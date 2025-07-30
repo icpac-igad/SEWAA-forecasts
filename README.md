@@ -24,22 +24,22 @@ https://github.com/Fenwick-Cooper/ensemble-cgan/tree/Mvua_kubwa
 2. Finalise working new models on github.
 3. Place working data (weights, elevation etc online).
 
+### Combine with HTML interface
+
+1. Add HTML interface.
+2. Update HTML interface with list of improvements.
+3. Add ELR quality plots to HTML interface.
+
 ### Add ELR
 
 1. Implement ELR scripts for ELR models.
 2. ELR interface python prototype.
 3. Add ELR to HTML interface.
-4. Add ELR quality plots to HTML interface.
-
-### Combine with HTML interface
-
-1. Make all paths relative to base directory.
-2. Add HTML interface.
-3. Update HTML interface with list of improvements.
 
 ### Prepare for remote install
 
-1. Download from gbmc instead of ECMWF
-2. Remove upload to gbmc
-3. Make prototype cGAN installation script for Windows/Linux/Mac.
+1. Make all paths relative to base directory.
+2. Download from gbmc instead of ECMWF
+3. Remove upload to gbmc
+4. Make prototype cGAN installation script for Windows/Linux/Mac.
 
