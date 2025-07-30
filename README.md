@@ -1,15 +1,19 @@
 # SEWAA-forecasts
+
 Scripts for operational rainfall forecasts in the ICPAC region.
 
 ## How to use
 
 See the header of the master scripts
+
 6h_accumulations/sixHourly_script.py
+
 24h_accumulations/seven_day_script.py
 
 ## Requires
 
 https://github.com/Fenwick-Cooper/ensemble-cgan/tree/Jurre_brishti_2
+
 https://github.com/Fenwick-Cooper/ensemble-cgan/tree/Mvua_kubwa
 
 ## Roadmap
