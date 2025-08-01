@@ -119,7 +119,7 @@ if __name__=='__main__':
         else:
             print('Could not find corresponding model for Location,', Location, 'in country folder', country)
         in_path = paths['OUT_PATH']+f'{country}/{region_type}/'
-        ds.append(xr.open_zarr(in_path+f'{model}_{Location}_{date}_logreg.zarr'))
+        ds.append(xr.open_dataset(in_path+f'{model}_{Location}_{date}_logreg.nc'))
         geometry_all.append(get_geometry(Location, region_type, country))
     if len(Locations)>1:
         save_path = paths['OUT_PATH']+f'plots/{country}/combined_regions/'
