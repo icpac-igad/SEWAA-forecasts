@@ -68,17 +68,17 @@ def plot_exceedance(ds, Location, date, day, threshold, model,
     ax.add_geometries(geometry, crs=ccrs.Robinson(), facecolor='none', edgecolor='k', linewidth=3)
     
 
-    plt.title(f'{model} forecast for {threshold} mm/day at {Location}:\n fcst time: {init_time}, valid time: {valid_time}') 
+    plt.title(f'{model}+ELR forecast for {threshold} mm/day at {Location}:\n fcst time: {init_time}, valid time: {valid_time}') 
 
-    plt.savefig(save_path+f'{model}_{Location}_{date}_{day}-day_leadtime_{threshold}_mmday.png')
+    #plt.savefig(save_path+f'{model}_{Location}_{date}_{day}-day_leadtime_{threshold}_mmday.png')
     plt.show()
 
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--date', help='IFS or GAN',default=None,type=str)
+    parser.add_argument('--date', help='fcst initialisation time',default=None,type=str)
     parser.add_argument('--model', help='IFS or GAN',default='GAN',type=str)
-    parser.add_argument('--day', help='valid date',default=1,type=int)
+    parser.add_argument('--day', help='lead time (in days)',default=1,type=int)
     parser.add_argument('--country', help='Country within which to plot',default='Kenya',type=str)
     parser.add_argument('--threshold', help='threshold within which to plot',default=40,type=int)
     parser.add_argument('--loc', help='Location within country to plot',action='append',nargs='+',type=str,default=None)

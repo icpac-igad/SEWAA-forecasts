@@ -126,7 +126,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--date', help='IFS or GAN',default=None)
     parser.add_argument('--model', help='IFS or GAN',default='GAN',type=str)
-    parser.add_argument('--day', help='valid date',default=1,type=int)
+    parser.add_argument('--day', help='lead time (in days)',default=1,type=int)
     parser.add_argument('--accumulation', help='6h- or 24h- accumulation',default="24h_accumulations",type=str)
     args = parser.parse_args()
 
