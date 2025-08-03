@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Evaluation plots</title>
+</head>
+<body>
+
+<p>
+Categories of reliability | <a href="costLossRatios.html">Cost-loss ratios</a>
+</p>
+
+<h2>Categories of reliability</h2>
+
+<p>
+Some text to explain this.
+<ul>
+	<li>Is this 1 day + 6 hours?</li>
+	<li>Can remove Categories of Reliability from the title?</li>
+	<li>Is the colour scale good for colour blindness?</li>
+</ul>
+</p>
+
+<p>
+Lead time:
+<select id="leadTimeCategorySelect" onchange="leadTimeCategorySelect()">
+	<option value="1">1 day 6 hours</option>
+    <option value="2">2 day 6 hours</option>
+    <option value="3">3 day 6 hours</option>
+    <option value="4">4 day 6 hours</option>
+    <option value="5">5 day 6 hours</option>
+</select>
+
+Threshold:
+<select id="thresholdCategorySelect" onchange="thresholdCategorySelect()">
+	<option value="5">5</option>
+    <option value="20">20</option>
+    <option value="30">30</option>
+    <option value="40">40</option>
+    <option value="50">50</option>
+</select>
+mm/day.
+</p>
+
+<img id="GHACategoryOfReliabilityPlot"
+    src="../categories_of_reliability/GHA_category_of_reliability_1-day_leadtime_5_mmday.png"
+    alt="GHA_category_of_reliability">
+
+<script src="../js/categoriesOfReliability.js"></script>
+</body>
+</html> 

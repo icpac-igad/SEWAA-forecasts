@@ -14,7 +14,7 @@ See the header of the master scripts
 
 ## How to use
 
-To view the interface locally in a terminal change to this
+To view the interface locally: In a terminal change to this
 directory and run
 
 > python3 -m http.server 8080 -d interface
