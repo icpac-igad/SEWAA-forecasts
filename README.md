@@ -3,13 +3,16 @@
 Scripts for operational rainfall forecasts in the ICPAC region.
 
 
-## How to use
+## Installation
 
 See the header of the master scripts
 
 6h_accumulations/sixHourly_script.py
 
 24h_accumulations/seven_day_script.py
+
+
+## How to use
 
 To view the interface locally in a terminal change to this
 directory and run
