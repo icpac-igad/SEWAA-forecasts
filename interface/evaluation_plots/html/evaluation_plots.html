@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Evaluation plots</title>
+</head>
+<body>
+
+<h2>Categories of reliability</h2>
+
+<p>
+Some text to explain this.
+<ul>
+	<li>Is this 1 day + 6 hours?</li>
+	<li>Can remove Categories of Reliability from the title?</li>
+	<li>Is the colour scale good for colour blindness?</li>
+</ul>
+</p>
+
+<p>
+Lead time:
+<select id="leadTimeCategorySelect" onchange="leadTimeCategorySelect()">
+	<option value="1">1 day 6 hours</option>
+    <option value="2">2 day 6 hours</option>
+    <option value="3">3 day 6 hours</option>
+    <option value="4">4 day 6 hours</option>
+    <option value="5">5 day 6 hours</option>
+</select>
+
+Threshold:
+<select id="thresholdCategorySelect" onchange="thresholdCategorySelect()">
+	<option value="5">5</option>
+    <option value="20">20</option>
+    <option value="30">30</option>
+    <option value="40">40</option>
+    <option value="50">50</option>
+</select>
+mm/day.
+</p>
+
+<img id="GHACategoryOfReliabilityPlot"
+    src="../categories_of_reliability/GHA_category_of_reliability_1-day_leadtime_5_mmday.png"
+    alt="GHA_category_of_reliability">
+
+
+<h2>Cost loss ratios</h2>
+
+<p>
+Add some text to explain this.
+<ul>
+	<li>Do you want this on the same page or another page?</li>
+	<li>Is this 1 day + 6 hours?</li>
+	<li>Please include region name in the title.</li>
+	<li>Can remove "Cost loss curves" from the title?</li>
+</ul>
+</p>
+
+<p>
+Region:
+<select id="regionCostLossSelect" onchange="regionCostLossSelect()">
+	<option value="Kenya">Kenya</option>
+    <option value="Ethiopia">Ethiopia</option>
+</select>
+
+Lead time:
+<select id="leadTimeCostLossSelect" onchange="leadTimeCostLossSelect()">
+	<option value="1">1 day 6 hours</option>
+    <option value="2">2 day 6 hours</option>
+    <option value="3">3 day 6 hours</option>
+    <option value="4">4 day 6 hours</option>
+    <option value="5">5 day 6 hours</option>
+</select>
+
+Threshold:
+<select id="thresholdCostLossSelect" onchange="thresholdCostLossSelect()">
+	<option value="40">40</option>
+    <option value="50">50</option>
+    <option value="60">60</option>
+</select>
+mm/day.
+
+Scale:
+<select id="xScaleCostLossSelect" onchange="xScaleCostLossSelect()">
+	<option value="linear">linear</option>
+	<option value="logarithmic">logarithmic</option>
+</select>
+</p>
+
+<img id="costLossPlot"
+    src="../costloss/Kenya_casestudy_costloss_1-day_leadtime_40_mmday.png"
+    alt="Cost-loss curves">
+
+<script src="../js/evaluation_plots.js"></script>
+</body>
+</html> 

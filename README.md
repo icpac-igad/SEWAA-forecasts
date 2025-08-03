@@ -2,6 +2,7 @@
 
 Scripts for operational rainfall forecasts in the ICPAC region.
 
+
 ## How to use
 
 See the header of the master scripts
@@ -10,11 +11,22 @@ See the header of the master scripts
 
 24h_accumulations/seven_day_script.py
 
+To view the interface locally in a terminal change to this
+directory and run
+
+   python3 -m http.server 8080 -d interface
+   
+Then in a browser window go to the address
+
+   http://localhost:8080/
+
+
 ## Requires
 
 https://github.com/Fenwick-Cooper/ensemble-cgan/tree/Jurre_brishti_2
 
 https://github.com/Fenwick-Cooper/ensemble-cgan/tree/Mvua_kubwa
+
 
 ## Roadmap
 
