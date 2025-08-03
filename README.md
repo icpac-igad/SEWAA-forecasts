@@ -14,11 +14,11 @@ See the header of the master scripts
 To view the interface locally in a terminal change to this
 directory and run
 
-   python3 -m http.server 8080 -d interface
+> python3 -m http.server 8080 -d interface
    
 Then in a browser window go to the address
 
-   http://localhost:8080/
+> http://localhost:8080/
 
 
 ## Requires
