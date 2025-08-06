@@ -22,7 +22,7 @@ MODEL_PATH = paths['MODEL_PATH']
 if not os.path.exists(OUT_PATH):
     os.makedirs(OUT_PATH)
 
-countries = ['Ethiopia','Kenya']
+countries = ['Ethiopia']
 county = True
 subcounty = True
 
@@ -93,7 +93,7 @@ def get_ELR_predictions(logreg_model, model, ds_sel, day, Location, date, save_p
     latitude_reg = ds_sel.latitude.values
     longitude_reg = ds_sel.longitude.values
     date = ds_sel.time.values[0].astype('datetime64[D]').astype(object).strftime("%Y%M%d")
-    
+    print(ds_sel)
     lons, lats = np.meshgrid(np.unique(longitude_reg),np.unique(latitude_reg))
     predictions = np.full([1,1,thresholds.shape[0],lats.shape[0],lats.shape[1]],np.nan)
     
