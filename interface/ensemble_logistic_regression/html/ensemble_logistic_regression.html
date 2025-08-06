@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Ensemble logistic regression</title>
+</head>
+<body>
+
+<h1>Ensemble logistic regression</h1>
+
+<p>
+To do after workshop:
+<ul>
+	<li>days since "date" is difficult to interpret in general. Can we stick to hours
+	since 1900 for all outputs?</li>
+	<li>Sub-regions have different names and go to different administrative levels
+	depending upon the country. We probably should reflect this in the (future) menus.</li>
+	<li>There is no glob in javascript. Instead, every time a new forecaste is created we
+	need run a script to generate a list of the available locations in JSON format and a
+	list of available dates as in
+	http://megacorr.dynu.net/ICPAC/cGAN_examplePlots/data/Jurre_brishti_counts/available_dates.json
+	Can you write such a script?</li>
+</ul> 
+</p>
+
+<p>
+Region:
+<select id="regionSelect" onchange="ELRSelect()">
+	<option value="Kenya">Kenya</option>
+    <option value="Ethiopia">Ethiopia</option>
+</select>
+
+Sub-region:
+<select id="subRegionSelect" onchange="ELRSelect()">
+	<option value="Kiambu">Kiambu</option>
+	<option value="Nairobi">Nairobi</option>
+	<option value="Kajiado-East">Kajiado-East</option>
+</select>
+
+Initialisation:
+<select id="initYearSelect" onchange="ELRSelect()">
+	<option value="2024">2024</option>
+</select>
+<select id="initMonthSelect" onchange="ELRSelect()">
+	<option value="4">4</option>
+</select>
+<select id="initDaySelect" onchange="ELRSelect()">
+	<option value="23">23</option>
+</select>
+
+Lead time:
+<select id="validTimeSelect" onchange="validTimeSelect()">
+	<option value="1">1 day 6 hours</option>
+	<option value="2">2 days 6 hours</option>
+	<option value="3">3 days 6 hours</option>
+	<option value="4">4 days 6 hours</option>
+	<option value="5">5 days 6 hours</option>
+</select>
+
+Style:
+<select id="styleSelect" onchange="styleSelect()">
+	<option value="Default">Default</option>
+	<option value="ICPAC">ICPAC</option>
+	<option value="KMD">KMD</option>
+	<option value="EMI">EMI</option>
+</select>
+</p>
+
+<p>
+Threshold:
+<select id="thresholdSelect" onchange="thresholdSelect()">
+	<option value="40">40</option>
+	<option value="45">45</option>
+	<option value="50">50</option>
+	<option value="55">55</option>
+	<option value="60">60</option>
+</select>
+mm/day.
+
+Probability bin edges:
+<input type="text" id="probabilityBin1" size="3" value="5" title="Top of first bin" onblur="pBinInput()">
+<input type="text" id="probabilityBin2" size="3" value="15" title="Bin boundary" onblur="pBinInput()">
+<input type="text" id="probabilityBin3" size="3" value="25" title="Bin boundary" onblur="pBinInput()">
+<input type="text" id="probabilityBin4" size="3" value="50" title="Bottom of last bin" onblur="pBinInput()">
+%
+</p>
+
+<p id="statusText"> Status </p>
+
+<canvas id="myCanvas" width="504" height="504">
+Your browser does not support the HTML canvas tag.</canvas>
+
+<script src="../js/ensembleLogisticRegressionMin.js"></script>
+<script src="../js/showEnsembleLogisticRegression.js"></script>
+</body>
+</html>
