@@ -1,17 +1,5 @@
 // Javascript for plotting the results of the ensemble logistic regression.
 
-// Load the netCDF
-
-// Load the boundaries
-//    For now, just make the .json for each of the 5 regions
-
-// Make the plot
-//    Draw the boundary for each region
-//    Draw the image with the correct colours
-//    Draw the colour bar
-//    Draw the legend
-
-
 let ELRForecast = new ELRData();		// Create a global ELRData object
 
 // Select a menu item requiring data to be loaded
