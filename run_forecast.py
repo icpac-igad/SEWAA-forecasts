@@ -203,6 +203,9 @@ if __name__=='__main__':
     
     if (accumulation_time == 6):
         
+        # Create the directory for the IFS downloads if it doesn't exist
+        pathlib.Path(IFS_data_path_6h).mkdir(exist_ok=True)
+        
         file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
         
         # Check to see if the file is here first
@@ -221,6 +224,9 @@ if __name__=='__main__':
         
     elif (accumulation_time == 24):
     
+        # Create the directory for the IFS downloads if it doesn't exist
+        pathlib.Path(IFS_data_path_24h).mkdir(exist_ok=True)
+        
         file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
         
         # Check to see if the file is here first
@@ -247,6 +253,9 @@ if __name__=='__main__':
         
     if (accumulation_time == 6):
         
+        # Create the directory for the cGAN forecasts if it doesn't exist
+        pathlib.Path(cGAN_forecast_path_6h).mkdir(exist_ok=True)
+        
         file_name = f"GAN_{date_str}_{hour:02d}Z.nc"
         
         # Check to see if the forecast is there first
@@ -259,7 +268,10 @@ if __name__=='__main__':
             subprocess.run(["python", "forecast_date.py", date_str, str(hour)], cwd=run_dir)
     
     elif (accumulation_time == 24):
-    
+        
+        # Create the directory for the cGAN forecasts if it doesn't exist
+        pathlib.Path(cGAN_forecast_path_24h).mkdir(exist_ok=True)
+        
         # Perform a separate forecast for each lead time
         for lead_time_idx in range(7):
         
