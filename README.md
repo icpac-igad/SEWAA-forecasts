@@ -60,6 +60,7 @@ To get usage information run
 
 Running 
 
+	conda activate tf215gpu
 	python run_forecast.py
 
 will

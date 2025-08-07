@@ -6,10 +6,10 @@ from datetime import datetime
 import netCDF4 as nc
 
 # Where the forecasts are downloaded to
-data_dir = "/home/c/cooperf/IFS/ICPAC_data/operational/GAN_forecasts_large"
+data_dir = "cGAN_forecasts"
 
 # Where the counts are saved to
-output_dir = '/home/c/cooperf/IFS/ICPAC_data/operational/counts'
+output_dir = '../interface/view_forecasts/data/counts_6h'
 
 # Smaller chunk size means slower but less RAM usage
 # Larger chunk size means faster but more RAM usage
@@ -65,7 +65,7 @@ num_ensemble_members = precip.shape[0]
 for valid_time_num in range(len(valid_time)):
 
     # counts in bin zero are not stored.
-    file_name = f"{output_dir}/counts_{year}{month:02d}{day:02d}_{hour:02d}_{valid_time_num*6+30}h.nc"
+    file_name = f"{output_dir}/{year}/counts_{year}{month:02d}{day:02d}_{hour:02d}_{valid_time_num*6+30}h.nc"
 
     # Create a new NetCDF file
     rootgrp = nc.Dataset(file_name, "w", format="NETCDF4")

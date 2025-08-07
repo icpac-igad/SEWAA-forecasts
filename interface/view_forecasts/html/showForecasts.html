@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>East African rainfall</title>
+<link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+</head>
+<body>
+
+<h3>
+East African rainfall forecasts. (Click for local distribution.)
+</h3>
+
+<p>
+Model:
+<select id="modelSelect" onchange="modelSelect()">
+	<option value="Jurre brishti">Jurre brishti</option>
+    <option value="Mvua kubwa">Mvua kubwa</option>
+</select>
+</p>
+
+<p id="modelInfo">
+The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a> 
+<a href="https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS" target="_blank">
+IFS</a> output is post-processed using
+<a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">
+cGAN</a> trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank"> IMERG</a>
+v6 to produce forecasts of 6h rainfall intervals.
+</p>
+
+<p>
+Region:
+<select id="regionSelect" onchange="regionSelect()">
+	<option value="East Africa">East Africa</option>
+    <option value="Burundi">Burundi</option>
+    <option value="Djibouti">Djibouti</option>
+    <option value="Eritrea">Eritrea</option>
+    <option value="Ethiopia">Ethiopia</option>
+    <option value="Kenya">Kenya</option>
+    <option value="Rwanda">Rwanda</option>
+    <option value="Somalia">Somalia</option>
+    <option value="South Sudan">South Sudan</option>
+    <option value="Sudan">Sudan</option>
+    <option value="Tanzania">Tanzania</option>
+    <option value="Uganda">Uganda</option>
+</select>
+
+Initialisation:
+<select id="initYearSelect" onchange="initTimeSelect()" title="Forecast initialisation year"></select>
+<select id="initMonthSelect" onchange="initTimeSelect()" title="Forecast initialisation month"></select>
+<select id="initDaySelect" onchange="initTimeSelect()" title="Forecast initialisation day"></select>
+<select id="initTimeSelect" onchange="initTimeSelect()" title="Forecast initialisation time"></select>
+
+Valid:
+<select id="validTimeSelect" onchange="validTimeSelect()" title="Start of the time we are forecasting"></select>
+
+Style:
+<select id="styleSelect" onchange="styleSelect()">
+	<option value="Default">Default</option>
+	<option value="ICPAC">ICPAC</option>
+    <option value="KMD">KMD</option>
+    <option value="EMI">EMI</option>
+</select>
+</p>
+
+<p>
+Plot:
+<select id="plotSelect" onchange="plotSelect()">
+	<option value="Probability">Probability to exceed value</option>
+	<option value="Values">Values below probability</option>
+</select>
+
+Value threshold:
+<input type="text" id="thresholdValueSelect" size="6" title="Show the chance of rainfall above this value">
+<span id="unitsDescription">mm/h</span>.
+<select id="percentagesSelect" onchange="percentagesSelect()" disabled>
+	<option value="Percentages">Show percentages</option>
+	<option value="Words">Show words</option>
+</select>
+
+Probability threshold:
+<input type="text" id="thresholdProbabilitySelect" size="3" title="Change this number and look at the plot description">
+%. Units:
+<select id="unitsSelect" onchange="unitsSelect()">
+	<option value="mm/h">mm/h</option>
+    <option value="mm/6h">mm/6h</option>
+    <option value="mm/day">mm/day</option>
+    <option value="mm/week">mm/week</option>
+</select>
+</p>
+
+<p id="statusText"> Status </p>
+
+<canvas id="myCanvas" width="1024" height="504">
+Your browser does not support the HTML canvas tag.</canvas>
+
+<script src="../js/plotForecastsMin.js"></script>
+<script src="../js/testScript.js"></script>
+
+</body>
+</html> 

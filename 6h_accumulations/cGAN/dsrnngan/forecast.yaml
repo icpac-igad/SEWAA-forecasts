@@ -1,0 +1,13 @@
+MODEL:
+    folder: "../ICPAC-big-ensmeansd"
+    checkpoint: 316800
+
+INPUT:
+    folder: "../../IFS_forecast_data"
+    file: "IFS_20241112_18Z.nc"
+    start_hour: 30
+    end_hour: 54
+
+OUTPUT:
+    folder: "../../cGAN_forecasts"
+    ensemble_members: 10

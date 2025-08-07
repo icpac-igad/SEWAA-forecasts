@@ -1,0 +1,9 @@
+AOPP:
+    GENERAL:
+        TRUTH_PATH: ''
+        FORECAST_PATH: '../../cGAN_forecasts'
+        CONSTANTS_PATH: '../../../cGAN_data'
+        NORMALISATION_PATH: '../'
+        
+    TFRecords:
+        tfrecords_path: ''

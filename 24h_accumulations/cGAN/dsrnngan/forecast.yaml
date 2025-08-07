@@ -1,0 +1,13 @@
+MODEL:
+    folder: "../logs_17"
+    checkpoint: 172544
+
+INPUT:
+    folder: "../../IFS_forecast_data"
+    file: "tp.nc"
+    start_hour: 30
+    end_hour: 54
+
+OUTPUT:
+    folder: "../../cGAN_forecasts"
+    ensemble_members: 1000

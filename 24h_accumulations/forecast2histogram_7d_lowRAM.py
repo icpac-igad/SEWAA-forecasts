@@ -6,10 +6,10 @@ from datetime import datetime
 import netCDF4 as nc
 
 # Where the forecasts are downloaded to
-data_dir = "/home/c/cooperf/IFS/ICPAC_data/operational/7d/GAN_forecasts"
+data_dir = "cGAN_forecasts"
 
 # Where the counts are saved to
-output_dir = '/home/c/cooperf/IFS/ICPAC_data/operational/7d/counts'
+output_dir = '../interface/view_forecasts/data/counts_24h'
 
 # Smaller chunk size means slower but less RAM usage
 # Larger chunk size means faster but more RAM usage
@@ -38,26 +38,35 @@ bin_spec_1h = np.array([0,0.04,0.1,0.25,0.4,0.6,0.8,1,1.25,1.5,
                         1.8,2.2,2.6,3,3.5,4,4.7,5.4,6.1,7,
                         8,9.1,10.3,11.7,13.25,15,1000])
 
-# Open a NetCDF file for reading
-file_name = f"{data_dir}/GAN_{year}{month:02d}{day:02d}_{hour:02d}Z.nc"
+# Load some details
+file_name = f"{data_dir}/GAN_{year}{month:02d}{day:02d}_{hour:02d}Z_v0.nc"
 nc_file = nc.Dataset(file_name, "r")
 latitude = np.array(nc_file["latitude"][:])
 longitude = np.array(nc_file["longitude"][:])
 time = np.array(nc_file["time"][:])
-valid_time = np.array(nc_file["fcst_valid_time"][:])[0]
+nc_file.close()
+        
+# valid_time_num can be 0,1,2,3,4,5,6
+num_valid_times = 7
+valid_time = np.zeros(num_valid_times)
+counts = np.zeros((num_valid_times, len(latitude), len(longitude), len(bin_spec_1h)-1), dtype=int)
+for valid_time_num in range(num_valid_times):
 
-# Compute the counts at each valuid time, latitude and longitude
-counts = np.zeros((len(valid_time), len(latitude), len(longitude), len(bin_spec_1h)-1), dtype=int)
-for valid_time_num in range(len(valid_time)):
+    # Open a NetCDF file for reading
+    file_name = f"{data_dir}/GAN_{year}{month:02d}{day:02d}_{hour:02d}Z_v{valid_time_num}.nc"
+    nc_file = nc.Dataset(file_name, "r")
+    valid_time[valid_time_num] = np.array(nc_file["fcst_valid_time"][:])[0,0]
+    
+    # Compute the counts at each valid time, latitude and longitude
     for j in range(0,len(latitude),chunk_size):
         # Load a chunk of the precip from the netCDF file
-        precip = np.array(nc_file["precipitation"][0,:,valid_time_num,j:np.min([j+chunk_size,len(latitude)]),:])
+        precip = np.array(nc_file["precipitation"][0,:,0,j:np.min([j+chunk_size,len(latitude)]),:])
         for k in range(precip.shape[1]):  # Iterate over the chunked dimension
             for i in range(len(longitude)):
                 counts[valid_time_num,j+k,i,:],_ = np.histogram(precip[:,k,i], bin_spec_1h)
 
-# Close the netCDF file
-nc_file.close()
+    # Close the netCDF file
+    nc_file.close()
 
 num_ensemble_members = precip.shape[0]
 
@@ -65,7 +74,7 @@ num_ensemble_members = precip.shape[0]
 for valid_time_num in range(len(valid_time)):
 
     # counts in bin zero are not stored.
-    file_name = f"{output_dir}/counts_{year}{month:02d}{day:02d}_00_{valid_time_num*24+6}h.nc"
+    file_name = f"{output_dir}/{year}/counts_{year}{month:02d}{day:02d}_00_{valid_time_num*24+6}h.nc"
 
     # Create a new NetCDF file
     rootgrp = nc.Dataset(file_name, "w", format="NETCDF4")
