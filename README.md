@@ -5,30 +5,77 @@ Scripts for operational rainfall forecasts in the ICPAC region.
 
 ## Installation
 
-See the header of the master scripts
+#### ECMWF data
 
-6h_accumulations/sixHourly_script.py
+To download the ECMWF data pre-processed for these scripts you will need access to the
+ECMWF machine gbmc. Contact the Oxford or ICPAC team for further information.
 
-24h_accumulations/seven_day_script.py
+#### Conda environment
+
+A conda environment is required, to set this up run the following commands:
+
+> `conda config --add channels conda-forge`
+> `conda config --set channel_priority strict`
+> `conda create -n tf215gpu python=3.11`
+> `conda activate tf215gpu`
+> `python -m pip install tensorflow==2.15`
+> `pip install numba`
+> `pip install matplotlib`
+> `pip install seaborn`
+> `pip install cartopy`
+> `pip install jupyter`
+> `pip install xarray`
+> `pip install netcdf4`
+> `pip install scikit-learn`
+> `pip install cfgrib`
+> `pip install dask`
+> `pip install tqdm`
+> `pip install properscoring`
+> `pip install climlab`
+> `pip install iris`
+> `pip install ecmwf-api-client`
+> `pip install xesmf`
+> `pip install flake8`
+
+Check that tensor flow is working
+
+> `python -c "import tensorflow as tf; print(tf.config.list_physical_devices('CPU'))"`
+
+#### Forecast scripts
+
+Go to https://github.com/Fenwick-Cooper/SEWAA-forecasts
+Click on the big green button labelled "<> Code "
+Select "Download ZIP"
+Uncompress the SEWAA-forecasts-main.zip.
 
 
 ## How to use
 
-To view the interface locally: In a terminal change to this
-directory and run
+#### To make a forecast
 
-> python3 -m http.server 8080 -d interface
+Run the script `run_forecast.py` that is located in the SEWAA-forecasts-main directory.
+To get usage information run
+
+> `python run_forecast.py --help`
+
+Running 
+
+> `python run_forecast.py`
+
+will
+1. Download the ECMWF data for 6h accumulations from gbmc.
+2. Run the forecasts.
+3. Process the forecast data for viewing.
+
+#### To view the forecasts
+
+In a terminal change to this directory and run
+
+> `python3 -m http.server 8080 -d interface`
    
 Then in a browser window go to the address
 
 > http://localhost:8080/
-
-
-## Requires
-
-https://github.com/Fenwick-Cooper/ensemble-cgan/tree/Jurre_brishti_2
-
-https://github.com/Fenwick-Cooper/ensemble-cgan/tree/Mvua_kubwa
 
 
 ## Roadmap
