@@ -192,11 +192,14 @@ if __name__=='__main__':
     # Where the 6h cGAN model forecast script is located
     cGAN_forecast_script_path_24h = f"{root_dir}/24h_accumulations/cGAN/dsrnngan"
     
+     # Where all of the cGAN histogram counts will be stored
+    cGAN_counts_path = f"{root_dir}/interface/view_forecasts/data"
+    
     # Where the cGAN 6h histogram counts will be stored
-    cGAN_counts_path_6h = f"{root_dir}/interface/view_forecasts/data/counts_6h"
+    cGAN_counts_path_6h = f"{cGAN_counts_path}/counts_6h"
     
     # Where the cGAN 24h histogram counts will be stored
-    cGAN_counts_path_24h = f"{root_dir}/interface/view_forecasts/data/counts_24h"
+    cGAN_counts_path_24h = f"{cGAN_counts_path}/counts_24h"
     
     
     # Download from gbmc
@@ -289,8 +292,14 @@ if __name__=='__main__':
 
     # Compute the histogram counts
     
-    if (accumulation_time == 6):
+    # Create the directory for the data if it doesn't exist
+    pathlib.Path(cGAN_counts_path).mkdir(exist_ok=True)
     
+    if (accumulation_time == 6):
+        
+        # Create the directory for the data if it doesn't exist
+        pathlib.Path(cGAN_counts_path_6h).mkdir(exist_ok=True)
+        
         # Check to see if the counts are there first
         num_files_exist = 0
         for i in [30,36,42,48]:
@@ -311,7 +320,10 @@ if __name__=='__main__':
             subprocess.run(["python", "forecast2histogram_lowRAM.py", date_str, time_str], cwd=run_dir)
     
     elif (accumulation_time == 24):
-    
+        
+        # Create the directory for the data if it doesn't exist
+        pathlib.Path(cGAN_counts_path_24h).mkdir(exist_ok=True)
+        
         # Check to see if the counts are there first
         num_files_exist = 0
         for i in [6,30,54,78,102,126,150]:
@@ -333,7 +345,7 @@ if __name__=='__main__':
     
     
     # Run ELR forecasts
-    # XXX Shruti XXX
+    # *** Shruti ***
     # At this point we have the integer variables:
     #     year, month, day, hour, minute
     # I use paths relative to the SEWAA-forecasts directory

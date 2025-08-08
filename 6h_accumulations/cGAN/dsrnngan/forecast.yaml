@@ -10,4 +10,4 @@ INPUT:
 
 OUTPUT:
     folder: "../../cGAN_forecasts"
-    ensemble_members: 10
+    ensemble_members: 1000
