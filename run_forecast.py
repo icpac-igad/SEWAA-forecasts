@@ -317,7 +317,7 @@ if __name__=='__main__':
             pathlib.Path(f"{cGAN_counts_path_6h}/{year}").mkdir(exist_ok=True)
             
             run_dir = f"{root_dir}/6h_accumulations"
-            subprocess.run(["python", "forecast2histogram_lowRAM.py", date_str, time_str], cwd=run_dir)
+            subprocess.run(["python", "forecast2histogram_lowRAM.py", date_str, str(hour)], cwd=run_dir)
     
     elif (accumulation_time == 24):
         
@@ -341,7 +341,7 @@ if __name__=='__main__':
             pathlib.Path(f"{cGAN_counts_path_24h}/{year}").mkdir(exist_ok=True)
             
             run_dir = f"{root_dir}/24h_accumulations"
-            subprocess.run(["python", f"forecast2histogram_7d_lowRAM.py", date_str, time_str], cwd=run_dir)
+            subprocess.run(["python", f"forecast2histogram_7d_lowRAM.py", date_str, str(hour)], cwd=run_dir)
     
     
     # Run ELR forecasts
