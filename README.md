@@ -72,7 +72,7 @@ will
 
 In a terminal change to the SEWAA-forecasts-main directory and run
 
-	python3 -m http.server 8080 -d interface
+	python -m http.server 8080 -d interface
    
 Then in a browser window go to the address
 

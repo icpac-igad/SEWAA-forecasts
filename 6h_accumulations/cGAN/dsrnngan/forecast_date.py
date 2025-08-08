@@ -114,7 +114,7 @@ def create_output_file(nc_out_path):
     netcdf_dict = {}
     rootgrp = nc.Dataset(nc_out_path, "w", format="NETCDF4")
     netcdf_dict["rootgrp"] = rootgrp
-    rootgrp.description = "GAN 6-hour rainfall ensemble members in the ICPAC region."
+    rootgrp.description = "GAN 6-hour rainfall ensemble members in the ICPAC region. Version 1."
 
     # Create output file dimensions
     rootgrp.createDimension("latitude", len(latitude))
