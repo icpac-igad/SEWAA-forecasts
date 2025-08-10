@@ -191,6 +191,9 @@ if __name__=='__main__':
     
     # Where the 6h cGAN model forecast script is located
     cGAN_forecast_script_path_24h = f"{root_dir}/24h_accumulations/cGAN/dsrnngan"
+
+    # Where the ELR model script is located
+    ELR_script_path = f"{root_dir}/ELR/"
     
      # Where all of the cGAN histogram counts will be stored
     cGAN_counts_path = f"{root_dir}/interface/view_forecasts/data"
@@ -296,7 +299,7 @@ if __name__=='__main__':
     pathlib.Path(cGAN_counts_path).mkdir(exist_ok=True)
     
     if (accumulation_time == 6):
-        
+
         # Create the directory for the data if it doesn't exist
         pathlib.Path(cGAN_counts_path_6h).mkdir(exist_ok=True)
         
@@ -318,7 +321,7 @@ if __name__=='__main__':
             
             run_dir = f"{root_dir}/6h_accumulations"
             subprocess.run(["python", "forecast2histogram_lowRAM.py", date_str, str(hour)], cwd=run_dir)
-    
+     
     elif (accumulation_time == 24):
         
         # Create the directory for the data if it doesn't exist
@@ -350,7 +353,14 @@ if __name__=='__main__':
     #     year, month, day, hour, minute
     # I use paths relative to the SEWAA-forecasts directory
     # I assume that you first need
-    #     if (accumulation_time == 24):
+    if (accumulation_time == 6):
+        run_dir=ELR_script_path
+        subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
+                        "--day", "1", "--accumulation", "6h_accumulations"], cwd=run_dir)
+    elif (accumulation_time == 24):
+        run_dir=ELR_script_path
+        subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
+                        "--day", "2", "3", "4", "5", "--accumulation", "24h_accumulations"], cwd=run_dir)
     
     
     # Update .JSON files for the interface. Overwrite if files exist.
