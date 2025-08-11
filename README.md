@@ -36,7 +36,7 @@ A conda environment is required, to set this up run the following commands:
 	pip install ecmwf-api-client
 	pip install xesmf
 	pip install flake8
-
+	pip install regionmask
 Check that tensor flow is working
 
 	python -c "import tensorflow as tf; print(tf.config.list_physical_devices('CPU'))"
