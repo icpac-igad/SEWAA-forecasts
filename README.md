@@ -19,24 +19,8 @@ A conda environment is required, to set this up run the following commands:
 	conda create -n tf215gpu python=3.11
 	conda activate tf215gpu
 	python -m pip install tensorflow==2.15
-	pip install numba
-	pip install matplotlib
-	pip install seaborn
-	pip install cartopy
-	pip install jupyter
-	pip install xarray
-	pip install netcdf4
-	pip install scikit-learn
-	pip install cfgrib
-	pip install dask
-	pip install tqdm
-	pip install properscoring
-	pip install climlab
-	pip install iris
-	pip install ecmwf-api-client
-	pip install xesmf
-	pip install flake8
-	pip install regionmask
+	pip install numba matplotlib seaborn cartopy jupyter xarray netcdf4 scikit-learn cfgrib dask tqdm properscoring climlab iris ecmwf-api-client xesmf flake8 regionmask
+
 Check that tensor flow is working
 
 	python -c "import tensorflow as tf; print(tf.config.list_physical_devices('CPU'))"
