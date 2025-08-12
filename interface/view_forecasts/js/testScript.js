@@ -1,13 +1,14 @@
-// Models: "Jurre brishti", "Muva kubwa"
-let modelName = "Jurre brishti"
+// Models were: "Jurre brishti", "Muva kubwa"
+// Models: "6h accumulation", "24h accumulation"
+let modelName = "6h accumulation"
 // Regions: Burundi, Djibouti, Eritrea, Ethiopia, Kenya, Rwanda, Somalia, South Sudan,
 //          Sudan, Tanzania, Uganda, ICPAC, East Africa, All.
 let regionName = "East Africa";
 let units = "mm/6h";			// Can be mm/h, mm/6h, mm/day, mm/week
 let style = "Default";			// Can be "Default", "ICPAC", "KMD", "EMI"
 let plotType="Probability";		// Can be "Probability" or "Values"
-let showPercentages = false;	// On the colour scale
-let maxRain = 1;				// Rainfall threshold in mm/h
+let showPercentages = true;		// On the colour scale
+let maxRain = 1/24;				// Rainfall threshold in mm/h
 let probability = 0.95;			// Between 0 and 1
 
 let drawMarker = false;			// Draw the marker corresponding to the histogram location
@@ -17,19 +18,25 @@ let canvasClickY = 0;
 let longitudeIdx = 0;			// Which location are we plotting
 let latitudeIDx = 0;
 
+// Hack to make sure multiple event handlers are not registered for the same canvas
+let canvasMouseDownRegistered = [false, false, false, false, false, false, false];
+
 let availableDates;						// An object containing the dates we can use
-let GANForecast = new countsData();		// Create a countsData object
+let GANForecast = [];			// An array of countsData objects
+
+let validTimes = [];			// An array of valid times, set in updateDateMenus
+
 
 // Called by the modelSelect menu
 async function modelSelect() {
 	modelName = document.getElementById("modelSelect").value;
 	
 	// Set the model description
-	if (modelName == "Jurre brishti") {
-		document.getElementById("modelInfo").innerHTML = "The <a href=\"https://www.ecmwf.int/\" target=\"_blank\">ECMWF</a> <a href=\"https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS\" target=\"_blank\">IFS</a> output is post-processed using <a href=\"https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120\" target=\"_blank\">cGAN</a> trained on <a href=\"https://gpm.nasa.gov/data/imerg\" target=\"_blank\"> IMERG</a> v6 from 2018 and 2019 to produce forecasts of 6h rainfall intervals.";
+	if (modelName == "6h accumulation") {
+		document.getElementById("modelInfo").innerHTML = "The <a href=\"https://www.ecmwf.int/\" target=\"_blank\">ECMWF</a> <a href=\"https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS\" target=\"_blank\">IFS</a> output is post-processed using <a href=\"https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120\" target=\"_blank\">cGAN</a> trained on <a href=\"https://gpm.nasa.gov/data/imerg\" target=\"_blank\"> IMERG</a> v6 from 2018 and 2019 to produce forecasts of 6h rainfall intervals. Model version 1.";
 	
-	} else if (modelName == "Mvua kubwa") {
-		document.getElementById("modelInfo").innerHTML = "The <a href=\"https://www.ecmwf.int/\" target=\"_blank\">ECMWF</a> <a href=\"https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS\" target=\"_blank\">IFS</a> output is post-processed using <a href=\"https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120\" target=\"_blank\">cGAN</a> trained on <a href=\"https://gpm.nasa.gov/data/imerg\" target=\"_blank\"> IMERG</a> v7 from 2018 and 2019 to produce forecasts of 24h rainfall intervals.";
+	} else if (modelName == "24h accumulation") {
+		document.getElementById("modelInfo").innerHTML = "The <a href=\"https://www.ecmwf.int/\" target=\"_blank\">ECMWF</a> <a href=\"https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS\" target=\"_blank\">IFS</a> output is post-processed using <a href=\"https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120\" target=\"_blank\">cGAN</a> trained on <a href=\"https://gpm.nasa.gov/data/imerg\" target=\"_blank\"> IMERG</a> v7 from 2018, 2019, 2020 and 2021 to produce forecasts of 24h rainfall intervals. Model version 2.";
 
 	}
 	await loadDates();		// Each model has it's own set of available dates
@@ -54,6 +61,7 @@ async function initTimeSelect() {
 
 // Called by the validTimeSelect menu
 async function validTimeSelect() {
+	// XXX Create or destroy the correct number of canvases
 	await loadForecast();
 	drawPlots();
 }
@@ -75,6 +83,11 @@ function plotSelect() {
 	drawPlots();
 }
 
+// Called when the focus is lost in the value threshold input
+function pValueThresholdInput() {
+	drawPlots();
+}
+
 // Called by the percentagesSelect menu
 function percentagesSelect() {
 	if (document.getElementById("percentagesSelect").value == "Percentages") {
@@ -82,6 +95,11 @@ function percentagesSelect() {
 	} else {
 		showPercentages = false;
 	}
+	drawPlots();
+}
+
+// Called when the focus is lost in the probability threshold input
+function pProbabilityThresholdInput() {
 	drawPlots();
 }
 
@@ -107,28 +125,44 @@ async function loadForecast() {
 	let month = document.getElementById("initMonthSelect").value;
 	let day = document.getElementById("initDaySelect").value;
 	let time = document.getElementById("initTimeSelect").value;
-	let validTime = document.getElementById("validTimeSelect").value;
+	let validTimeMenu = document.getElementById("validTimeSelect").value;
 	
 	// The directory name depends upon which model we are looking at
 	let countsDir;
 	let accumulationHours;
-	if (modelName == "Jurre brishti") {
+	if (modelName == "6h accumulation") {
 		countsDir = "counts_6h";
 		accumulationHours = 6;
-	} else if (modelName == "Mvua kubwa") {
+	} else if (modelName == "24h accumulation") {
 		countsDir = "counts_24h";
 		accumulationHours = 24;
 	}
 	
-	// The cGAN forecast file to load
-	let fileName = "../data/"+countsDir+"/"+year+"/counts_"+year
-								 +month.padStart(2,'0')
-								 +day.padStart(2,'0')
-								 +"_"+time.padStart(2,'0')
-								 +"_"+validTime+"h.nc";
-	
-	// Load data into the forecastDataObject
-	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+	// If we should load all valid times
+	if (validTimeMenu == "All") {
+		for (let i=0;i<validTimes.length;i++) {
+			// The cGAN forecast file to load
+			let fileName = "../data/"+countsDir+"/"+year+"/counts_"+year
+										 +month.padStart(2,'0')
+										 +day.padStart(2,'0')
+										 +"_"+time.padStart(2,'0')
+										 +"_"+validTimes[i]+"h.nc";
+			
+			// Load data into the forecastDataObject
+			// XXX Load to an array of objects
+			await GANForecast[i].loadGANForecast(fileName, modelName, accumulationHours);
+		}
+	} else {	// Load a single valid time
+		// The cGAN forecast file to load
+		let fileName = "../data/"+countsDir+"/"+year+"/counts_"+year
+									 +month.padStart(2,'0')
+									 +day.padStart(2,'0')
+									 +"_"+time.padStart(2,'0')
+									 +"_"+validTimeMenu+"h.nc";
+		
+		// Load data into the forecastDataObject
+		await GANForecast[0].loadGANForecast(fileName, modelName, accumulationHours);
+	}
 }
 
 // Update an HTML select menu with dates that are available.
@@ -210,7 +244,7 @@ function updateDateMenus() {
 	time = updateMenu(daysObject,timeStrings,"initTimeSelect");
 	
 	// The available valid times depend upon the year, month, day and time.
-	let validTimes = daysObject[String(time)];	// validTimes is an Array
+	validTimes = daysObject[String(time)];	// validTimes is an Array
 	// We use a custom string for the valid time menu elements
 	let validTimeStrings = new Array(validTimes.length);
 	for (let i=0;i<validTimes.length;i++) {
@@ -226,14 +260,22 @@ function updateDateMenus() {
 							+":00 UTC (+"+validTimes[i]+"h)";
 	}
 	updateMenu(validTimes,validTimeStrings,"validTimeSelect");
+	
+	// Select the HTML select menu that we are updating
+	let dateSelect = document.getElementById("validTimeSelect");
+	// Add an "Plot all valid times" option
+	let option = document.createElement("option");
+	option.value = "All";
+	option.innerHTML = "Plot all valid times";
+	dateSelect.appendChild(option);
 }
 
 async function loadDates() {
 	// Fetch a remote file
 	let fileName;
-	if (modelName == "Jurre brishti") {
+	if (modelName == "6h accumulation") {
 		fileName = "../data/counts_6h/available_dates.json";
-	} else if (modelName == "Mvua kubwa") {
+	} else if (modelName == "24h accumulation") {
 		fileName = "../data/counts_24h/available_dates.json";
 	}
 	const response = await fetch(fileName);
@@ -257,12 +299,17 @@ async function loadDates() {
 	let validTime = validTimes[validTimes.length-1];
 	
 	// Set the menus to match the loaded dates
+	// Probably doesn't do anything. Overridden by updateDateMenus.
 	document.getElementById("initYearSelect").value = year;
 	document.getElementById("initMonthSelect").value = month;
 	document.getElementById("initDaySelect").value = day;
 	document.getElementById("initTimeSelect").value = time;
 	document.getElementById("validTimeSelect").value = String(validTime);
+	
 	updateDateMenus();
+	
+	// By default plot all lead times
+	document.getElementById("validTimeSelect").value = "All";
 }
 
 function initControls() {
@@ -328,9 +375,20 @@ async function init() {
 	// Specify the function to call to inform the user what is going on
 	setStatusUpdateFunction(showLoadingStatus);
 	
+	// GANForecast is a global array of countsData objects
+	// XXX Make according to validTimes.length
+	for (let i=0;i<7;i++) {
+		GANForecast[i] = new countsData();		// Create a countsData object
+	}
+	
 	// If the region names are not loaded yet, then load them and wait for them to be loaded
 	// First argument is the directory, second argument is the file name.
-	await GANForecast.regionSpec.loadRegionNames("../boundaries", "regional_names.json");
+	await GANForecast[0].regionSpec.loadRegionNames("../boundaries", "regional_names.json");
+	// All point at the same regionSpec
+	// XXX Make according to validTimes.length
+	for (let i=1;i<7;i++) {
+		GANForecast[i].regionSpec = GANForecast[0].regionSpec;
+	}
 	
 	// Load a list of the available forecasts
 	await loadDates();
@@ -339,10 +397,86 @@ async function init() {
 	await loadForecast();
 	
 	// Draw everything
-	let plotRect = await drawPlots();
+	await drawPlots();
+	
+	// Stop the default window scroll when the arrow keys are pressed.
+	// XXX Probably should attach this to the relevant canvas instead, to enable arrow
+	// keys in the input boxes. See:
+	// https://stackoverflow.com/questions/8916620/disable-arrow-key-scrolling-in-users-browser
+	window.addEventListener("keydown", function(e) {
+    	if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+       		e.preventDefault();
+    	}
+	}, false);
+	
+	// Detect if the enter or return key is pressed in the document
+	document.addEventListener("keydown", function(event) {
+		
+		if (event.key === "Enter") {
+			drawPlots();
+		
+		} else if (event.key === "ArrowRight") {
+			// If we are currently drawing the location marker
+			if (drawMarker) {
+				// Increase the longitude index by one
+				longitudeIdx += 1;
+				
+				// The lon/lat location changes with a mouse click
+				locationChanged = false;
+			
+				// Draw the plots
+				requestAnimationFrame(drawPlots);
+			}
+			
+		} else if (event.key === "ArrowLeft") {
+			// If we are currently drawing the location marker
+			if (drawMarker) {
+				// Increase the longitude index by one
+				longitudeIdx -= 1;
+				
+				// The lon/lat location changes with a mouse click
+				locationChanged = false;
+			
+				// Draw the plots
+				requestAnimationFrame(drawPlots);
+			}
+		
+		} else if (event.key === "ArrowUp") {
+			// If we are currently drawing the location marker
+			if (drawMarker) {
+				// Increase the longitude index by one
+				latitudeIdx += 1;
+				
+				// The lon/lat location changes with a mouse click
+				locationChanged = false;
+			
+				// Draw the plots
+				requestAnimationFrame(drawPlots);
+			}
+		
+		} else if (event.key === "ArrowDown") {
+			// If we are currently drawing the location marker
+			if (drawMarker) {
+				// Increase the longitude index by one
+				latitudeIdx -= 1;
+				
+				// The lon/lat location changes with a mouse click
+				locationChanged = false;
+			
+				// Draw the plots
+				requestAnimationFrame(drawPlots);
+			}
+		}
+	});
+}
+
+// Listens for the mouse in the supplied rectangle (corresponding to the plot picture)
+function listenForMouse(canvasNum, plotRect) {
+	// XXX This still listens for events when the forecast is not drawn.
+	//     Which stops being a (minor) problem when canvases are removed/created as needed.
 	
 	// Get canvas for events
-	const canvas = document.getElementById("myCanvas");
+	const canvas = document.getElementById("myCanvas"+canvasNum);
 	
 	// Detect the mouse location when it is within the canvas element
 	canvas.addEventListener('mousedown', function(evt) {
@@ -377,125 +511,143 @@ async function init() {
 			requestAnimationFrame(drawPlots);
 		}
 	});
-	
-	// Detect if the enter or return key is pressed in the value threshold input field
-	inputField = document.getElementById("thresholdValueSelect");
-	inputField.addEventListener("keypress", function(event) {
-		if (event.key === "Enter") {
-			let norm = getPlotNormalisation(units);
-			maxRain = document.getElementById("thresholdValueSelect").value / norm;
-			drawPlots();
-		}
-	}); 
-	
-	// Detect if the enter or return key is pressed in the probability threshold input field
-	inputField = document.getElementById("thresholdProbabilitySelect");
-	inputField.addEventListener("keypress", function(event) {
-		if (event.key === "Enter") {
-			probability = document.getElementById("thresholdProbabilitySelect").value / 100.0;
-			drawPlots();
-		}
-	}); 
 }
 
 async function drawPlots() {
 	
-	// Get the context for plotting
-	const canvas = document.getElementById("myCanvas");
-	const ctx = canvas.getContext("2d");
+	// See what the input boxes say
+	let norm = getPlotNormalisation(units);
+	maxRain = document.getElementById("thresholdValueSelect").value / norm;
+	probability = document.getElementById("thresholdProbabilitySelect").value / 100.0;
 	
-	// Erase the canvas
-	ctx.clearRect(0,0,canvas.width,canvas.height);
-	
-	let x = 2, y=2;			// Location of plot from top left
-	let width = 500;		// Width of plot in pixels
-	let height = 500;		// Height of plot in pixels
-	
-	// Must use await unless all of the region shape data is loaded in advance
-	// otherwise the region shape data could be loaded multiple times and corrupted.
-	
-	let plotRect;
-	if (plotType == "Probability") {
-		plotRect = await GANForecast.plotExceedenceProbability(ctx, x, y, width, height,
-															   maxRain, units, style,
-															   showPercentages, regionName);
-	} else if (plotType == "Values") {
-		plotRect = await GANForecast.plotExceedenceValue(ctx, x, y, width, height,
-														 probability, units, style, regionName);
+	// Find out how many plots to make
+	let plotAllValidTimes = document.getElementById("validTimeSelect").value;
+	if (plotAllValidTimes == "All") {
+		numCanvases = validTimes.length;
+	} else {
+		numCanvases = 1;
 	}
 	
-	// Plot the marker and associated histogram
-	if (drawMarker) {
+	// Erase all canvases, regardless of how many are being drawn to
+	// XXX In future, the correct number of canvases will exist instead.
+	for (let canvasNum=0;canvasNum<7;canvasNum++) {
+		const canvas = document.getElementById("myCanvas"+canvasNum);
+		const ctx = canvas.getContext("2d");
+		ctx.clearRect(0,0,canvas.width,canvas.height);
+	}
 	
-		// Need the longitude range in the current plot
-		let [minLatIdx,maxLatIdx,minLonIdx,maxLonIdx] = GANForecast.computeLatLonIdxBounds(regionName);
+	// Draw plots in each canvas
+	for (let canvasNum=0;canvasNum<numCanvases;canvasNum++) {
 		
-		// If the location has changed (set the latitude and longitude indices)
-		if (locationChanged) {
+		// Get the context for plotting
+		const canvas = document.getElementById("myCanvas"+canvasNum);
+		const ctx = canvas.getContext("2d");
 		
-			// Get the mouse location within the plot image boundary
-			let xMouse = Math.floor(canvasClickX) - Math.round(plotRect[0]);
-			let yMouse = Math.floor(canvasClickY) - Math.round(plotRect[1]);
-			
-			// Find the corresponding latitude and longitude indices
-			longitudeIdx = minLonIdx + Math.round(xMouse * (maxLonIdx-minLonIdx)
-														 / (plotRect[2]-plotRect[0]));
-			latitudeIdx = maxLatIdx - Math.round(yMouse * (maxLatIdx-minLatIdx)
-														/ (plotRect[3]-plotRect[1]));
-			
-			// By default the location hasn't changed so set this flag now
-			locationChanged = false;
+		// Erase the canvas
+		// XXX Will need this when we have the correct number of canvases
+		// ctx.clearRect(0,0,canvas.width,canvas.height);
 		
-		} else {	// The location has not changed (set click location from the lat/lon indices)
-			canvasClickX = (longitudeIdx - minLonIdx) * (plotRect[2]-plotRect[0])
-													  / (maxLonIdx-minLonIdx) + plotRect[0];
-			canvasClickY = (maxLatIdx - latitudeIdx) * (plotRect[3]-plotRect[1])
-													 / (maxLatIdx-minLatIdx) + plotRect[1];
+		let x = 2, y=2;			// Location of plot from top left
+		let width = 500;		// Width of plot in pixels
+		let height = 500;		// Height of plot in pixels
+		
+		// Must use await unless all of the region shape data is loaded in advance
+		// otherwise the region shape data could be loaded multiple times and corrupted.
+		
+		// The rectangles within which the plots are drawn
+		let plotRect;
+		if (plotType == "Probability") {
+			plotRect = await GANForecast[canvasNum].plotExceedenceProbability(ctx, x, y, width, height,
+																   maxRain, units, style,
+																   showPercentages, regionName);
+		} else if (plotType == "Values") {
+			plotRect = await GANForecast[canvasNum].plotExceedenceValue(ctx, x, y, width, height,
+															 probability, units, style, regionName);
 		}
 		
-		let markerWidth = 10;	// Width of the plot marker in pixels
+		// Plot the marker and associated histogram
+		if (drawMarker) {
 		
-		// Thick black cross
-		ctx.beginPath();
-		ctx.strokeStyle = "#000000";
-		ctx.lineWidth = 3;
-		ctx.moveTo(canvasClickX - markerWidth/2, canvasClickY - markerWidth/2);
-		ctx.lineTo(canvasClickX + markerWidth/2, canvasClickY + markerWidth/2);
-		ctx.moveTo(canvasClickX + markerWidth/2, canvasClickY - markerWidth/2);
-		ctx.lineTo(canvasClickX - markerWidth/2, canvasClickY + markerWidth/2);
-		ctx.stroke();
+			// Need the longitude range in the current plot
+			let [minLatIdx,maxLatIdx,minLonIdx,maxLonIdx] = GANForecast[0].computeLatLonIdxBounds(regionName);
+			
+			// If the location has changed (set the latitude and longitude indices)
+			if (locationChanged) {
+			
+				// Get the mouse location within the plot image boundary
+				let xMouse = Math.floor(canvasClickX) - Math.round(plotRect[0]);
+				let yMouse = Math.floor(canvasClickY) - Math.round(plotRect[1]);
+				
+				// Find the corresponding latitude and longitude indices
+				longitudeIdx = minLonIdx + Math.round(xMouse * (maxLonIdx-minLonIdx)
+															 / (plotRect[2]-plotRect[0]));
+				latitudeIdx = maxLatIdx - Math.round(yMouse * (maxLatIdx-minLatIdx)
+															/ (plotRect[3]-plotRect[1]));
+				
+				// By default the location hasn't changed so set this flag now
+				locationChanged = false;
+			
+			} else {	// The location has not changed (set click location from the lat/lon indices)
+				canvasClickX = (longitudeIdx - minLonIdx) * (plotRect[2]-plotRect[0])
+														  / (maxLonIdx-minLonIdx) + plotRect[0];
+				canvasClickY = (maxLatIdx - latitudeIdx) * (plotRect[3]-plotRect[1])
+														 / (maxLatIdx-minLatIdx) + plotRect[1];
+			}
+			
+			let markerWidth = 10;	// Width of the plot marker in pixels
+			
+			// Thick black cross
+			ctx.beginPath();
+			ctx.strokeStyle = "#000000";
+			ctx.lineWidth = 3;
+			ctx.moveTo(canvasClickX - markerWidth/2, canvasClickY - markerWidth/2);
+			ctx.lineTo(canvasClickX + markerWidth/2, canvasClickY + markerWidth/2);
+			ctx.moveTo(canvasClickX + markerWidth/2, canvasClickY - markerWidth/2);
+			ctx.lineTo(canvasClickX - markerWidth/2, canvasClickY + markerWidth/2);
+			ctx.stroke();
+			
+			// Thin white cross
+			ctx.beginPath();
+			ctx.strokeStyle = "#ffffff";
+			ctx.lineWidth = 1;
+			ctx.moveTo(canvasClickX - markerWidth/2, canvasClickY - markerWidth/2);
+			ctx.lineTo(canvasClickX + markerWidth/2, canvasClickY + markerWidth/2);
+			ctx.moveTo(canvasClickX + markerWidth/2, canvasClickY - markerWidth/2);
+			ctx.lineTo(canvasClickX - markerWidth/2, canvasClickY + markerWidth/2);
+			ctx.stroke();
 		
-		// Thin white cross
-		ctx.beginPath();
-		ctx.strokeStyle = "#ffffff";
-		ctx.lineWidth = 1;
-		ctx.moveTo(canvasClickX - markerWidth/2, canvasClickY - markerWidth/2);
-		ctx.lineTo(canvasClickX + markerWidth/2, canvasClickY + markerWidth/2);
-		ctx.moveTo(canvasClickX + markerWidth/2, canvasClickY - markerWidth/2);
-		ctx.lineTo(canvasClickX - markerWidth/2, canvasClickY + markerWidth/2);
-		ctx.stroke();
-	
-		// Put a line dividing the two plots
-		ctx.strokeStyle = "#b6b6b6";
-		ctx.lineWidth = 1;
-		ctx.beginPath();
-		ctx.moveTo(512, 25);
-		ctx.lineTo(512, 504-25);
-		ctx.stroke();
+			// Put a line dividing the two plots
+			ctx.strokeStyle = "#b6b6b6";
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(512, 25);
+			ctx.lineTo(512, 504-25);
+			ctx.stroke();
+			
+			// Create a new histogram specification
+			let barChartSpec = new barChartSpecification();
+			
+			let y2 = y;
+			let x2 = 522;				// Change the location of the second plot
+			
+			// Plot the histogram and wait for it to finish
+			await GANForecast[canvasNum].plotHistogram(ctx, x2, y2, width, height, maxRain, probability,
+											latitudeIdx, longitudeIdx, units, barChartSpec);
+		}
 		
-		// Create a new histogram specification
-		let barChartSpec = new barChartSpecification();
-		
-		let y2 = y;
- 		let x2 = 522;				// Change the location of the second plot
-		
-		// Plot the histogram and wait for it to finish
-		await GANForecast.plotHistogram(ctx, x2, y2, width, height, maxRain, probability,
-										latitudeIdx, longitudeIdx, units, barChartSpec);
+		// XXX Can make plotRect a local variable and not an array of rectangles. And no
+		//     need to return it.
+		if (canvasMouseDownRegistered[canvasNum] == false) {
+			canvasMouseDownRegistered[canvasNum] = true;
+			listenForMouse(canvasNum, plotRect);
+		}
 	}
 	
-	// Return the rectangle used for mouse detection
-	return plotRect;
+	// Remove mouse events from empty canvases
+	// XXX In future the canvas itself will be removed instead
+// 	for (let canvasNum=numCanvases;canvasNum<7;canvasNum++) {
+// 		// XXX Work out how to dissavle the event listener
+// 	}
 }
 
 init();

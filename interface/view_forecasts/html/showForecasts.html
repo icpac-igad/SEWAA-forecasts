@@ -10,24 +10,25 @@
 <body>
 
 <h3>
-East African rainfall forecasts. (Click for local distribution.)
+East African rainfall forecasts.
 </h3>
+
+<p>Click for local distribution. Use arrow keys to change location by 0.1 degrees.</p>
 
 <p>
 Model:
 <select id="modelSelect" onchange="modelSelect()">
-	<option value="Jurre brishti">Jurre brishti</option>
-    <option value="Mvua kubwa">Mvua kubwa</option>
+	<option value="6h accumulation">6h accumulation</option>
+    <option value="24h accumulation">24h accumulation</option>
 </select>
-</p>
-
-<p id="modelInfo">
-The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a> 
+<span id="modelInfo">
+: The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a> 
 <a href="https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS" target="_blank">
 IFS</a> output is post-processed using
 <a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">
 cGAN</a> trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank"> IMERG</a>
-v6 to produce forecasts of 6h rainfall intervals.
+v6 to produce forecasts of 6h rainfall intervals. Model version 1.
+</span>
 </p>
 
 <p>
@@ -73,7 +74,8 @@ Plot:
 </select>
 
 Value threshold:
-<input type="text" id="thresholdValueSelect" size="6" title="Show the chance of rainfall above this value">
+<input type="text" id="thresholdValueSelect" size="6"
+	title="Show the chance of rainfall above this value" onblur="pValueThresholdInput()">
 <span id="unitsDescription">mm/h</span>.
 <select id="percentagesSelect" onchange="percentagesSelect()" disabled>
 	<option value="Percentages">Show percentages</option>
@@ -81,20 +83,28 @@ Value threshold:
 </select>
 
 Probability threshold:
-<input type="text" id="thresholdProbabilitySelect" size="3" title="Change this number and look at the plot description">
+<input type="text" id="thresholdProbabilitySelect" size="3"
+	title="Change this number and look at the plot description" onblur="pProbabilityThresholdInput()">
 %. Units:
 <select id="unitsSelect" onchange="unitsSelect()">
 	<option value="mm/h">mm/h</option>
     <option value="mm/6h">mm/6h</option>
     <option value="mm/day">mm/day</option>
-    <option value="mm/week">mm/week</option>
+    <!-- <option value="mm/week">mm/week</option> -->
 </select>
 </p>
 
 <p id="statusText"> Status </p>
 
-<canvas id="myCanvas" width="1024" height="504">
+<canvas id="myCanvas0" width="1024" height="504">
 Your browser does not support the HTML canvas tag.</canvas>
+<canvas id="myCanvas1" width="1024" height="504"></canvas>
+<canvas id="myCanvas2" width="1024" height="504"></canvas>
+<canvas id="myCanvas3" width="1024" height="504"></canvas>
+<canvas id="myCanvas4" width="1024" height="504"></canvas>
+<canvas id="myCanvas5" width="1024" height="504"></canvas>
+<canvas id="myCanvas6" width="1024" height="504"></canvas>
+
 
 <script src="../js/plotForecastsMin.js"></script>
 <script src="../js/testScript.js"></script>
