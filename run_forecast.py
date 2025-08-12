@@ -348,16 +348,14 @@ if __name__=='__main__':
     
     
     # Run ELR forecasts
-    # *** Shruti ***
-    # At this point we have the integer variables:
-    #     year, month, day, hour, minute
-    # I use paths relative to the SEWAA-forecasts directory
-    # I assume that you first need
     if (accumulation_time == 6):
+        print("Running ELR 6h forecasts.")
         run_dir=ELR_script_path
         subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
                         "--day", "1", "--accumulation", "6h_accumulations"], cwd=run_dir)
+                        
     elif (accumulation_time == 24):
+        print("Running ELR 24h forecasts.")
         run_dir=ELR_script_path
         subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
                         "--day", "2", "3", "4", "5", "--accumulation", "24h_accumulations"], cwd=run_dir)
