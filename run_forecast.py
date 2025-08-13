@@ -55,22 +55,22 @@ def parseArguments():
  Usage examples:
 
  Run todays 6h forecasts initialised at 0000
-    python run_forecasts.py
-    python run_forecasts.py --accumulation 6h
+    python run_forecast.py
+    python run_forecast.py --accumulation 6h
 
  Run the 6h forecasts for the 10th of February 2025 initialised at 1800
-    python run_forecasts.py --date 20250210 --time 1800
+    python run_forecast.py --date 20250210 --time 1800
 
  Run the most recent 24h forecasts
-    python run_forecasts.py --accumulation 24h
+    python run_forecast.py --accumulation 24h
 
  Run the 24h forecasts for the 10th of February 2025
-    python run_forecasts.py --accumulation 24h --date 20250210  
+    python run_forecast.py --accumulation 24h --date 20250210  
     
 
  Run todays 6h forecasts initialised at 0000 and delete the forecasts once
  statistics have been computed
-    python run_forecasts.py --delete_forecasts Y  
+    python run_forecast.py --delete_forecasts Y  
     """, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--accumulation', help='How long rainfall is accumulated for, either 6h or 24h',default=None,type=str)
     parser.add_argument('--date', help='Forecast initialisation date (YYMMDD)',default=None,type=str)
@@ -347,19 +347,23 @@ if __name__=='__main__':
             subprocess.run(["python", f"forecast2histogram_7d_lowRAM.py", date_str, str(hour)], cwd=run_dir)
     
     
-    # Run ELR forecasts
-    if (accumulation_time == 6):
-        print("Running ELR 6h forecasts.")
-        run_dir=ELR_script_path
-        subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
-                        "--day", "1", "--accumulation", "6h_accumulations"], cwd=run_dir)
-                        
-    elif (accumulation_time == 24):
-        print("Running ELR 24h forecasts.")
-        run_dir=ELR_script_path
-        subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
-                        "--day", "2", "3", "4", "5", "--accumulation", "24h_accumulations"], cwd=run_dir)
+    # Run ELR forecasts (only when time is 0)
+    if (hour == 0):
     
+        if (accumulation_time == 6):
+            print("Running ELR 6h forecasts.")
+            run_dir=ELR_script_path
+            subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
+                            "--day", "1", "--accumulation", "6h_accumulations"], cwd=run_dir)
+                            
+        elif (accumulation_time == 24):
+            print("Running ELR 24h forecasts.")
+            run_dir=ELR_script_path
+            subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
+                            "--day", "2", "3", "4", "5", "--accumulation", "24h_accumulations"], cwd=run_dir)
+    
+    else:
+        print("Skipping ELR forecats for non")
     
     # Update .JSON files for the interface. Overwrite if files exist.
     
