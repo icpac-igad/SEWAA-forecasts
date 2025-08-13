@@ -22,7 +22,7 @@ MODEL_PATH = paths['MODEL_PATH']
 if not os.path.exists(OUT_PATH):
     os.makedirs(OUT_PATH)
 
-ucountries = ['Ethiopia','Kenya']
+countries = ['Ethiopia','Kenya']
 county = True
 subcounty = True
 
