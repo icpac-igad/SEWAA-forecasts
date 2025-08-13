@@ -13,21 +13,21 @@
 # Usage examples:
 #
 # Run todays 6h forecasts initialised at 0000
-#    python run_forecasts.py
-#    python run_forecasts.py --accumulation 6h
+#    python run_forecast.py
+#    python run_forecast.py --accumulation 6h
 #
 # Run the 6h forecasts for the 10th of February 2025 initialised at 1800
-#    python run_forecasts.py --date 20250210 --time 1800
+#    python run_forecast.py --date 20250210 --time 1800
 #
 # Run the most recent 24h forecasts
-#    python run_forecasts.py --accumulation 24h
+#    python run_forecast.py --accumulation 24h
 #
 # Run the 24h forecasts for the 10th of February 2025
-#    python run_forecasts.py --accumulation 24h --date 20250210
+#    python run_forecast.py --accumulation 24h --date 20250210
 #
 # Run todays 6h forecasts initialised at 0000 and delete the forecasts once
 # statistics have been computed
-#    python run_forecasts.py --delete_forecasts Y
+#    python run_forecast.py --delete_forecasts Y
 
 import argparse
 import sys
