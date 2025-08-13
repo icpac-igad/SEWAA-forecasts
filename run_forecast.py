@@ -360,7 +360,7 @@ if __name__=='__main__':
             print("Running ELR 24h forecasts.")
             run_dir=ELR_script_path
             subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
-                            "--day", "2", "3", "4", "5", "--accumulation", "24h_accumulations"], cwd=run_dir)
+                            "--accumulation", "24h_accumulations"], cwd=run_dir)
     
     else:
         print("Skipping ELR forecats for non")

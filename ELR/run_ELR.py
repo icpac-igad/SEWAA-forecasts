@@ -158,7 +158,7 @@ if __name__=='__main__':
     model = args.model
     day = args.day
     if day is None:
-        day = np.arange(1,6)
+        day = np.arange(2,6)
     else:
         day = day[0]
     store_netcdf = args.store_netcdf
@@ -172,6 +172,7 @@ if __name__=='__main__':
             ds_county = {}
         
         for d in day:
+            d = int(d)
             assert isinstance(d,int)
             ds = get_model_output(date, accumulation = accumulation, model=model, day=d)
         
@@ -183,7 +184,7 @@ if __name__=='__main__':
     
             if counties == None and county:
                 counties_loop = glob.glob(MODEL_PATH+f'{country}/counties/*')
-                counties_loop = [c.split('/')[-1].split('_')[0] for c in counties_loop]
+                counties_loop = [c.split('counties')[-1].split('_')[0].replace('/','').replace('\\','') for c in counties_loop]
             
             if len(counties_loop)==0 and county:
                 print("No county-level models found for:",country)
@@ -191,7 +192,7 @@ if __name__=='__main__':
         
             if subcounties == None and subcounty:
                 subcounties_loop = glob.glob(MODEL_PATH+f'{country}/subcounties/*')
-                subcounties_loop = [c.split('/')[-1].split('_')[0] for c in subcounties_loop]
+                subcounties_loop = [c.split('subcounties')[-1].split('_')[0].replace('/','').replace('\\','') for c in subcounties_loop]
         
             if len(subcounties_loop)==0 and subcounty:
                 print("No subcounty-level models found for:",country)
@@ -251,27 +252,27 @@ if __name__=='__main__':
                          get_ELR_predictions(logreg_model, model, ds_sel, d, 
                                                                 Location, date, OUT_PATH+f'{accumulation}/{country}/county/',
                                                                 return_ds=store_netcdf)
-            #pbar.update(1)
-            if store_netcdf:
-                if subcounty_loop:
-                    for Location in ds_subcounty.keys():
-                        if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/subcounty/'):
-                            os.makedirs(OUT_PATH+f'{accumulation}/{country}/subcounty/')
-                        file_name = OUT_PATH+f'{accumulation}/{country}/subcounty/{model}_{Location}_{date}_logreg.nc'
-                        if os.path.exists(file_name):
-                            continue
-                        else:
-                            xr.concat(ds_subcounty[Location],'fcst_valid_time').to_netcdf(file_name)
+        #pbar.update(1)
+        if store_netcdf:
+            if subcounty_loop:
+                for Location in ds_subcounty.keys():
+                    if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/subcounty/'):
+                        os.makedirs(OUT_PATH+f'{accumulation}/{country}/subcounty/')
+                    file_name = OUT_PATH+f'{accumulation}/{country}/subcounty/{model}_{Location}_{date}_logreg.nc'
+                    if os.path.exists(file_name):
+                        continue
+                    else:
+                        xr.concat(ds_subcounty[Location],'fcst_valid_time').to_netcdf(file_name)
+    
+            if county_loop:
+                for Location in ds_county.keys():
+                    if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/county/'):
+                        os.makedirs(OUT_PATH+f'{accumulation}/{country}/county/')
+                    file_name = OUT_PATH+f'{accumulation}/{country}/county/{model}_{Location}_{date}_logreg.nc'
+                    if os.path.exists(file_name):
+                        continue
+                    else:
+                        xr.concat(ds_county[Location],'fcst_valid_time').to_netcdf(file_name)
         
-                if county_loop:
-                    for Location in ds_county.keys():
-                        if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/county/'):
-                            os.makedirs(OUT_PATH+f'{accumulation}/{country}/county/')
-                        file_name = OUT_PATH+f'{accumulation}/{country}/county/{model}_{Location}_{date}_logreg.nc'
-                        if os.path.exists(file_name):
-                            continue
-                        else:
-                            xr.concat(ds_county[Location],'fcst_valid_time').to_netcdf(file_name)
-            
                         
                     
