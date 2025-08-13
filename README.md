@@ -50,6 +50,34 @@ Check that tensor flow is working
 - Uncompress the SEWAA-forecasts-main.zip.
 
 
+## Updating an installation
+
+#### For people who use git:
+
+Update using git.
+
+#### For everyone else:
+
+Download the latest version as in the "Forecast scripts" section above.
+To keep your data move the following directories:
+
+From:
+
+	SEWAA-forecasts-main-OLD/6h_accumulations/IFS_forecast_data
+	SEWAA-forecasts-main-OLD/24h_accumulations/IFS_forecast_data
+	SEWAA-forecasts-main-OLD/6h_accumulations/cGAN_forecasts
+	SEWAA-forecasts-main-OLD/24h_accumulations/cGAN_forecasts
+	SEWAA-forecasts-main-OLD/interface/view_forecasts/data
+	
+To:
+
+	SEWAA-forecasts-main-NEW/6h_accumulations/IFS_forecast_data
+	SEWAA-forecasts-main-NEW/24h_accumulations/IFS_forecast_data
+	SEWAA-forecasts-main-NEW/6h_accumulations/cGAN_forecasts
+	SEWAA-forecasts-main-NEW/24h_accumulations/cGAN_forecasts
+	SEWAA-forecasts-main-NEW/interface/view_forecasts/data
+
+
 ## How to use
 
 #### To make a forecast
