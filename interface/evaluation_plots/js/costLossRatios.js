@@ -14,7 +14,9 @@ async function CostlossSelect() {
 	} else {
 		console.log("ERROR: Unknown region "+region+" in CostlossSelect().");
 	};
-	updateSubRegionMenu(subRegions)}
+	updateSubRegionMenu(subRegions);
+        regionCostLossSelect();
+}
 // Set the sub region menu
 function updateSubRegionMenu(subRegions) {
 	
@@ -81,7 +83,7 @@ function updateThresholdCostLossMenu(thresholds) {
 function regionCostLossSelect() {
 	
 	// Get the region
-	let region = document.getElementById("regionCostLossSelect").value;
+	let region = document.getElementById("regionSelect").value;
 	
 	// Set the threshold menu
 	let thresholds;
