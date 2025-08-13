@@ -2,8 +2,50 @@
 
 // On page load do this:
 // Required because menu settings are initially unknown.
-regionCostLossSelect();
-
+async function CostlossSelect() {
+	let region = document.getElementById("regionSelect").value;
+	
+	// Change the sub-region depending upon the region
+	let subRegions;
+	if (region=="Kenya") {
+		subRegions = ["Kiambu, Nairobi and Kajiado-East"];
+	} else if (region=="Ethiopia") {
+		subRegions = ["Konso and Moyale"];
+	} else {
+		console.log("ERROR: Unknown region "+region+" in CostlossSelect().");
+	};
+	updateSubRegionMenu(subRegions)}
+// Set the sub region menu
+function updateSubRegionMenu(subRegions) {
+	
+	// Select the HTML select menu that we are updating
+	let subRegionSelect = document.getElementById("subRegionSelect");
+	
+	// Record the menu's value before we remove it
+	let subRegion = subRegionSelect.value;
+	
+	// Remove all of the current menu items
+	while (subRegionSelect.hasChildNodes()) {
+		subRegionSelect.removeChild(subRegionSelect.firstChild);
+	}
+	
+	// Add the appropriate menu items
+	let option;
+	for (let i=0; i<subRegions.length;i++) {
+		option = document.createElement("option");
+		option.value = subRegions[i];
+		option.innerHTML = subRegions[i];
+		subRegionSelect.appendChild(option);
+	}
+	
+	// If the original value does not exist.
+	if (!(subRegions.includes(subRegion))) {
+		subRegion = subRegions[subRegions.length-1];	// Pick the final one
+	}
+	
+	// Set the menu to the value it should be
+	subRegionSelect.value = subRegion;
+}
 // Sets the threshold cost loss menu to have the specified thresholds
 function updateThresholdCostLossMenu(thresholds) {
 	

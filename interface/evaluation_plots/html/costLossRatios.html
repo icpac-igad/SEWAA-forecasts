@@ -17,9 +17,14 @@ REV is plotted against the cost-loss ratio equivalent to the forecasted probabil
 <p>
 <p>For further information on the REV refer to <a href="https://rmets.onlinelibrary.wiley.com/doi/pdf/10.1017/S1350482701002092">Wilks (2001)</a>.</p>
 Region:
-<select id="regionCostLossSelect" onchange="regionCostLossSelect()">
-	<option value="Kenya">Kenya: Nairobi, Kiambu and Kajiado</option>
-    <option value="Ethiopia">Ethiopia: Moyale and Konso</option>
+<select id="regionSelect" onchange="CostlossSelect()">
+        <option value="Kenya">Kenya</option>
+    <option value="Ethiopia">Ethiopia</option>
+</select>
+
+Sub-region:
+<select id="subRegionSelect" onchange="CostlossSelect()">
+        <option value="Kiambu, Nairobi and Kajiado-East">Kiambu, Nairobi and Kajiado-East</option>
 </select>
 
 Lead time:
