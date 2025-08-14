@@ -172,10 +172,7 @@ if __name__=='__main__':
 
         county_loop = county
         subcounty_loop = subcounty
-
-        if not os.path.exists(OUT_PATH+f'{country}/'):
-            os.makedirs(OUT_PATH+f'{country}/')
-
+        
         if counties == None and county:
             counties_loop = glob.glob(MODEL_PATH+f'{country}/counties/*')
             counties_loop = [c.split('counties')[-1].split('_')[0].replace('/','').replace('\\','') for c in counties_loop]
@@ -213,8 +210,8 @@ if __name__=='__main__':
     
             if subcounty_loop:
                 
-                if not os.path.exists(OUT_PATH+f'{country}/subcounty/'):
-                    os.makedirs(OUT_PATH+f'{country}/subcounty/')
+                if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/subcounty/'):
+                    os.makedirs(OUT_PATH+f'{accumulation}/{country}/subcounty/')
                 
                 for Location in subcounties_loop:
                     if store_netcdf:
@@ -234,14 +231,16 @@ if __name__=='__main__':
     
                     if store_netcdf:
                         ds_subcounty[Location].append(get_ELR_predictions(logreg_model, model, ds_sel, d, 
-                                                                Location, date, OUT_PATH+f'{country}/subcounty/',return_ds=store_netcdf))
+                                                                Location, date,
+                                                                          None,return_ds=store_netcdf))
                     else:
                         get_ELR_predictions(logreg_model, model, ds_sel, d, 
-                                                                Location, date, OUT_PATH+f'{country}/subcounty/',return_ds=store_netcdf)
+                                                                Location, date, OUT_PATH+f'{accumulation}/{country}/subcounty/',
+                                            return_ds=store_netcdf)
         
             if county_loop:
-                if not os.path.exists(OUT_PATH+f'{country}/county/'):
-                    os.makedirs(OUT_PATH+f'{country}/county/')
+                if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/county/'):
+                    os.makedirs(OUT_PATH+f'{accumulation}/{country}/county/')
                 
                 for Location in counties_loop:
                     if store_netcdf:
@@ -259,7 +258,7 @@ if __name__=='__main__':
     
                     if store_netcdf:
                         ds_county[Location].append(get_ELR_predictions(logreg_model, model, ds_sel, d, 
-                                                                        Location, date, OUT_PATH+f'{accumulation}/{country}/county/',
+                                                                        Location, date, None,
                                                                        return_ds=store_netcdf))
                     else:
                          get_ELR_predictions(logreg_model, model, ds_sel, d, 
