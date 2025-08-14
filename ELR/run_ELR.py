@@ -163,40 +163,53 @@ if __name__=='__main__':
         day = day[0]
     store_netcdf = args.store_netcdf
     accumulation = args.accumulation
-    print('Calculating ELR output for',accumulation)
     #with tqdm(total=len(countries)*len(day)) as pbar:
     for country in countries:
 
         if store_netcdf:
             ds_subcounty = {}
             ds_county = {}
+
+        county_loop = county
+        subcounty_loop = subcounty
+
+        if not os.path.exists(OUT_PATH+f'{country}/'):
+            os.makedirs(OUT_PATH+f'{country}/')
+
+        if counties == None and county:
+            counties_loop = glob.glob(MODEL_PATH+f'{country}/counties/*')
+            counties_loop = [c.split('counties')[-1].split('_')[0].replace('/','').replace('\\','') for c in counties_loop]
         
+        if len(counties_loop)==0 and county:
+            print("No county-level models found for:",country)
+            county_loop=False
+    
+        if subcounties == None and subcounty:
+            subcounties_loop = glob.glob(MODEL_PATH+f'{country}/subcounties/*')
+            subcounties_loop = [c.split('subcounties')[-1].split('_')[0].replace('/','').replace('\\','') for c in subcounties_loop]
+    
+        if len(subcounties_loop)==0 and subcounty:
+            print("No subcounty-level models found for:",country)
+            subcounty_loop=False
+
+        for Location in counties_loop:
+            skip_county = True
+            if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/county/{model}_{Location}_{date}_logreg.nc'):
+                skip_county=False
+
+        for Location in subcounties_loop:
+            skip_subcounty = True
+            if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/subcounty/{model}_{Location}_{date}_logreg.nc'):
+                skip_subcounty=False
+
+        if skip_county and skip_subcounty:
+            print(f"All ELR predictions already made for {country} at {accumulation}, skipping")
+            continue
+        print(f'Calculating ELR output for {accumulation} in {country}')
         for d in day:
             d = int(d)
             assert isinstance(d,int)
             ds = get_model_output(date, accumulation = accumulation, model=model, day=d)
-        
-            county_loop = county
-            subcounty_loop = subcounty
-    
-            if not os.path.exists(OUT_PATH+f'{country}/'):
-                os.makedirs(OUT_PATH+f'{country}/')
-    
-            if counties == None and county:
-                counties_loop = glob.glob(MODEL_PATH+f'{country}/counties/*')
-                counties_loop = [c.split('counties')[-1].split('_')[0].replace('/','').replace('\\','') for c in counties_loop]
-            
-            if len(counties_loop)==0 and county:
-                print("No county-level models found for:",country)
-                county_loop=False
-        
-            if subcounties == None and subcounty:
-                subcounties_loop = glob.glob(MODEL_PATH+f'{country}/subcounties/*')
-                subcounties_loop = [c.split('subcounties')[-1].split('_')[0].replace('/','').replace('\\','') for c in subcounties_loop]
-        
-            if len(subcounties_loop)==0 and subcounty:
-                print("No subcounty-level models found for:",country)
-                subcounty_loop=False
     
             if subcounty_loop:
                 
