@@ -37,6 +37,7 @@ A conda environment is required, to set this up run the following commands:
 	pip install xesmf
 	pip install flake8
 	pip install regionmask
+	pip install schedule
 
 Check that tensor flow is working
 
@@ -96,6 +97,20 @@ will
 1. Download the ECMWF data for 6h accumulations from gbmc.
 2. Run the forecasts.
 3. Process the forecast data for viewing.
+
+#### To automatically run forecasts
+
+Run the script `start_forecasting.py` that is located in the SEWAA-forecasts-main directory.
+
+Running 
+
+	conda activate tf215gpu
+	python start_forecasting.py
+
+will
+1. Check every 15 minutes to see if all forecasts from the last two days are done.
+2. Complete any forecasts from the last two days that are found to be missing.
+3. Delete the forecasts from the last two days, keeping the histogram data for viewing.
 
 #### To view the forecasts
 
