@@ -363,7 +363,7 @@ if __name__=='__main__':
                             "--accumulation", "24h_accumulations"], cwd=run_dir)
     
     else:
-        print("Skipping ELR forecats for non")
+        print("Skipping ELR forecats for time not equal to 00:00.")
     
     # Update .JSON files for the interface. Overwrite if files exist.
     
