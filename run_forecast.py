@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Python script to run the forecasts for a given date and time
 #
 # Requirements:
@@ -36,9 +38,6 @@ import subprocess
 import pathlib
 import datetime
 
-from file_paths import paths
-
-
 # Parse arguments to this script
 def parseArguments():
 
@@ -46,7 +45,6 @@ def parseArguments():
 
     Access to the ECMWF computer gbmc@136.156.130.165.
     Conda environment for cGAN installed and activated.
-    The path to the SEWAA-forecasts directory is specified in file_paths.py
 
  Before use:
  
@@ -172,7 +170,9 @@ if __name__=='__main__':
     # Shorthand
     date_str = f"{year}{month:02d}{day:02d}"
     time_str = f"{hour:02d}{minute:02d}"
-    root_dir = paths["root_dir"]
+    
+    # The SEWAA-forecasts directory
+    root_dir = "."
     
     # Where IFS data for 6 hour accumulations will be stored
     IFS_data_path_6h = f"{root_dir}/6h_accumulations/IFS_forecast_data"
