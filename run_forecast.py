@@ -38,6 +38,7 @@ import subprocess
 import pathlib
 import datetime
 
+
 # Parse arguments to this script
 def parseArguments():
 
@@ -159,6 +160,47 @@ def parseArguments():
     return accumulation_time, year, month, day, hour, minute, delete_forecasts
 
 
+# Checks that all of the histogram counts files for this date and time are there or not.
+# Arguments:
+#    counts_path - The directory to check.
+#    date_str    - A string containing the initialisation date (YYYYMMDD).
+#    hour        - An integer corresponding to initialisation hour of the day.
+#    valid_hours - A list of the valid_hours that the forecast is computed at.
+# Returns:
+#    If all files that should be there, are there.
+def check_counts_files(counts_path, date_str, hour, valid_hours):
+    
+    # Extract the year from date_str
+    year = date_str[0:4]
+    
+    # Check to see if each file exists
+    num_files_exist = 0
+    for i in valid_hours:
+        file_name = f"counts_{date_str}_{hour:02d}_{i}h.nc"
+        exists = os.path.isfile(f"{counts_path}/{year}/{file_name}")
+        if (exists):
+            num_files_exist += 1
+            # print(f"{counts_path}/{year}/{file_name} already exists.")
+    
+    # Does the number of files that exist equal the number that should exist?
+    correct_num_files_exist = (num_files_exist == len(valid_hours))
+    
+    return correct_num_files_exist
+
+
+# Checks that all of the ELR output files for this date and time are there or not.
+# Returns:
+#    If all files that should be there, are there.
+def check_ELR_files():
+
+    # XXX Shruti: Can you write this function?
+    #             You might need to add arguments here and where it is called.
+    #             When this function returns True, ELR is not run.
+
+    # Always returns true (correct files are there) for now.
+    return True
+
+
 if __name__=='__main__':
     
     # Parse arguments to this script
@@ -166,6 +208,10 @@ if __name__=='__main__':
     
     print(f"Producing forecasts of {accumulation_time}h accumulations")
     print(f"initialised on {year}-{month:02d}-{day:02d} at {hour:02d}{minute:02d}.")
+    
+    # What are the valid hours of the forecast
+    valid_hours_6h = [30, 36, 42, 48]
+    valid_hours_24h = [6, 30, 54, 78, 102, 126, 150]
     
     # Shorthand
     date_str = f"{year}{month:02d}{day:02d}"
@@ -259,39 +305,64 @@ if __name__=='__main__':
         
     if (accumulation_time == 6):
         
-        # Create the directory for the cGAN forecasts if it doesn't exist
-        pathlib.Path(cGAN_forecast_path_6h).mkdir(exist_ok=True)
+        # Check to see if the counts are there first
+        correct_num_counts_files = check_counts_files(cGAN_counts_path_6h,
+                                                      date_str, hour, valid_hours_6h)
         
-        file_name = f"GAN_{date_str}_{hour:02d}Z.nc"
+        # Check to see if the ELR files are there first
+        correct_num_ELR_files = check_ELR_files()
         
-        # Check to see if the forecast is there first
-        if os.path.isfile(f"{cGAN_forecast_path_6h}/{file_name}"):
-            print(f"{cGAN_forecast_path_6h}/{file_name} already exists.")
-        
+        # If the counts files are there and delete_forecasts is true don't run the forecasts
+        if not (correct_num_counts_files and correct_num_ELR_files and delete_forecasts):
+            
+            # Create the directory for the cGAN forecasts if it doesn't exist
+            pathlib.Path(cGAN_forecast_path_6h).mkdir(exist_ok=True)
+            
+            file_name = f"GAN_{date_str}_{hour:02d}Z.nc"
+            
+            # Check to see if the forecast is there first
+            if os.path.isfile(f"{cGAN_forecast_path_6h}/{file_name}"):
+                print(f"{cGAN_forecast_path_6h}/{file_name} already exists.")
+            
+            else:
+                print(f"Running 6h cGAN: forecast_date.py {date_str} {time_str}")
+                run_dir = cGAN_forecast_script_path_6h
+                subprocess.run(["python", "forecast_date.py", date_str, str(hour)], cwd=run_dir)
+                
         else:
-            print(f"Running 6h cGAN: forecast_date.py {date_str} {time_str}")
-            run_dir = cGAN_forecast_script_path_6h
-            subprocess.run(["python", "forecast_date.py", date_str, str(hour)], cwd=run_dir)
+            print("Counts and ELR files exist and delete_forecasts is True; no forecast required.")
     
     elif (accumulation_time == 24):
         
-        # Create the directory for the cGAN forecasts if it doesn't exist
-        pathlib.Path(cGAN_forecast_path_24h).mkdir(exist_ok=True)
+        # Check to see if the counts are there first
+        correct_num_counts_files = check_counts_files(cGAN_counts_path_24h,
+                                                      date_str, hour, valid_hours_24h)
         
-        # Perform a separate forecast for each lead time
-        for lead_time_idx in range(7):
+        # Check to see if the ELR files are there first
+        correct_num_ELR_files = check_ELR_files()
         
-            file_name = f"GAN_{date_str}_{hour:02d}Z_v{lead_time_idx}.nc"
+        # If the counts and ELR files are there and delete_forecasts is true don't run the forecasts
+        if not (correct_num_counts_files and correct_num_ELR_files and delete_forecasts):
             
-            # Check to see if the forecast is there first
-            if os.path.isfile(f"{cGAN_forecast_path_24h}/{file_name}"):
-                print(f"{cGAN_forecast_path_24h}/{file_name} already exists.")
+            # Create the directory for the cGAN forecasts if it doesn't exist
+            pathlib.Path(cGAN_forecast_path_24h).mkdir(exist_ok=True)
             
-            else:
-                print(f"Running 24h cGAN: forecast_date.py {lead_time_idx} {date_str}")
-                run_dir = cGAN_forecast_script_path_24h
-                subprocess.run(["python", "forecast_date.py", str(lead_time_idx), date_str], cwd=run_dir)
+            # Perform a separate forecast for each lead time
+            for lead_time_idx in range(7):
+            
+                file_name = f"GAN_{date_str}_{hour:02d}Z_v{lead_time_idx}.nc"
+                
+                # Check to see if the forecast is there first
+                if os.path.isfile(f"{cGAN_forecast_path_24h}/{file_name}"):
+                    print(f"{cGAN_forecast_path_24h}/{file_name} already exists.")
+                
+                else:
+                    print(f"Running 24h cGAN: forecast_date.py {lead_time_idx} {date_str}")
+                    run_dir = cGAN_forecast_script_path_24h
+                    subprocess.run(["python", "forecast_date.py", str(lead_time_idx), date_str], cwd=run_dir)
 
+        else:
+            print("Counts and ELR files exist and delete_forecasts is True; no forecast required.")
 
     # Compute the histogram counts
     
@@ -304,16 +375,20 @@ if __name__=='__main__':
         pathlib.Path(cGAN_counts_path_6h).mkdir(exist_ok=True)
         
         # Check to see if the counts are there first
-        num_files_exist = 0
-        for i in [30,36,42,48]:
-            file_name = f"counts_{date_str}_{hour:02d}_{i}h.nc"
-            exists = os.path.isfile(f"{cGAN_counts_path_6h}/{year}/{file_name}")
-            if (exists):
-                num_files_exist += 1
-                print(f"{cGAN_counts_path_6h}/{year}/{file_name} already exists.")
+        correct_num_counts_files = check_counts_files(cGAN_counts_path_6h, date_str, hour, valid_hours_6h)
         
-        # If a file isn't there
-        if (num_files_exist < 4):
+        # Check to see if the counts are there first
+#         num_files_exist = 0
+#         for i in [30,36,42,48]:
+#             file_name = f"counts_{date_str}_{hour:02d}_{i}h.nc"
+#             exists = os.path.isfile(f"{cGAN_counts_path_6h}/{year}/{file_name}")
+#             if (exists):
+#                 num_files_exist += 1
+#                 print(f"{cGAN_counts_path_6h}/{year}/{file_name} already exists.")
+#         
+#         # If a file isn't there
+#         if (num_files_exist < 4):
+        if not correct_num_counts_files:
             print(f"Computing 6h histograms for {date_str} {time_str}.")
             
             # Create the directory for the year if it doesn't exist
@@ -321,23 +396,30 @@ if __name__=='__main__':
             
             run_dir = f"{root_dir}/6h_accumulations"
             subprocess.run(["python", "forecast2histogram_lowRAM.py", date_str, str(hour)], cwd=run_dir)
-     
+        
+        else:
+            print("Histogram counts files already exist.")
+        
     elif (accumulation_time == 24):
         
         # Create the directory for the data if it doesn't exist
         pathlib.Path(cGAN_counts_path_24h).mkdir(exist_ok=True)
         
         # Check to see if the counts are there first
-        num_files_exist = 0
-        for i in [6,30,54,78,102,126,150]:
-            file_name = f"counts_{date_str}_{hour:02d}_{i}h.nc"
-            exists = os.path.isfile(f"{cGAN_counts_path_24h}/{year}/{file_name}")
-            if (exists):
-                num_files_exist += 1
-                print(f"{cGAN_counts_path_24h}/{year}/{file_name} already exists.")
+        correct_num_counts_files = check_counts_files(cGAN_counts_path_24h, date_str, hour, valid_hours_24h)
         
-        # If a file isn't there
-        if (num_files_exist < 7):
+#         # Check to see if the counts are there first
+#         num_files_exist = 0
+#         for i in [6,30,54,78,102,126,150]:
+#             file_name = f"counts_{date_str}_{hour:02d}_{i}h.nc"
+#             exists = os.path.isfile(f"{cGAN_counts_path_24h}/{year}/{file_name}")
+#             if (exists):
+#                 num_files_exist += 1
+#                 print(f"{cGAN_counts_path_24h}/{year}/{file_name} already exists.")
+#         
+#         # If a file isn't there
+#         if (num_files_exist < 7):
+        if not correct_num_counts_files:
             print(f"Computing 24h histograms for {date_str} {time_str}.")
             
             # Create the directory for the year if it doesn't exist
@@ -345,23 +427,45 @@ if __name__=='__main__':
             
             run_dir = f"{root_dir}/24h_accumulations"
             subprocess.run(["python", f"forecast2histogram_7d_lowRAM.py", date_str, str(hour)], cwd=run_dir)
-    
+        
+        else:
+            print("Histogram counts files already exist.")
     
     # Run ELR forecasts (only when time is 0)
     if (hour == 0):
     
         if (accumulation_time == 6):
-            print("Running ELR 6h forecasts.")
-            run_dir=ELR_script_path
-            subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
-                            "--day", "1", "--accumulation", "6h_accumulations"], cwd=run_dir)
-                            
+                                                          
+            # Check to see if the ELR files are there first
+            correct_num_ELR_files = check_ELR_files()
+        
+            # If the relevant files are there don't run the ELR
+            if not correct_num_ELR_files:
+        
+                print("Running ELR 6h forecasts.")
+                run_dir=ELR_script_path
+                subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
+                                "--day", "1", "--accumulation", "6h_accumulations"], cwd=run_dir)
+            
+            else:
+                print("ELR files already exist.")
+                  
         elif (accumulation_time == 24):
-            print("Running ELR 24h forecasts.")
-            run_dir=ELR_script_path
-            subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
-                            "--accumulation", "24h_accumulations"], cwd=run_dir)
-    
+                                                          
+            # Check to see if the ELR files are there first
+            correct_num_ELR_files = check_ELR_files()
+        
+            # If the relevant files are there and delete_forecasts is true don't run the ELR
+            if not correct_num_ELR_files:
+        
+                print("Running ELR 24h forecasts.")
+                run_dir=ELR_script_path
+                subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
+                                "--accumulation", "24h_accumulations"], cwd=run_dir)
+            
+            else:
+                print("ELR files already exist.")
+                
     else:
         print("Skipping ELR forecats for time not equal to 00:00.")
     
@@ -387,14 +491,16 @@ if __name__=='__main__':
     
         if (accumulation_time == 6):
             file_to_delete = f"{cGAN_forecast_path_6h}/GAN_{date_str}_{hour:02d}Z.nc"
-            print(f"Deleting {file_to_delete}")
-            subprocess.run(["rm", file_to_delete])
+            if os.path.isfile(file_to_delete):  # Check to see if the forecast is there first
+                print(f"Deleting {file_to_delete}")
+                subprocess.run(["rm", file_to_delete])
         
         elif (accumulation_time == 24):
             for lead_time_idx in range(7):
                 file_to_delete = f"{cGAN_forecast_path_24h}/GAN_{date_str}_{hour:02d}Z_v{lead_time_idx}.nc"
-                print(f"Deleting {file_to_delete}")
-                subprocess.run(["rm", file_to_delete])
+                if os.path.isfile(file_to_delete):  # Check to see if the forecast is there first
+                    print(f"Deleting {file_to_delete}")
+                    subprocess.run(["rm", file_to_delete])
     
     
     # Show that we are done (and haven't crashed)
