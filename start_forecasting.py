@@ -14,10 +14,12 @@
 #
 # To run this script in the foreground (Windows):
 #
+#       conda activate tf215gpu
 #       python start_forecasting.py
 #
 # To run this script in the background on Linux or Mac OS:
 #
+#       conda activate tf215gpu
 #       nohup python start_forecasting.py > nohup_forecasting.out 2>&1 &
 #
 #    Logs of the forecast will then be stored in the text file nohup_forecasting.out.
@@ -120,10 +122,12 @@ if __name__=='__main__':
 
 To run this script in the foreground (Windows):
 
+      conda activate tf215gpu
       python start_forecasting.py
 
 To run this script in the background on Linux or Mac OS:
 
+      conda activate tf215gpu
       nohup python start_forecasting.py > nohup_forecasting.out 2>&1 &
 
 Logs of the forecast will then be stored in the text file nohup_forecasting.out.
