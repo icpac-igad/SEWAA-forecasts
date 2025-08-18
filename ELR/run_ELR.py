@@ -13,7 +13,7 @@ from file_paths import paths
 from helper_functions import get_geometry
 import regionmask
 from sklearn.exceptions import InconsistentVersionWarning
-
+import time
 
 OUT_PATH = paths['OUT_PATH']
 FCST_PATH = paths['FCST_PATH']
@@ -151,10 +151,10 @@ if __name__=='__main__':
     
     args = parser.parse_args()
 
-    
+    start_time = time.time()
     date = args.date
     if date is None:
-        date = np.array(['2024-04-23'],dtype='datetime64[D]')[0].astype(object).strftime("%Y%m%d")#datetime.now().strftime("%Y%M%d")
+        date = datetime.now().strftime("%Y%M%d")
     model = args.model
     day = args.day
     if day is None:
@@ -163,6 +163,7 @@ if __name__=='__main__':
         day = day[0]
     store_netcdf = args.store_netcdf
     accumulation = args.accumulation
+
     #with tqdm(total=len(countries)*len(day)) as pbar:
     for country in countries:
 
@@ -172,7 +173,7 @@ if __name__=='__main__':
 
         county_loop = county
         subcounty_loop = subcounty
-        
+
         if counties == None and county:
             counties_loop = glob.glob(MODEL_PATH+f'{country}/counties/*')
             counties_loop = [c.split('counties')[-1].split('_')[0].replace('/','').replace('\\','') for c in counties_loop]
@@ -232,7 +233,8 @@ if __name__=='__main__':
                     if store_netcdf:
                         ds_subcounty[Location].append(get_ELR_predictions(logreg_model, model, ds_sel, d, 
                                                                 Location, date,
-                                                                          None,return_ds=store_netcdf))
+                                                                          OUT_PATH+f'{accumulation}/{country}/subcounty/',
+                                                                          return_ds=store_netcdf))
                     else:
                         get_ELR_predictions(logreg_model, model, ds_sel, d, 
                                                                 Location, date, OUT_PATH+f'{accumulation}/{country}/subcounty/',
@@ -258,7 +260,7 @@ if __name__=='__main__':
     
                     if store_netcdf:
                         ds_county[Location].append(get_ELR_predictions(logreg_model, model, ds_sel, d, 
-                                                                        Location, date, None,
+                                                                        Location, date, OUT_PATH+f'{accumulation}/{country}/county/',
                                                                        return_ds=store_netcdf))
                     else:
                          get_ELR_predictions(logreg_model, model, ds_sel, d, 
