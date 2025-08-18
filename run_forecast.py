@@ -504,4 +504,4 @@ if __name__=='__main__':
     
     
     # Show that we are done (and haven't crashed)
-    print("Done!")
+    print("Script run_forecast.py is done!")
