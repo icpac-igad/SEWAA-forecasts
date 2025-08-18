@@ -12,19 +12,11 @@
 
 # Python script to start running forecasts automatically.
 #
-# To run this script in the foreground (Windows):
+# To run this script:
 #
 #       conda activate tf215gpu
 #       python start_forecasting.py
 #
-# To run this script in the background on Linux or Mac OS:
-#
-#       conda activate tf215gpu
-#       nohup python start_forecasting.py > nohup_forecasting.out 2>&1 &
-#
-#    Logs of the forecast will then be stored in the text file nohup_forecasting.out.
-#    If nohup_forecasting.out gets too big, you can safely delete it.
-
 # Fault tolerance is delegated to run_forecasts.py.
 # run_forecasts.py checks for existing files.
 
@@ -120,18 +112,10 @@ if __name__=='__main__':
     # There are no command line arguments, but the user might want help anyway.
     parser = argparse.ArgumentParser(description="""Python script to start running forecasts automatically.
 
-To run this script in the foreground (Windows):
+To run this script:
 
       conda activate tf215gpu
       python start_forecasting.py
-
-To run this script in the background on Linux or Mac OS:
-
-      conda activate tf215gpu
-      nohup python start_forecasting.py > nohup_forecasting.out 2>&1 &
-
-Logs of the forecast will then be stored in the text file nohup_forecasting.out.
-If nohup_forecasting.out gets too big, you can safely delete it.
     """, formatter_class=argparse.RawTextHelpFormatter)
     parser.parse_args()
 
