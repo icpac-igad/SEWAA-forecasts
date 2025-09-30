@@ -55,6 +55,7 @@ with open(fcstyaml_path, "r") as f:
         print(exc)
 
 # %%
+set_seed = fcst_params["MODEL"]["set_seed"]
 model_folder = fcst_params["MODEL"]["folder"]
 checkpoint = fcst_params["MODEL"]["checkpoint"]
 input_folder = fcst_params["INPUT"]["folder"]
@@ -176,6 +177,9 @@ valid_times = nc_in["valid_time"][:]
 d = datetime(1900,1,1) + timedelta(hours=int(start_times[0]))
 print(f"{d.year}-{d.month:02}-{d.day:02}")
 
+tdelta = d-datetime(1980,1,1)
+tdelta = delta.hours/6
+
 # %%
 # Create output netCDF file
 pathlib.Path(output_folder).mkdir(parents=True, exist_ok=True)
@@ -271,9 +275,13 @@ for out_time_idx, in_time_idx in enumerate(range(start_hour//HOURS, end_hour//HO
     network_fcst_input = np.expand_dims(network_fcst_input, axis=0)  # 1 x lat x lon x 4*len(...)
 
     noise_shape = network_fcst_input.shape[1:-1] + (noise_channels,)
-    noise_gen = NoiseGenerator(noise_shape, batch_size=1)
     progbar = Progbar(ensemble_members)
+    if not set_seed:
+        noise_gen = NoiseGenerator(noise_shape, batch_size=1)
     for ii in range(ensemble_members):
+        if set_seed:
+            noise_gen = NoiseGenerator(noise_shape, batch_size=1, 
+                                       random_seed=tdelta+(out_time_idx*1e5)+(ensemble_members*1e6))
         gan_inputs = [network_fcst_input, network_const_input, noise_gen()]
         gan_prediction = gen.predict(gan_inputs, verbose=False)  # 1 x lat x lon x 1
         netcdf_dict["precipitation"][0, ii, out_time_idx, :, :] = denormalise(gan_prediction[0, :, :, 0])
