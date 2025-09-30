@@ -83,7 +83,7 @@ if __name__=='__main__':
     parser.add_argument('--threshold', help='threshold within which to plot',default=40,type=int)
     parser.add_argument('--loc', help='Location within country to plot',action='append',nargs='+',type=str,default=None)
     parser.add_argument('--probability_bins', help='probability bins to use',
-                        action='append',nargs='+',type=int,default=None)
+                        action='append',nargs='+',type=float,default=None)
     
     args = parser.parse_args()
 
@@ -97,6 +97,11 @@ if __name__=='__main__':
        
     model = args.model
     day = args.day
+    if day==1:
+        accumulation = 6
+    else:
+        accumulation = 24
+        
     country = args.country
     Locations = args.loc
     if Locations is not None:
@@ -105,9 +110,9 @@ if __name__=='__main__':
     threshold = args.threshold
 
     counties = glob.glob(paths['MODEL_PATH']+f'{country}/counties/*')
-    counties = [c.split('/')[-1].split('_')[0] for c in counties]
+    counties = [c.split('counties')[-1].replace('/','').replace('\\','').split('Region_bin_')[-1].split('_')[0] for c in counties]
     subcounties = glob.glob(paths['MODEL_PATH']+f'{country}/subcounties/*')
-    subcounties = [c.split('/')[-1].split('_')[0] for c in subcounties]
+    subcounties = [c.split('subcounties')[-1].replace('/','').replace('\\','').split('Region_bin_')[-1].split('_')[0] for c in subcounties]
    
     ds = []
     geometry_all = []
@@ -118,8 +123,8 @@ if __name__=='__main__':
             region_type = 'subcounty'
         else:
           print('Could not find corresponding model for Location,', Location, 'in country folder', country)
-          return
-        in_path = paths['OUT_PATH']+f'{country}/{region_type}/'
+          break
+        in_path = paths['OUT_PATH']+f'{accumulation}h_accumulations/{country}/{region_type}/'
         ds.append(xr.open_dataset(in_path+f'{model}_{Location}_{date}_logreg.nc'))
         geometry_all.append(get_geometry(Location, region_type, country))
     if len(Locations)>1:

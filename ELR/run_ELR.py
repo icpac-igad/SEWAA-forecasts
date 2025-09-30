@@ -22,7 +22,7 @@ MODEL_PATH = paths['MODEL_PATH']
 if not os.path.exists(OUT_PATH):
     os.makedirs(OUT_PATH)
 
-countries = ['Ethiopia','Kenya']
+countries = ['Rwanda']
 county = True
 subcounty = True
 
@@ -76,6 +76,9 @@ def get_model_checkpoint(Location, country, day, model):
         
     elif country=='Ethiopia':
         return str(day)
+
+    else:
+        return '1'
     
 
 def get_ELR_predictions(logreg_model, model, ds_sel, day, Location, date, save_path, return_ds=False):
@@ -176,19 +179,22 @@ if __name__=='__main__':
 
         if counties == None and county:
             counties_loop = glob.glob(MODEL_PATH+f'{country}/counties/*')
-            counties_loop = [c.split('counties')[-1].split('_')[0].replace('/','').replace('\\','') for c in counties_loop]
-        
+            counties_loop = [c.split('counties')[-1].replace('/','').replace('\\','').split('Region_bin_')[-1].split('_')[0] for c in counties_loop]
+
         if len(counties_loop)==0 and county:
             print("No county-level models found for:",country)
             county_loop=False
+            skip_subcounty=True
     
         if subcounties == None and subcounty:
             subcounties_loop = glob.glob(MODEL_PATH+f'{country}/subcounties/*')
-            subcounties_loop = [c.split('subcounties')[-1].split('_')[0].replace('/','').replace('\\','') for c in subcounties_loop]
+            subcounties_loop = [c.split('subcounties')[-1].replace('/','').replace('\\','').split('Region_bin_')[-1].split('_')[0]\
+                                for c in subcounties_loop]
     
         if len(subcounties_loop)==0 and subcounty:
             print("No subcounty-level models found for:",country)
             subcounty_loop=False
+            skip_subcounty=True
 
         for Location in counties_loop:
             skip_county = True
@@ -254,9 +260,10 @@ if __name__=='__main__':
                     ds_sel = get_region(Location, geometry_all, ds)
                     checkpoint = get_model_checkpoint(Location, country, d, model)
                     if model=='GAN':
-                        logreg_model = joblib.load(MODEL_PATH+f'{country}/counties/{Location}_logreg_models.pkl')[checkpoint]['cGAN']
+                        warnings.filterwarnings('ignore', category=InconsistentVersionWarning)
+                        logreg_model = joblib.load(MODEL_PATH+f'{country}/counties/Region_bin_{Location}_logreg_models.pkl')['cGAN']
                     else:
-                        logreg_model = joblib.load(MODEL_PATH+f'{country}/counties/{Location}_logreg_models.pkl')[checkpoint][model]
+                        logreg_model = joblib.load(MODEL_PATH+f'{country}/counties/Region_bin_{Location}_logreg_models.pkl')[model]
     
                     if store_netcdf:
                         ds_county[Location].append(get_ELR_predictions(logreg_model, model, ds_sel, d, 
