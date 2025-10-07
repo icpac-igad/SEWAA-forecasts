@@ -2,10 +2,8 @@
 name = "sewaa-forecasts-v2"
 version = "0.1.0"
 description = "Scripts for operational rainfall forecasts in the ICPAC region"
-authors = [
-    {name = "Jason Kinyua",email = "jaysnmury@gmail.com"}
-]
-license = {text = "CC BY 4.0"}
+authors = [{ name = "Jason Kinyua", email = "jaysnmury@gmail.com" }]
+license = { text = "CC BY 4.0" }
 readme = "README.md"
 requires-python = ">=3.11.0,<3.13"
 dependencies = [
