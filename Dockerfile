@@ -1,7 +1,7 @@
 ARG PYTHON_VERSION=3.11
 
 FROM alpine/git AS builder
-ARG GAN_REPO=https://github.com/jaysnm/SEWAA-forecasts.git
+ARG GAN_REPO=https://github.com/icpac-igad/SEWAA-forecasts.git
 
 RUN git clone --depth 1 ${GAN_REPO} /tmp/cgan
 
@@ -41,4 +41,4 @@ ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WO
 
 RUN uv sync
 
-CMD ["fastapi", "run", "--proxy-headers", "--workers", ${API_WORKERS}]
+CMD fastapi run --proxy-headers --workers ${API_WORKERS}
