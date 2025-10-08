@@ -13,6 +13,9 @@ ARG USER_NAME=cgan
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 ARG WORK_HOME=/opt/cgan
+ARG API_WORKERS=24
+
+
 
 # install system libraries
 RUN apt-get update -y && \
@@ -34,8 +37,8 @@ COPY --from=builder --chown=${USER_ID}:root /tmp/cgan ${WORK_HOME}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     python -m venv ${WORK_HOME}/.venv
 
-ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME}
+ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS}
 
 RUN uv sync
 
-CMD ["python"]
+CMD ["fastapi", "run", "--proxy-headers", "--workers", ${API_WORKERS}]
