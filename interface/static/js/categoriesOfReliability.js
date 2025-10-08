@@ -14,7 +14,7 @@ function leadTimeCategorySelect() {
 	let threshold = document.getElementById("thresholdCategorySelect").value;
 	
 	// Set the picture
-	document.getElementById("GHACategoryOfReliabilityPlot").src = "../categories_of_reliability/GHA_category_of_reliability_"+leadTime+"-hour_leadtime_"+threshold+"_mmday.png"
+	document.getElementById("GHACategoryOfReliabilityPlot").src = "/static/categories_of_reliability/GHA_category_of_reliability_"+leadTime+"-hour_leadtime_"+threshold+"_mmday.png"
 }
 
 // A user has selected the threshold category menu
