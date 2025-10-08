@@ -242,7 +242,7 @@ if __name__=='__main__':
     ELR_script_path = f"{root_dir}/ELR/"
     
      # Where all of the cGAN histogram counts will be stored
-    cGAN_counts_path = f"{root_dir}/interface/view_forecasts/data"
+    cGAN_counts_path = f"{root_dir}/interface/data"
     
     # Where the cGAN 6h histogram counts will be stored
     cGAN_counts_path_6h = f"{cGAN_counts_path}/counts_6h"

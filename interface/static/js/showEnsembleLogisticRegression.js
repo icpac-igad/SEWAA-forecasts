@@ -183,7 +183,7 @@ async function loadELRForecast() {
 	} else {
 		subRegionPath = "/subcounty/";
 	}
-	let fileName = "../ELR_predictions/"+region+subRegionPath+"GAN_"+subRegion+"_"
+	let fileName = "/static/ELR_predictions/"+region+subRegionPath+"GAN_"+subRegion+"_"
 					+year+month.padStart(2,'0')+day.padStart(2,'0')+"_logreg.nc";
 	
 	// Load data into the forecastDataObject
