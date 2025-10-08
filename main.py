@@ -1,8 +1,8 @@
 import subprocess
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from typing import Literal
-
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from pydantic import BaseModel
@@ -19,6 +19,8 @@ class GenForecastPayload(BaseModel):
 
 app = FastAPI()
 
+app.mount("/static", StaticFiles(directory="interface/static"), name="static")
+app.mount("/data", StaticFiles(directory="interface/data"), name="data")
 
 templates = Jinja2Templates(directory="interface")
 
@@ -26,8 +28,39 @@ templates = Jinja2Templates(directory="interface")
 @app.get("/")
 async def visualize_forecasts(request: Request) -> HTMLResponse:
     """Application Landing Page"""
+    return templates.TemplateResponse(request=request, name="index.html")
+
+
+@app.get("/index.html")
+async def get_index_page() -> RedirectResponse:
+    return RedirectResponse(url="/")
+
+
+@app.get("/showForecasts.html")
+async def get_show_forecasts(request: Request) -> HTMLResponse:
+    """Render Forecasts Visualization Page"""
+    return templates.TemplateResponse(request=request, name="showForecasts.html")
+
+
+@app.get("/ensemble_logistic_regression.html")
+async def get_ensemble_logistic_regression(request: Request) -> HTMLResponse:
+    """Render Ensemble Logistic Regression Page"""
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"id": 10}
+        request=request, name="ensemble_logistic_regression"
+    )
+
+
+@app.get("/costLossRatios.html")
+async def get_cost_loss_ratios(request: Request) -> HTMLResponse:
+    """Render Cost Loss Ratios Page"""
+    return templates.TemplateResponse(request=request, name="costLossRatios.html")
+
+
+@app.get("/categoriesOfReliability.html")
+async def get_categories_of_reliability(request: Request) -> HTMLResponse:
+    """Render Categories Of Reliability Page"""
+    return templates.TemplateResponse(
+        request=request, name="categoriesOfReliability.html"
     )
 
 
