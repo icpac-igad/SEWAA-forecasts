@@ -294,7 +294,8 @@ if __name__ == "__main__":
                 cp = subprocess.run(
                     [
                         "scp",
-                        "-v -o StrictHostKeyChecking=no",
+                        "-v",
+                        "-o StrictHostKeyChecking=no",
                         f"gbmc@136.156.130.165:/data/Operational/{file_name}",
                         IFS_data_path_6h,
                     ]
@@ -330,7 +331,8 @@ if __name__ == "__main__":
                 cp = subprocess.run(
                     [
                         "scp",
-                        "-v -o StrictHostKeyChecking=no",
+                        "-v",
+                        "-o StrictHostKeyChecking=no",
                         f"gbmc@136.156.130.165:/data/Operational_7d/{file_name}",
                         IFS_data_path_24h,
                     ]
