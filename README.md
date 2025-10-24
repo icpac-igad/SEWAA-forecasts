@@ -68,7 +68,7 @@ From:
 	SEWAA-forecasts-main-OLD/24h_accumulations/IFS_forecast_data
 	SEWAA-forecasts-main-OLD/6h_accumulations/cGAN_forecasts
 	SEWAA-forecasts-main-OLD/24h_accumulations/cGAN_forecasts
-	SEWAA-forecasts-main-OLD/interface/view_forecasts/data
+	SEWAA-forecasts-main-OLD/interface/data
 	
 To:
 
@@ -76,7 +76,7 @@ To:
 	SEWAA-forecasts-main-NEW/24h_accumulations/IFS_forecast_data
 	SEWAA-forecasts-main-NEW/6h_accumulations/cGAN_forecasts
 	SEWAA-forecasts-main-NEW/24h_accumulations/cGAN_forecasts
-	SEWAA-forecasts-main-NEW/interface/view_forecasts/data
+	SEWAA-forecasts-main-NEW/interface/data
 
 
 ## How to use

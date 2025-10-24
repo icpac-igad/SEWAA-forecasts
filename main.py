@@ -46,7 +46,7 @@ async def get_show_forecasts(request: Request) -> HTMLResponse:
 async def get_ensemble_logistic_regression(request: Request) -> HTMLResponse:
     """Render Ensemble Logistic Regression Page"""
     return templates.TemplateResponse(
-        request=request, name="ensemble_logistic_regression"
+        request=request, name="ensemble_logistic_regression.html"
     )
 
 
