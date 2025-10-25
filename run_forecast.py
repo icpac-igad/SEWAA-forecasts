@@ -69,7 +69,7 @@ def parseArguments():
 
  Run todays 6h forecasts initialised at 0000 and delete the forecasts once
  statistics have been computed
-    python run_forecast.py --delete_forecasts Y  
+    python run_forecast.py --delete_forecasts Y 
     """,
         formatter_class=argparse.RawTextHelpFormatter,
     )
