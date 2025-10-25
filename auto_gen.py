@@ -1,8 +1,8 @@
-import requests
 from typing import Literal
 from pandas import date_range
 import argparse
 import threading
+import subprocess
 from datetime import datetime, timedelta
 
 
@@ -10,19 +10,22 @@ def make_gen_forecast_request(
     forecast_date: str,
     accumulation: Literal["6h", "24h"] | None = "6h",
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
-    api_url: str | None = None,
 ) -> bool:
     accumulation = accumulation if accumulation is not None else "6h"
     time = time if time is not None else "0000"
-    api_url = api_url if api_url is not None else "http://localhost:8000/gen-forecast"
-    r = requests.get(
-        f"{api_url}?forecast_date={forecast_date}&time={time}&accumulation={accumulation}"
-    )
-    if r.status_code != 200:
-        print(
-            f"failed to generate forecast for {forecast_date}-{accumulation}-{time} with error {r.text}"
-        )
-        return None
+    params = [
+        "python",
+        "run_forecast.py",
+        "--delete_forecasts",
+        "Y",
+        "--date",
+        forecast_date,
+        "--accumulation",
+        accumulation,
+        "--time",
+        time,
+    ]
+    subprocess.run(params)
     print(f"successfully processed forecast for {forecast_date}-{accumulation}-{time}")
 
 
@@ -63,11 +66,10 @@ def auto_gen_forecasts(
     final_date: str | None = None,
     accumulation: Literal["6h", "24h"] | None = "6h",
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
-    api_url: str | None = "http://localhost:8000/gen-forecast",
 ) -> None:
     print(
         f"received request to autogenerate forecasts from {start_date} to {final_date} with "
-        + f"accumulation {accumulation} and initialization time {time} using API endpoint {api_url}"
+        + f"accumulation {accumulation} and initialization time {time}"
     )
     forecast_dates = forecast_dates_generator(
         start_date=start_date, final_date=final_date
@@ -80,7 +82,6 @@ def auto_gen_forecasts(
                 "forecast_date": forecast_date,
                 "accumulation": accumulation,
                 "time": time,
-                "api_url": api_url,
             },
             name=f"{forecast_date}-{accumulation}-{time}",
         )
@@ -97,8 +98,7 @@ if __name__ == "__main__":
             --final_date     - generate forecasts from start_date to this date. By default, the program uses the date today.
             --accumulation   - forecast accumulation period. Either of 6h or 24h. The program uses 6h by default
             --time           - forecast initialization time. Either of 0000, 0600, 1200 or 1800. The program uses 0000 by default
-            --api_url        - API endpoint of the application configured to process the request
-
+        
         Returns:
             A list of successfully generated forecasts
         """,
@@ -125,17 +125,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--time", help="Forecast initialisation time (HHMM)", default="0000", type=str
     )
-    parser.add_argument(
-        "--api_url",
-        help="API endpoint configured to process forecast generation request",
-        default="http://localhost:8000/gen-forecast",
-        type=str,
-    )
     args = parser.parse_args()
     auto_gen_forecasts(
         start_date=args.start_date,
         final_date=args.final_date,
         time=args.time,
         accumulation=args.accumulation,
-        api_url=args.api_url,
     )

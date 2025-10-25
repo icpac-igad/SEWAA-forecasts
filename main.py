@@ -6,7 +6,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from pathlib import Path
-from auto_gen import auto_gen_forecasts
 
 
 class HealthCheckPayload(BaseModel):
@@ -42,7 +41,7 @@ async def visualize_forecasts(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request=request, name="index.html")
 
 
-@app.get("/healthz")
+@app.get("/app-status")
 async def health_check() -> HealthCheckPayload:
     """Application health check endpoint"""
     return HealthCheckPayload(status="online", code=200)
@@ -108,20 +107,3 @@ async def generate_forecasts(
         params.extend(["--time", time])
     subprocess.run(params)
     return GenForecastPayload(status="started")
-
-
-@app.get("/auto-gen-forecasts")
-async def auto_generate_forecasts(
-    start_date: str | None = None,
-    final_date: str | None = None,
-    accumulation: Literal["6h", "24h"] | None = "6h",
-    time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
-    api_url: str | None = "http://localhost:8000/gen-forecast",
-) -> list[str]:
-    auto_gen_forecasts(
-        start_date=start_date,
-        final_date=final_date,
-        accumulation=accumulation,
-        time=time,
-        api_url=api_url,
-    )
