@@ -15,7 +15,7 @@ class HealthCheckPayload(BaseModel):
 
 
 class GenForecastPayload(BaseModel):
-    status: Literal["complete", "pending", "failed"]
+    status: Literal["started", "complete", "pending", "failed"]
 
 
 app = FastAPI()
@@ -107,7 +107,7 @@ async def generate_forecasts(
     if time is not None:
         params.extend(["--time", time])
     subprocess.run(params)
-    return GenForecastPayload(status="forecast generation started")
+    return GenForecastPayload(status="started")
 
 
 @app.get("/auto-gen-forecasts")
