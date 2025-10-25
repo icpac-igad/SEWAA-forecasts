@@ -1,11 +1,11 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Ensemble logistic regression</title>
-</head>
-<body>
+{% extends 'base.html' %}
 
-<h1>Ensemble logistic regression</h1>
+{% block title %}
+Ensemble logistic regression
+{% endblock %}
+
+{% block content %}
+<h3>Ensemble logistic regression</h3>
 
 <!--<p>
 To do:
@@ -92,7 +92,9 @@ Probability bin edges:
 <canvas id="myCanvas" width="504" height="504">
 Your browser does not support the HTML canvas tag.</canvas>
 
+{% endblock %}
+
+{% block scripts %}
 <script src="/static/js/ensembleLogisticRegressionMin.js"></script>
 <script src="/static/js/showEnsembleLogisticRegression.js"></script>
-</body>
-</html>
+{% endblock %}

@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Evaluation plots</title>
-</head>
-<body>
+{% extends 'base.html' %}
 
+{% block title %}Evaluation plots{% endblock %}
+
+{% block content %}
 <p>
 Categories of reliability | <a href="costLossRatios.html">Cost-loss ratios</a>
 </p>
@@ -41,6 +39,9 @@ mm/day.
     src="/static/categories_of_reliability/GHA_category_of_reliability_1-day_leadtime_5_mmday.png"
     alt="GHA_category_of_reliability">
 
+{% endblock %}
+
+{% block scripts %}
 <script src="/static/js/categoriesOfReliability.js"></script>
-</body>
-</html> 
+{% endblock %}
+

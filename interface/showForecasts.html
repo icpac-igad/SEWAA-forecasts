@@ -1,17 +1,11 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>East African rainfall</title>
-<link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
-<link rel="manifest" href="favicon_io/site.webmanifest">
-</head>
-<body>
+{% extends 'base.html' %}
 
-<h3>
+{% block title %}
 East African rainfall forecasts.
-</h3>
+{% endblock %}
+
+{% block content %}
+<h3>East African rainfall forecasts. </h3>
 
 <p>Click for local distribution. Use arrow keys to change location by 0.1 degrees.</p>
 
@@ -106,8 +100,8 @@ Your browser does not support the HTML canvas tag.</canvas>
 <canvas id="myCanvas6" width="1024" height="504"></canvas>
 
 
+{% endblock %}
+{% block scripts %}
 <script src="/static/js/plotForecastsMin.js"></script>
 <script src="/static/js/testScript.js"></script>
-
-</body>
-</html> 
+{% endblock %}

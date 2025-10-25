@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Evaluation plots</title>
-</head>
-<body>
+{% extends 'base.html' %}
+
+{% block title %}Evaluation plots{% endblock %}
+
+{% block content %}
 
 <p>
 <a href="categoriesOfReliability.html">Categories of reliability</a> | Cost-loss ratios
@@ -55,6 +54,9 @@ Scale:
     src="/static/costloss/Kenya_casestudy_costloss_1-day_leadtime_40_mmday.png"
     alt="Cost-loss curves">
 
+{% endblock %}
+
+{% block scripts %}
 <script src="/static/js/costLossRatios.js"></script>
-</body>
-</html> 
+{% endblock %}
+

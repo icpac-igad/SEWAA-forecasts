@@ -1,13 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>East African rainfall</title>
-</head>
-<body>
+{% extends 'base.html' %}
 
-<h1>SEWAA forecasts of East African rainfall</h1>
-
-<p>Main landing page for the local forecast install.</p>
+{% block content %}
+<h3>Main landing page for the local forecast install.</h3>
 
 <h2>Internal</h2>
 
@@ -35,6 +29,4 @@ All files are stored locally.
 		<a href="http://megacorr.dynu.net/ICPAC/cGAN_examplePlots/fastData.html">Oxford prototype website</a>
 	</li>
 </ul> 
-
-</body>
-</html>
+{% endblock %}
