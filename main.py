@@ -5,6 +5,7 @@ from typing import Literal
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from datetime import datetime
 from pathlib import Path
 
 
@@ -84,7 +85,8 @@ async def get_categories_of_reliability(request: Request) -> HTMLResponse:
 async def generate_forecasts(
     accumulation: Literal["6h", "24h"] | None = None,
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
-    forecast_date: str | None = None,
+    forecast_date: str | None = datetime.today().strftime("%Y%m%d"),
+    delete_forecasts: Literal["Y", "N"] | None = "Y",
 ) -> GenForecastPayload:
     """
     Generate cGAN forecasts
@@ -98,7 +100,7 @@ async def generate_forecasts(
         - time (optional): forecast initialization time. Valid for 6h accumulation forecast. Any of 0000, 0600, 1200 and 1800. Defaults to 0000.
 
     """
-    params = ["python", "run_forecast.py", "--delete_forecasts", "Y"]
+    params = ["python", "run_forecast.py", "--delete_forecasts", delete_forecasts]
     if accumulation is not None:
         params.extend(["--accumulation", accumulation])
     if forecast_date is not None:

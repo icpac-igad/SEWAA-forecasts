@@ -41,4 +41,4 @@ ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WO
 
 RUN uv sync
 
-CMD fastapi run --proxy-headers --workers ${API_WORKERS}
+CMD ["fastapi", "run", "--proxy-headers", "--workers", "${API_WORKERS}"]
