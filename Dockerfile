@@ -13,7 +13,7 @@ ARG USER_NAME=cgan
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 ARG WORK_HOME=/opt/cgan
-ARG API_WORKERS=48
+ARG API_WORKERS=32
 
 
 
@@ -41,4 +41,4 @@ ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WO
 
 RUN uv sync
 
-CMD ["fastapi", "run", "--proxy-headers", "--workers", "${API_WORKERS}"]
+CMD ["sh", "-c", "fastapi run --proxy-headers --workers ${API_WORKERS}"]
