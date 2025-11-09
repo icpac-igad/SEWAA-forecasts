@@ -111,7 +111,7 @@ function regionCostLossSelect() {
 	} else {	// scale=="logarithmic"
 		fileName = region+"_casestudy_logscale_costloss_"+leadTime+"-day_leadtime_"+threshold+"_mmday.png"
 	}
-	document.getElementById("costLossPlot").src = "../costloss/"+fileName
+	document.getElementById("costLossPlot").src = "/static/costloss/"+fileName
 }
 
 // A user has selected the lead time costloss menu
