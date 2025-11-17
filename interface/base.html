@@ -4,13 +4,344 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %} SEWAA Forecasts {% endblock %}</title>
-    {% block styles %}{% endblock %}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        header {
+            background-color: #A2CD3D;
+            color: white;
+            padding: 0.8rem 3rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        header .logo-section img {
+            height: 60px;
+            width: auto;
+        }
+
+        header .logo-section .logo-text {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            text-transform: lowercase;
+            color: white;
+        }
+
+        header h1 {
+            display: none;
+        }
+
+        header nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        header nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.5rem 0;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        header nav a:hover {
+            opacity: 0.8;
+            color: blue;
+        }
+        header nav a.active {
+            color: #3498db;
+        }
+
+        header nav a.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #3498db;
+        }
+
+        @media (max-width: 768px) {
+            header .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            header nav {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        footer {
+            background-color: #1e3a5f;
+            color: #ecf0f1;
+            padding: 2rem 3rem;
+            margin-top: auto;
+        }
+
+        footer .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        footer .footer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid rgba(236, 240, 241, 0.2);
+        }
+
+        footer .footer-logos {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        footer .footer-logos img {
+            height: 80px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        footer .footer-resources {
+            text-align: left;
+        }
+
+        footer .footer-resources h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        footer .footer-resources ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        footer .footer-resources li {
+            margin: 0.5rem 0;
+        }
+
+        footer .footer-resources a {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            transition: color 0.3s;
+        }
+
+        footer .footer-resources a:hover {
+            color: #3498db;
+        }
+
+        footer .footer-resources a::before {
+            content: '›';
+            margin-right: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        footer .footer-logos a {
+            display: inline-block;
+            transition: opacity 0.3s;
+        }
+
+        footer .footer-logos a:hover {
+            opacity: 0.8;
+            color: blue;
+        }
+
+        footer .footer-support a {
+            display: inline-block;
+            transition: opacity 0.3s;
+        }
+
+        footer .footer-support a:hover {
+            opacity: 0.8;
+        }
+
+        footer .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 2rem;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        footer .footer-support {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        footer .footer-support img {
+            height: 60px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        footer .footer-support-text {
+            font-size: 1.1rem;
+            color: rgba(236, 240, 241, 0.7);
+        }
+
+        footer .footer-support-text .google-logo {
+            font-weight: 600;
+            color: #ecf0f1;
+        }
+
+        footer p {
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            footer .footer-top {
+                flex-direction: column;
+            }
+
+            footer .footer-logos {
+                justify-content: center;
+            }
+
+            footer .footer-resources {
+                text-align: center;
+                justify-content: center;
+            }
+        }
+    </style>
+    {% block styles %}
+    {% endblock %}
 </head>
 <body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="static/images/sewaa-final-potrait.png" alt="SEWAA Logo">
+            </div>
+            <nav>
+                <a href="index.html" class="{% if request.url.path == '/' or request.url.path == '/index.html' %}active{% endif %}">Home</a>
+                <a href="showForecasts.html" class="{% if request.url.path == '/showForecasts.html' %}active{% endif %}">View Forecasts</a>
+                <a href="ensemble_logistic_regression.html" class="{% if request.url.path == '/ensemble_logistic_regression.html' %}active{% endif %}">Ensemble Logistic Regression</a>
+                <a href="categoriesOfReliability.html" class="{% if request.url.path == '/categoriesOfReliability.html' %}active{% endif %}">Evaluation Tools</a>
+            </nav>
+        </div>
+        <h1>SEWAA Forecasts of East African Rainfall</h1>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <div class="footer-content">
+            <div class="footer-top">
+                <div class="footer-logos">
+                    <a href="https://www.icpac.net/" target="_blank" rel="noopener noreferrer">
+                        <img src="static/images/ICPAC_Website_Header_Logo.svg" alt="IGAD ICPAC">
+                    </a>
 
-    <h1>SEWAA Forecasts of East African Rainfall</h1>
+                    <a href="https://www.wfp.org/" target="_blank" rel="noopener noreferrer">
+                        <img src="static/images/wfp-logo-standard-white-en.png" alt="World Food Programme">
+                    </a>
 
-    {% block content %}{% endblock %}
-    {% block scripts %}{% endblock %}
+                    <a href="https://www.ox.ac.uk/" target="_blank" rel="noopener noreferrer">
+                        <img src="static/images/oxford-large.png" alt="University of Oxford">
+                    </a>
+
+                    <a href="https://www.ethiomet.gov.et/" target="_blank" rel="noopener noreferrer">
+                        <img src="static/images/emi-logo-large.png" alt="Ethiopian Meteorological Institute">
+                    </a>
+
+                    <a href="https://www.ecmwf.int/" target="_blank" rel="noopener noreferrer">
+                        <img src="static/images/ecmwf-logo-white.png" alt="ECMWF">
+                    </a>
+                    <a href="https://www.meteo.go.ke/" target="_blank" rel="noopener noreferrer">
+                        <img src="static/images/kmd-logo.png" alt="KMD">
+                    </a>
+                    <a href="https://www.google.org/" target="_blank" rel="noopener noreferrer">
+                        <img src="static/images/logo_Google.org_Support_FullColor.png" alt="Google LLC">
+                    </a>
+                </div>
+                <div class="footer-resources">
+                    <h3>Important Resources</h3>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="https://www.icpac.net">ICPAC Website</a></li>
+                        <li><a href="http://megacorr.dynu.net/ICPAC/cGAN_examplePlots/fastData.html">Oxford prototype website</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    {% block scripts %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const navLinks = document.querySelectorAll("header nav a");
+            const currentPath = window.location.pathname.split("/").pop(); // e.g. 'index.html'
+        
+            navLinks.forEach(link => {
+                const linkPath = link.getAttribute("href").split("/").pop();
+        
+                // Add 'active' class if this link matches the current page
+                if (linkPath === currentPath) {
+                    link.classList.add("active");
+                } else {
+                    link.classList.remove("active");
+                }
+        
+                // Optional: add click behavior for smooth client-side switching (if same-page)
+                link.addEventListener("click", function() {
+                    navLinks.forEach(l => l.classList.remove("active"));
+                    this.classList.add("active");
+                });
+            });
+        });
+        </script>
+        {% endblock %}
 </body>
 </html>

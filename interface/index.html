@@ -1,32 +1,286 @@
 {% extends 'base.html' %}
 
+{% block title %}SEWAA{% endblock %}
+
+{% block styles %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 50vh;
+        display: flex;
+        align-items: center;
+        padding: 4rem 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        opacity: 0.3;
+    }
+
+    .hero-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+        color: white;
+    }
+    .hero-subtitle {
+        font-size: 2rem;
+        font-weight: 300;
+        margin-bottom: 2rem;
+        opacity: 0.95;
+    }
+
+    .content-section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 4rem 2rem;
+    }
+
+    .description-card {
+        background: linear-gradient(135deg, #D1E9F9 0%, #EBF0CA 100%);
+        border-radius: 16px;
+        padding: 3rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        margin-top: -3rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .description-text {
+        font-size: 1.5rem;
+        line-height: 1.8;
+        color: #4a5568;
+        margin-bottom: 1.5rem;
+    }
+
+    .cta-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 1.25rem;
+        font-weight: 600;
+        padding: 1rem 2.5rem;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        text-decoration: none;
+    }
+
+    .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .cta-button::after {
+        content: '→';
+        font-size: 1.5rem;
+        transition: transform 0.3s ease;
+    }
+
+    .cta-button:hover::after {
+        transform: translateX(5px);
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+    }
+
+    .feature-card {
+        background: linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .feature-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+    }
+
+    .feature-description {
+        font-size: 1rem;
+        color: #718096;
+        line-height: 1.6;
+    }
+
+    .quick-links {
+        background: #f7fafc;
+        padding: 3rem 2rem;
+        margin-top: 3rem;
+    }
+
+    .quick-links-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .quick-links-title {
+        font-size: 2rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #2d3748;
+    }
+
+    .links-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .link-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #2d3748;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .link-card:hover {
+        border-color: #667eea;
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .link-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+
+    .link-text {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+        }
+
+        .description-card {
+            padding: 2rem;
+        }
+
+        .description-text {
+            font-size: 1rem;
+        }
+
+        .features-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<h3>Main landing page for the local forecast install.</h3>
+<div class="content-section">
+    <div class="description-card">
+		<h1 style="font-family: Arial, Helvetica, sans-serif;">Strengthening Early Warning Systems</h1>
+		<h1 style="font-family: Arial, Helvetica, sans-serif;">for Anticipatory Action</h1>
+        <p class="description-text">
+            The Strengthening Early Warning Systems for Anticipatory Action (SEWAA) Project is an innovative project that aims at provision of early warning systems that can be utilized in improving the decision-making process by the different stakeholders over Eastern Africa.
+            Eastern Africa has experienced extreme events that have had a significant impact on the region. These events, such as droughts, floods, and tropical cyclones, have posed challenges to the communities living in this part of the continent. The scarcity of rainfall during droughts has affected water and food availability, increases the levels of food insecurity over the region. On the other hand, heavy rains and floods have led to infrastructure and crop damage, displacement of communities and loss of biodiversity.
+            Coping with these extreme events requires collective efforts and resilient strategies to mitigate their adverse effects on the well-being of Eastern African populations thus the need for Anticipatory Actions in order to preserve the resilience of the communities. The scientific work in the SEWAA project is ambitious and aims to break new ground along two thematic areas by utilizing the state of the art Machine learning techniques.
+        </p>
 
-<h2>Internal</h2>
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="showForecasts.html" class="cta-button">
+                Explore Forecasts
+            </a>
+        </div>
 
-All files are stored locally.
+        <!-- Features Grid -->
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🌍</div>
+                <div class="feature-title">Addressing Climate Disasters in Eastern Africa</div>
+                <div class="feature-description">
+                    E4DRR aims to enhance early warning systems through impact-based forecasting using event-based climate storylines, hazard modeling, and impact estimation.
+                </div>
+            </div>
 
-<ul>
-	<li>
-		<a href="showForecasts.html">View forecasts</a>
-	</li>
-	<li>
-		<a href="ensemble_logistic_regression.html">Ensemble logistic regression</a>
-	</li>
-	<li>
-		<a href="categoriesOfReliability.html">Evaluation plots</a>
-	</li>
-</ul> 
+            <div class="feature-card">
+                <div class="feature-icon">🌦️</div>
+                <div class="feature-title">Probabilistic Forecasts</div>
+                <div class="feature-description">
+                    National and regional stakeholders benefit from improved capacity to generate high-resolution calibrated probabilistic weather forecasts.
+                </div>
+            </div>
 
-<h2>Links to external websites</h2>
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-title">Machine Learning</div>
+                <div class="feature-description">
+                    Utilizing state-of-the-art machine learning techniques to break new ground in weather prediction and early warning systems.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<ul>
-	<li>
-		<a href="https://cgan.icpac.net/">ICPAC SEWAA website</a>
-	</li>
-	<li>
-		<a href="http://megacorr.dynu.net/ICPAC/cGAN_examplePlots/fastData.html">Oxford prototype website</a>
-	</li>
-</ul> 
+<!-- Quick Links Section -->
+<div class="quick-links">
+    <div class="quick-links-container">
+        <h2 class="quick-links-title">Explore Our Tools & Resources</h2>
+        <div class="links-grid">
+            <a href="showForecasts.html" class="link-card">
+                <div class="link-icon">🗺️</div>
+                <div class="link-text">View Forecasts</div>
+            </a>
+
+            <a href="ensemble_logistic_regression.html" class="link-card">
+                <div class="link-icon">📈</div>
+                <div class="link-text">Ensemble Logistic Regression</div>
+            </a>
+
+            <a href="categoriesOfReliability.html" class="link-card">
+                <div class="link-icon">📉</div>
+                <div class="link-text">Evaluation Plots</div>
+            </a>
+
+            <a href="https://github.com/Fenwick-Cooper/ensemble-cgan.git" class="link-card" target="_blank">
+                <div class="link-icon">🧩</div>
+                <div class="link-text">cGAN Model Source Code</div>
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}

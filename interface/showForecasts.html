@@ -4,103 +4,421 @@
 East African rainfall forecasts.
 {% endblock %}
 
-{% block content %}
-<h3>East African rainfall forecasts. </h3>
+{% block styles %}
+<style>
+    .forecasts-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 0 0 0;
+    }
 
-<p>Click for local distribution. Use arrow keys to change location by 0.1 degrees.</p>
+    .page-header {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
 
-<p>
-Model:
-<select id="modelSelect" onchange="modelSelect()">
-	<option value="6h accumulation">6h accumulation</option>
-    <option value="24h accumulation">24h accumulation</option>
-</select>
-<span id="modelInfo">
-: The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a> 
-<a href="https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS" target="_blank">
-IFS</a> output is post-processed using
-<a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">
-cGAN</a> trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank"> IMERG</a>
-v6 to produce forecasts of 6h rainfall intervals. Model version 1.
-</span>
-</p>
+    .page-header h3 {
+        font-size: 2rem;
+        color: #2c3e50;
+        margin: 0 0 0.5rem 0;
+    }
 
-<p>
-Region:
-<select id="regionSelect" onchange="regionSelect()">
-	<option value="East Africa">East Africa</option>
-    <option value="Burundi">Burundi</option>
-    <option value="Djibouti">Djibouti</option>
-    <option value="Eritrea">Eritrea</option>
-    <option value="Ethiopia">Ethiopia</option>
-    <option value="Kenya">Kenya</option>
-    <option value="Rwanda">Rwanda</option>
-    <option value="Somalia">Somalia</option>
-    <option value="South Sudan">South Sudan</option>
-    <option value="Sudan">Sudan</option>
-    <option value="Tanzania">Tanzania</option>
-    <option value="Uganda">Uganda</option>
-</select>
+    .page-header .instruction {
+        color: #555;
+        font-size: 0.95rem;
+        margin: 0;
+    }
 
-Initialisation:
-<select id="initYearSelect" onchange="initTimeSelect()" title="Forecast initialisation year"></select>
-<select id="initMonthSelect" onchange="initTimeSelect()" title="Forecast initialisation month"></select>
-<select id="initDaySelect" onchange="initTimeSelect()" title="Forecast initialisation day"></select>
-<select id="initTimeSelect" onchange="initTimeSelect()" title="Forecast initialisation time"></select>
+    .model-info-section {
+        background-color: #e3f2fd;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #3498db;
+    }
 
-Valid:
-<select id="validTimeSelect" onchange="validTimeSelect()" title="Start of the time we are forecasting"></select>
+    .model-info-section p {
+        margin: 0;
+        color: #555;
+        line-height: 1.6;
+    }
 
-Style:
-<select id="styleSelect" onchange="styleSelect()">
-	<option value="Default">Default</option>
-	<option value="ICPAC">ICPAC</option>
-    <option value="KMD">KMD</option>
-    <option value="EMI">EMI</option>
-</select>
-</p>
+    .model-info-section a {
+        color: #3498db;
+        text-decoration: none;
+    }
 
-<p>
-Plot:
-<select id="plotSelect" onchange="plotSelect()">
-	<option value="Probability">Probability to exceed value</option>
-	<option value="Values">Values below probability</option>
-</select>
+    .model-info-section a:hover {
+        text-decoration: underline;
+    }
 
-Value threshold:
-<input type="text" id="thresholdValueSelect" size="6"
-	title="Show the chance of rainfall above this value" onblur="pValueThresholdInput()">
-<span id="unitsDescription">mm/h</span>.
-<select id="percentagesSelect" onchange="percentagesSelect()" disabled>
-	<option value="Percentages">Show percentages</option>
-	<option value="Words">Show words</option>
-</select>
+    .controls-wrapper {
+        display: grid;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
 
-Probability threshold:
-<input type="text" id="thresholdProbabilitySelect" size="3"
-	title="Change this number and look at the plot description" onblur="pProbabilityThresholdInput()">
-%. Units:
-<select id="unitsSelect" onchange="unitsSelect()">
-	<option value="mm/h">mm/h</option>
-    <option value="mm/6h">mm/6h</option>
-    <option value="mm/day">mm/day</option>
-    <!-- <option value="mm/week">mm/week</option> -->
-</select>
-</p>
+    .controls-section {
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
 
-<p id="statusText"> Status </p>
+    .controls-section h4 {
+        font-size: 1rem;
+        color: #2c3e50;
+        margin: 0 0 1rem 0;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-<canvas id="myCanvas0" width="1024" height="504">
-Your browser does not support the HTML canvas tag.</canvas>
-<canvas id="myCanvas1" width="1024" height="504"></canvas>
-<canvas id="myCanvas2" width="1024" height="504"></canvas>
-<canvas id="myCanvas3" width="1024" height="504"></canvas>
-<canvas id="myCanvas4" width="1024" height="504"></canvas>
-<canvas id="myCanvas5" width="1024" height="504"></canvas>
-<canvas id="myCanvas6" width="1024" height="504"></canvas>
+    .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 2.5rem;
+    }
 
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
 
+    .control-group label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.95rem;
+    }
+
+    .control-group select,
+    .control-group input[type="text"] {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .control-group input[type="text"] {
+        cursor: text;
+    }
+
+    /* Valid Time control group - organized horizontal layout */
+    #validTimeControlGroup {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    #validTimeInputs {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    #validTimeInputs > * {
+        flex: 0 0 auto;
+        min-width: 120px;
+        max-width: 200px;
+    }
+
+    #validTimeInputs select,
+    #validTimeInputs input {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        transition: all 0.3s;
+    }
+
+    .control-group select:hover,
+    .control-group input[type="text"]:hover {
+        border-color: #A2CD3D;
+    }
+
+    .control-group select:focus,
+    .control-group input[type="text"]:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .init-date-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+
+    .init-date-grid select {
+        padding: 0.75rem 0.5rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .init-date-grid select:hover {
+        border-color: #A2CD3D;
+    }
+
+    .init-date-grid select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .inline-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .inline-control input {
+        width: 80px;
+    }
+
+    .inline-control span {
+        color: #555;
+        font-weight: 500;
+    }
+
+    .status-section {
+        background-color: #fff3cd;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #ffc107;
+    }
+
+    .status-section p {
+        margin: 0;
+        color: #856404;
+        font-weight: 500;
+    }
+
+    .visualization-section {
+        background-color: white;
+        padding: 1.5rem 1.5rem 0 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .maps-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 0;
+    }
+
+    .map-item {
+        text-align: center;
+    }
+
+    .map-item canvas {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: crosshair;
+    }
+
+    @media (max-width: 1200px) {
+        .maps-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .forecasts-container {
+            padding: 1rem 0;
+        }
+
+        .page-header h3 {
+            font-size: 1.5rem;
+        }
+
+        .controls-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .init-date-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .visualization-section {
+            padding: 1rem;
+        }
+    }
+</style>
 {% endblock %}
+
+{% block content %}
+<div class="forecasts-container">
+    <div class="page-header">
+        <h3>East African Rainfall Forecasts</h3>
+        <p class="instruction" style="font-style: italic;">Click for local distribution. Use arrow keys to change location by 0.1 degrees.</p>
+    </div>
+
+    <div class="model-info-section">
+        <p>
+            <strong>Model: </strong>
+            <select id="modelSelect" onchange="modelSelect()" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; margin: 0 0.5rem;">
+                <option value="6h accumulation">6h accumulation</option>
+                <option value="24h accumulation">24h accumulation</option>
+            </select>
+            <span id="modelInfo">
+                : The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a>
+                <a href="https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS" target="_blank">IFS</a>
+                output is post-processed using
+                <a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">cGAN</a>
+                trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank">IMERG</a>
+                v6 to produce forecasts of 6h rainfall intervals. Model version 1.
+            </span>
+        </p>
+    </div>
+
+    <div class="controls-wrapper">
+        <div class="controls-section">
+            <h4>Location & Time Settings</h4>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label for="regionSelect">Region</label>
+                    <select id="regionSelect" onchange="regionSelect()">
+                        <option value="East Africa">East Africa</option>
+                        <option value="Burundi">Burundi</option>
+                        <option value="Djibouti">Djibouti</option>
+                        <option value="Eritrea">Eritrea</option>
+                        <option value="Ethiopia">Ethiopia</option>
+                        <option value="Kenya">Kenya</option>
+                        <option value="Rwanda">Rwanda</option>
+                        <option value="Somalia">Somalia</option>
+                        <option value="South Sudan">South Sudan</option>
+                        <option value="Sudan">Sudan</option>
+                        <option value="Tanzania">Tanzania</option>
+                        <option value="Uganda">Uganda</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Initialization Date & Time</label>
+                    <div class="init-date-grid">
+                        <select id="initYearSelect" onchange="initTimeSelect()" title="Forecast initialisation year"></select>
+                        <select id="initMonthSelect" onchange="initTimeSelect()" title="Forecast initialisation month"></select>
+                        <select id="initDaySelect" onchange="initTimeSelect()" title="Forecast initialisation day"></select>
+                        <select id="initTimeSelect" onchange="initTimeSelect()" title="Forecast initialisation time"></select>
+                    </div>
+                </div>
+
+                <div class="control-group" id="validTimeControlGroup">
+                    <label for="validTimeSelect">Valid Time</label>
+                    <div id="validTimeInputs">
+                        <select id="validTimeSelect" onchange="validTimeSelect()" title="Start of the time we are forecasting"></select>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="styleSelect">Style</label>
+                    <select id="styleSelect" onchange="styleSelect()">
+                        <option value="Default">Default</option>
+                        <option value="ICPAC">ICPAC</option>
+                        <option value="KMD">KMD</option>
+                        <option value="EMI">EMI</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-section">
+            <h4>Visualization Settings</h4>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label for="plotSelect">Plot Type</label>
+                    <select id="plotSelect" onchange="plotSelect()">
+                        <option value="Probability">Probability to exceed value</option>
+                        <option value="Values">Values below probability</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="thresholdValueSelect">Value Threshold</label>
+                    <div class="inline-control">
+                        <input type="text" id="thresholdValueSelect" size="6"
+                            title="Show the chance of rainfall above this value" onblur="pValueThresholdInput()">
+                        <span id="unitsDescription">mm/h</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="percentagesSelect">Display Format</label>
+                    <select id="percentagesSelect" onchange="percentagesSelect()" disabled>
+                        <option value="Percentages">Show percentages</option>
+                        <option value="Words">Show words</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="thresholdProbabilitySelect">Probability Threshold</label>
+                    <div class="inline-control">
+                        <input type="text" id="thresholdProbabilitySelect" size="3"
+                            title="Change this number and look at the plot description" onblur="pProbabilityThresholdInput()">
+                        <span>%</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="unitsSelect">Units</label>
+                    <select id="unitsSelect" onchange="unitsSelect()">
+                        <option value="mm/h">mm/h</option>
+                        <option value="mm/6h">mm/6h</option>
+                        <option value="mm/day">mm/day</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-section">
+        <p id="statusText">Status</p>
+    </div>
+
+    <div class="visualization-section">
+        <div class="maps-grid">
+            <div class="map-item">
+                <canvas id="myCanvas0" width="1024" height="504">
+                    Your browser does not support the HTML canvas tag.
+                </canvas>
+            </div>
+            <div class="map-item">
+                <canvas id="myCanvas1" width="1024" height="504"></canvas>
+            </div>
+            <div class="map-item">
+                <canvas id="myCanvas2" width="1024" height="504"></canvas>
+            </div>
+            <div class="map-item">
+                <canvas id="myCanvas3" width="1024" height="504"></canvas>
+            </div>
+        </div>
+        <!-- Hidden canvases for JavaScript compatibility -->
+        <div style="display: none;">
+            <canvas id="myCanvas4" width="1024" height="504"></canvas>
+            <canvas id="myCanvas5" width="1024" height="504"></canvas>
+            <canvas id="myCanvas6" width="1024" height="504"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {% block scripts %}
 <script src="/static/js/plotForecastsMin.js"></script>
 <script src="/static/js/testScript.js"></script>
