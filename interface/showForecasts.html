@@ -78,8 +78,9 @@ East African rainfall forecasts.
 
     .controls-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 2.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: start;
     }
 
     .control-group {
@@ -109,35 +110,15 @@ East African rainfall forecasts.
         cursor: text;
     }
 
-    /* Valid Time control group - organized horizontal layout */
-    #validTimeControlGroup {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+    /* Increase spacing between dropdown options in Valid Time select */
+    #validTimeSelect {
+        min-width: 200px;
     }
 
-    #validTimeInputs {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-    }
-
-    #validTimeInputs > * {
-        flex: 0 0 auto;
-        min-width: 120px;
-        max-width: 200px;
-    }
-
-    #validTimeInputs select,
-    #validTimeInputs input {
-        padding: 0.75rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 6px;
-        font-size: 1rem;
-        background-color: white;
-        transition: all 0.3s;
+    #validTimeSelect option {
+        padding: 0.5rem 0.75rem;
+        line-height: 2;
+        margin: 0.25rem 0;
     }
 
     .control-group select:hover,
@@ -155,27 +136,14 @@ East African rainfall forecasts.
     .init-date-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
+        gap: 0.5rem;
     }
 
+    /* Override padding for init-date-grid selects to fit 4 columns */
     .init-date-grid select {
-        padding: 0.75rem 0.5rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 6px;
-        font-size: 1rem;
-        background-color: white;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-
-    .init-date-grid select:hover {
-        border-color: #A2CD3D;
-    }
-
-    .init-date-grid select:focus {
-        outline: none;
-        border-color: #3498db;
-        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        padding: 0.6rem 0.2rem;
+        font-size: 0.85rem;
+        text-align: center;
     }
 
     .inline-control {
@@ -320,11 +288,9 @@ East African rainfall forecasts.
                     </div>
                 </div>
 
-                <div class="control-group" id="validTimeControlGroup">
+                <div class="control-group">
                     <label for="validTimeSelect">Valid Time</label>
-                    <div id="validTimeInputs">
-                        <select id="validTimeSelect" onchange="validTimeSelect()" title="Start of the time we are forecasting"></select>
-                    </div>
+                    <select id="validTimeSelect" onchange="validTimeSelect()" title="Start of the time we are forecasting"></select>
                 </div>
 
                 <div class="control-group">

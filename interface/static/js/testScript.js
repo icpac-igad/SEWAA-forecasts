@@ -474,39 +474,49 @@ async function init() {
 function listenForMouse(canvasNum, plotRect) {
 	// XXX This still listens for events when the forecast is not drawn.
 	//     Which stops being a (minor) problem when canvases are removed/created as needed.
-	
+
 	// Get canvas for events
 	const canvas = document.getElementById("myCanvas"+canvasNum);
-	
+
 	// Detect the mouse location when it is within the canvas element
 	canvas.addEventListener('mousedown', function(evt) {
-		
-		// Get the mouse position in the canvas element
+
+		// Get the mouse position relative to the canvas element as displayed
 		let canvasRect = canvas.getBoundingClientRect();
 		let clickX = evt.clientX - canvasRect.left;
 		let clickY = evt.clientY - canvasRect.top;
-		
+
+		// Account for canvas scaling (CSS display size vs actual canvas size)
+		// The canvas element has a fixed size (width/height attributes) but may be
+		// displayed at a different size due to CSS (getBoundingClientRect)
+		let scaleX = canvas.width / canvasRect.width;
+		let scaleY = canvas.height / canvasRect.height;
+
+		// Convert click coordinates to actual canvas coordinate system
+		clickX = clickX * scaleX;
+		clickY = clickY * scaleY;
+
 		// Get the mouse location within the plot image boundary
 		let xMouse = Math.floor(clickX) - Math.round(plotRect[0]);
 		let yMouse = Math.floor(clickY) - Math.round(plotRect[1]);
-		
+
 		// Width and height of the plot rectangle
 		let width = Math.round(plotRect[2]-plotRect[0]);
 		let height = Math.round(plotRect[3]-plotRect[1]);
-		
+
 		// If the mouse is within the plot rectangle
 		if (xMouse>=0 && yMouse>=0 && xMouse<width && yMouse<height) {
-			
-			// Save the click location for other functions
+
+			// Save the click location for other functions (in canvas coordinates)
 			canvasClickX = clickX;
 			canvasClickY = clickY;
-			
+
 			// When the plots are drawn, also draw the marker
 			drawMarker = true;
-			
+
 			// The lon/lat location changes with a mouse click
 			locationChanged = true;
-		
+
 			// Draw the plots
 			requestAnimationFrame(drawPlots);
 		}
@@ -567,26 +577,26 @@ async function drawPlots() {
 		
 		// Plot the marker and associated histogram
 		if (drawMarker) {
-		
+
 			// Need the longitude range in the current plot
 			let [minLatIdx,maxLatIdx,minLonIdx,maxLonIdx] = GANForecast[0].computeLatLonIdxBounds(regionName);
-			
+
 			// If the location has changed (set the latitude and longitude indices)
 			if (locationChanged) {
-			
+
 				// Get the mouse location within the plot image boundary
 				let xMouse = Math.floor(canvasClickX) - Math.round(plotRect[0]);
 				let yMouse = Math.floor(canvasClickY) - Math.round(plotRect[1]);
-				
+
 				// Find the corresponding latitude and longitude indices
 				longitudeIdx = minLonIdx + Math.round(xMouse * (maxLonIdx-minLonIdx)
 															 / (plotRect[2]-plotRect[0]));
 				latitudeIdx = maxLatIdx - Math.round(yMouse * (maxLatIdx-minLatIdx)
 															/ (plotRect[3]-plotRect[1]));
-				
+
 				// By default the location hasn't changed so set this flag now
 				locationChanged = false;
-			
+
 			} else {	// The location has not changed (set click location from the lat/lon indices)
 				canvasClickX = (longitudeIdx - minLonIdx) * (plotRect[2]-plotRect[0])
 														  / (maxLonIdx-minLonIdx) + plotRect[0];
@@ -595,7 +605,7 @@ async function drawPlots() {
 			}
 			
 			let markerWidth = 10;	// Width of the plot marker in pixels
-			
+
 			// Thick black cross
 			ctx.beginPath();
 			ctx.strokeStyle = "#000000";
