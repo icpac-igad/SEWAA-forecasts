@@ -1,0 +1,13 @@
+Issues:
+
+When a new date is selected the value of the "Valid:" menu is not maintained if
+"Plot all valid times" is selected.
+
+If the plug is pulled half way through a forecast, it needs to be deleted before the
+forecast can run again. Solution: Write to a temporary file and move it to the final
+file.
+
+Include the model version in the GAN*.nc file name. Without breaking the current output.
+
+
+
