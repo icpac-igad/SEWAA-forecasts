@@ -18,8 +18,8 @@ let canvasClickY = 0;
 let longitudeIdx = 0;			// Which location are we plotting
 let latitudeIDx = 0;
 
-// Hack to make sure multiple event handlers are not registered for the same canvas
-let canvasMouseDownRegistered = [false, false, false, false, false, false, false];
+// Hack to make sure clicking in the plot is handled correctly
+let canvasMouseDownRects = [];
 
 let availableDates;						// An object containing the dates we can use
 let GANForecast = [];			// An array of countsData objects
@@ -42,6 +42,7 @@ async function modelSelect() {
 	await loadDates();		// Each model has it's own set of available dates
 	await loadForecast();		// Load the currently selected forecast
 	drawMarker = false;	// No longer draw the histograms
+	document.getElementById("removeHistBttn").style.display = "none";	// Hide the button
 	drawPlots();
 }
 
@@ -49,6 +50,7 @@ async function modelSelect() {
 function regionSelect() {
 	regionName = document.getElementById("regionSelect").value;
 	drawMarker = false;	// No longer draw the histograms
+	document.getElementById("removeHistBttn").style.display = "none";	// Hide the button
 	drawPlots();
 }
 
@@ -61,7 +63,6 @@ async function initTimeSelect() {
 
 // Called by the validTimeSelect menu
 async function validTimeSelect() {
-	// XXX Create or destroy the correct number of canvases
 	await loadForecast();
 	drawPlots();
 }
@@ -119,6 +120,144 @@ function unitsSelect() {
 	drawPlots();
 }
 
+// Called by the showExplanations input checkbox
+function showExplanation() {
+	
+	// Is the box ticked or not
+	const checked = document.getElementById("showExplanation").checked;
+	
+	// The HTML string that the explanation will be in
+	let explanationString = ``;
+		
+	if (checked == true) {
+	
+		// Get the accumulation time for the description
+		let accumulationTime = 6;
+		let easiestUnits = "mm/6h";
+		if (document.getElementById("modelSelect").value == "24h accumulation") {
+			accumulationTime = 24;
+			easiestUnits = "mm/day";
+		}
+		// Get the value threshold for the description
+		let thresholdValue = document.getElementById("thresholdValueSelect").value;
+		let thresholdProbability = document.getElementById("thresholdProbabilitySelect").value;
+		// Get the units for the description
+		let units = document.getElementById("unitsSelect").value;
+	
+		// Explanation depends on the type of plot in the "Plot" menu.
+		if (document.getElementById("plotSelect").value == "Probability") {
+			explanationString +=
+				`<b>Map description:</b> The map shows the chance that rainfall
+				 accumulated over `+accumulationTime+` hours between the valid times, will
+				 be above `+thresholdValue+` `+units+` at each location. This chance has
+				 been calculated at each location from the histogram at that location.
+				 
+				 Each colour covers a range of probabilities. There are only five
+				 categories to illustrate that we should not be overconfident in the
+				 accuracy of our probability prediction and to make the plot clear. The
+				 precise probabilities calculated are available from the histograms.
+				 
+				 The value threshold (`+thresholdValue+` `+units+`) can be changed to the
+				 value you want in the "Value threshold" box above. The units can be set
+				 in the "Units" menu also above. For example, if you are interested in
+				 rainfall above 20 mm/day, first set the "Units" menu to "mm/day" and then
+				 set the "Value threshold" box to "20". Setting the units to "`+
+				 easiestUnits+`" means that the rainfall values plotted correspond to the
+				 total rainfall over this `+accumulationTime+` hour period.
+				 
+				 The colour scale can be labelled as a percentage or in words by selecting
+				 "Show percentages" or "Show words" in the menu above.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval. The value threshold used in the map (`+
+					thresholdValue+` `+units+`) is represented at this location by the
+					blue line. The number of ensemble members to the right of the blue
+					line divided by the total number of ensemble members is the predicted
+					probability that the threshold will be exceeded. `+
+					thresholdProbability+`% of the ensemble members are to the left of the
+					red line and the rest are to the right of it. This percentage can be
+					set in the "Probability threshold" box above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+								  
+		} else if (document.getElementById("plotSelect").value == "Values") {
+			explanationString +=
+				`<b>Map description:</b> The map shows that for rainfall accumulated over
+				 `+accumulationTime+` hours between the valid times, `+
+				 thresholdProbability+`% of ensemble members predicted rainfall below the
+				 plotted value at each location. The remaining ensemble members predicted
+				 rainfall above the plotted value at each location. This rainfall value
+				 has been calculated at each location from the histogram at that location.
+				 
+				 The probability threshold (`+thresholdProbability+`%) can be changed to
+				 the percentage you want in the "Probability threshold" box above. A
+				 probability threshold of 50% corresponds to the <i>ensemble median</i>
+				 which is a good alternative to the ensemble mean when looking at
+				 rainfall. A probability threshold of 95% indicates that only 5% of
+				 ensemble members exceeded the plotted value. In that case rainfall above
+				 the predicted value is unlikely. A probability threshold of 95% is a
+				 good alternative to using the ensemble standard deviation to estimate the
+				 range of predicted rainfall.
+				 
+				 Each colour covers a range of values and the precise values calculated
+				 are available from the histograms. The units of the colour scale can be
+				 set in the "Units" menu above. The units show the rainfall rate on
+				 average over the `+accumulationTime+` hour period. Setting the units to
+				 "`+easiestUnits+`" means that the rainfall values plotted correspond to
+				 the total rainfall over this `+accumulationTime+` hour period.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval. The probability threshold used in the map
+					(`+thresholdProbability+`%) is represented at this location by the
+					red line. `+thresholdProbability+`% of the ensemble members are to the
+					left of the red line and the rest are to the right of it.
+					
+					The blue line corresponds to a value threshold. The number of ensemble
+					members to the right of the blue line divided by the total number of
+					ensemble members is the predicted probability that the value threshold
+					will be exceeded. This value can be set in the "Value threshold" box
+					above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+		}
+		
+		// Gap between paragraph and plots
+		explanationString += "<br><br>";
+		
+		// Add the string to the paragraph
+		document.getElementById("mapExplanationText").innerHTML = explanationString;
+		
+		// Show the explanation
+		document.getElementById("mapExplanationText").style.display = "inline";
+	} else {
+		// Hide the explanation
+		document.getElementById("mapExplanationText").style.display = "none";
+	}
+	
+	// XXX Give the model description too
+	
+	
+}
+
+// Called by the removeHistBttn button
+function removeHistograms() {
+	drawMarker = false;	// No longer draw the histograms
+	document.getElementById("removeHistBttn").style.display = "none";	// Hide the button
+	drawPlots();
+}
+
 // Loads and plots the currently selected forecast
 async function loadForecast() {
 	let year = document.getElementById("initYearSelect").value;
@@ -149,7 +288,6 @@ async function loadForecast() {
 										 +"_"+validTimes[i]+"h.nc";
 			
 			// Load data into the forecastDataObject
-			// XXX Load to an array of objects
 			await GANForecast[i].loadGANForecast(fileName, modelName, accumulationHours);
 		}
 	} else {	// Load a single valid time
@@ -471,15 +609,16 @@ async function init() {
 }
 
 // Listens for the mouse in the supplied rectangle (corresponding to the plot picture)
-function listenForMouse(canvasNum, plotRect) {
-	// XXX This still listens for events when the forecast is not drawn.
-	//     Which stops being a (minor) problem when canvases are removed/created as needed.
+function listenForMouse(canvasNum) {
 	
 	// Get canvas for events
-	const canvas = document.getElementById("myCanvas"+canvasNum);
+	const canvas = document.getElementById("mapCanvas"+canvasNum);
 	
 	// Detect the mouse location when it is within the canvas element
 	canvas.addEventListener('mousedown', function(evt) {
+		
+		// Get the current rectangle for dealing with plot clicks from a global variable
+		plotRect = canvasMouseDownRects[canvasNum];
 		
 		// Get the mouse position in the canvas element
 		let canvasRect = canvas.getBoundingClientRect();
@@ -503,6 +642,7 @@ function listenForMouse(canvasNum, plotRect) {
 			
 			// When the plots are drawn, also draw the marker
 			drawMarker = true;
+			document.getElementById("removeHistBttn").style.display = "inline";	// Show the button
 			
 			// The lon/lat location changes with a mouse click
 			locationChanged = true;
@@ -514,6 +654,9 @@ function listenForMouse(canvasNum, plotRect) {
 }
 
 async function drawPlots() {
+
+	// It's easier to update the plot explanation every time the plots are drawn
+	showExplanation();
 	
 	// See what the input boxes say
 	let norm = getPlotNormalisation(units);
@@ -528,24 +671,100 @@ async function drawPlots() {
 		numCanvases = 1;
 	}
 	
-	// Erase all canvases, regardless of how many are being drawn to
-	// XXX In future, the correct number of canvases will exist instead.
-	for (let canvasNum=0;canvasNum<7;canvasNum++) {
-		const canvas = document.getElementById("myCanvas"+canvasNum);
-		const ctx = canvas.getContext("2d");
-		ctx.clearRect(0,0,canvas.width,canvas.height);
+	// Ensure the correct number of map canvases exist
+	let canvasNum=0;
+	while (document.getElementById("mapCanvas"+canvasNum) != null) {
+		// If this canvas is not needed
+		if (canvasNum+1 > numCanvases) {
+			canvasElement = document.getElementById("mapCanvas"+canvasNum);
+			canvasElement.remove();
+		}
+		canvasNum += 1;
 	}
+	// If there are insufficient canvases
+	while (canvasNum < numCanvases) {
+		const canvasElement = document.createElement("canvas");
+		canvasElement.id = "mapCanvas"+canvasNum;
+		canvasElement.width = 513;
+		canvasElement.height = 504;
+		canvasElement.innerHTML = "Your browser does not support the HTML canvas tag.";
+		// canvasElement.style="border:1px solid grey";
+		document.body.appendChild(canvasElement);
+		// Listen for clicks in the canvas
+		listenForMouse(canvasNum);
+		canvasNum += 1;
+	}
+	
+	// Remove all mapNewLine line breaks
+	let brIdx=0;
+	while (document.getElementById("mapNewLine"+brIdx) != null) {
+		brElement = document.getElementById("mapNewLine"+brIdx);
+		brElement.remove();
+		brIdx += 1;
+	}
+	
+	// Create the necessary histogram canvases (Same code as above almost)
+	if (drawMarker) {
+		// Ensure the correct number of histogram canvases exist
+		let canvasNum=0;
+		while (document.getElementById("histogramCanvas"+canvasNum) != null) {
+			// If this canvas is not needed
+			if (canvasNum+1 > numCanvases) {
+				canvasElement = document.getElementById("histogramCanvas"+canvasNum);
+				canvasElement.remove();
+			}
+			canvasNum += 1;
+		}
+		// If there are insufficient canvases
+		brIdx=0;	// Keep track of the number of line breaks
+		while (canvasNum < numCanvases) {
+			const canvasElement = document.createElement("canvas");
+			canvasElement.id = "histogramCanvas"+canvasNum;
+			canvasElement.width = 511;
+			canvasElement.height = 504;
+			canvasElement.innerHTML = "Your browser does not support the HTML canvas tag.";
+			// canvasElement.style="border:1px solid grey";
+			
+			// Place the histogram canvas just after the map canvas
+			const mapElement = document.getElementById("mapCanvas"+canvasNum);
+			mapElement.insertAdjacentElement("afterend", canvasElement);
+			
+			// If the map drawn is to the right of the histogram
+			mapRect = mapElement.getClientRects();
+			histogramRect = canvasElement.getClientRects();
+			// With a buffer to account for funky layout engines
+			if (mapRect[0].x > histogramRect[0].x + mapElement.width/2) {
+				// Insert <br> before the map
+				const brElement = document.createElement("br");
+				brElement.id = "mapNewLine"+brIdx;
+				brIdx += 1;
+				mapElement.insertAdjacentElement("beforebegin", brElement);
+			}
+						
+			canvasNum += 1;
+		}
+	} else {
+		// Remove all histogram canvases
+		let canvasNum=0;
+		while (document.getElementById("histogramCanvas"+canvasNum) != null) {
+			canvasElement = document.getElementById("histogramCanvas"+canvasNum);
+			canvasElement.remove();
+			canvasNum += 1;
+		}
+	}
+	
+	// Reset the array of rectangles containing map canvas boundaries
+	canvasMouseDownRects = [];
 	
 	// Draw plots in each canvas
 	for (let canvasNum=0;canvasNum<numCanvases;canvasNum++) {
 		
 		// Get the context for plotting
-		const canvas = document.getElementById("myCanvas"+canvasNum);
+		const canvas = document.getElementById("mapCanvas"+canvasNum);
 		const ctx = canvas.getContext("2d");
 		
 		// Erase the canvas
-		// XXX Will need this when we have the correct number of canvases
-		// ctx.clearRect(0,0,canvas.width,canvas.height);
+		ctx.clearRect(0,0,canvas.width,canvas.height);
 		
 		let x = 2, y=2;			// Location of plot from top left
 		let width = 500;		// Width of plot in pixels
@@ -564,6 +783,9 @@ async function drawPlots() {
 			plotRect = await GANForecast[canvasNum].plotExceedenceValue(ctx, x, y, width, height,
 															 probability, units, style, regionName);
 		}
+		
+		// Save plotRect for understanding map clicks
+		canvasMouseDownRects[canvasMouseDownRects.length] = plotRect;
 		
 		// Plot the marker and associated histogram
 		if (drawMarker) {
@@ -628,26 +850,20 @@ async function drawPlots() {
 			let barChartSpec = new barChartSpecification();
 			
 			let y2 = y;
-			let x2 = 522;				// Change the location of the second plot
+			let x2 = 8;				// Change the location of the second plot
+			
+			// Get the context for plotting
+			const histogramCanvas = document.getElementById("histogramCanvas"+canvasNum);
+			const histogramCtx = histogramCanvas.getContext("2d");
+			
+			// Erase the canvas
+			histogramCtx.clearRect(0,0,histogramCanvas.width,histogramCanvas.height);
 			
 			// Plot the histogram and wait for it to finish
-			await GANForecast[canvasNum].plotHistogram(ctx, x2, y2, width, height, maxRain, probability,
-											latitudeIdx, longitudeIdx, units, barChartSpec);
-		}
-		
-		// XXX Can make plotRect a local variable and not an array of rectangles. And no
-		//     need to return it.
-		if (canvasMouseDownRegistered[canvasNum] == false) {
-			canvasMouseDownRegistered[canvasNum] = true;
-			listenForMouse(canvasNum, plotRect);
+			await GANForecast[canvasNum].plotHistogram(histogramCtx, x2, y2, width, height,
+						maxRain, probability,latitudeIdx, longitudeIdx, units, barChartSpec);
 		}
 	}
-	
-	// Remove mouse events from empty canvases
-	// XXX In future the canvas itself will be removed instead
-// 	for (let canvasNum=numCanvases;canvasNum<7;canvasNum++) {
-// 		// XXX Work out how to dissavle the event listener
-// 	}
 }
 
 init();

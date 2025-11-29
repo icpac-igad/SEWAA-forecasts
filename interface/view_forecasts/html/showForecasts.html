@@ -2,10 +2,6 @@
 <html>
 <head>
 <title>East African rainfall</title>
-<link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
-<link rel="manifest" href="favicon_io/site.webmanifest">
 </head>
 <body>
 
@@ -85,7 +81,9 @@ Value threshold:
 Probability threshold:
 <input type="text" id="thresholdProbabilitySelect" size="3"
 	title="Change this number and look at the plot description" onblur="pProbabilityThresholdInput()">
-%. Units:
+%.
+
+Units:
 <select id="unitsSelect" onchange="unitsSelect()">
 	<option value="mm/h">mm/h</option>
     <option value="mm/6h">mm/6h</option>
@@ -94,16 +92,16 @@ Probability threshold:
 </select>
 </p>
 
+<p>
+<input type="checkbox" id="showExplanation" onclick="showExplanation()"> Show plot explanation &nbsp;
+<button id="removeHistBttn" onclick="removeHistograms()" style="display:none;">Remove histograms</button>
+</p>
+
 <p id="statusText"> Status </p>
 
-<canvas id="myCanvas0" width="1024" height="504">
-Your browser does not support the HTML canvas tag.</canvas>
-<canvas id="myCanvas1" width="1024" height="504"></canvas>
-<canvas id="myCanvas2" width="1024" height="504"></canvas>
-<canvas id="myCanvas3" width="1024" height="504"></canvas>
-<canvas id="myCanvas4" width="1024" height="504"></canvas>
-<canvas id="myCanvas5" width="1024" height="504"></canvas>
-<canvas id="myCanvas6" width="1024" height="504"></canvas>
+<div id="mapExplanationText" style="display:none;">
+Some text to explain the current plots.
+<br><br></div>
 
 
 <script src="../js/plotForecastsMin.js"></script>
