@@ -464,7 +464,7 @@ if __name__=='__main__':
     # Run ELR forecasts (only when time is 0)
     if (hour == 0):
                   
-        elif (accumulation_time == 24):
+        if (accumulation_time == 24):
                                                           
             # Check to see if the ELR files are there first
             correct_num_ELR_files = check_ELR_files(ELR_model_path, ELR_predictions_path, accumulation_time,
