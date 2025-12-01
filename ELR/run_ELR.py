@@ -155,7 +155,7 @@ if __name__=='__main__':
     model = args.model
     day = args.day
     if day is None:
-        day = np.arange(2,6)
+        day = np.arange(1)
     else:
         day = day[0]
     store_netcdf = args.store_netcdf

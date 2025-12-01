@@ -463,23 +463,6 @@ if __name__=='__main__':
     
     # Run ELR forecasts (only when time is 0)
     if (hour == 0):
-    
-        if (accumulation_time == 6):
-                                                          
-            # Check to see if the ELR files are there first
-            correct_num_ELR_files = check_ELR_files(ELR_model_path, ELR_predictions_path, accumulation_time,
-                                               ELR_countries, date_str)
-        
-            # If the relevant files are there don't run the ELR
-            if not correct_num_ELR_files:
-        
-                print("Running ELR 6h forecasts.")
-                run_dir=ELR_script_path
-                subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
-                                "--day", "1", "--accumulation", "6h_accumulations"], cwd=run_dir)
-            
-            else:
-                print("ELR files already exist.")
                   
         elif (accumulation_time == 24):
                                                           
