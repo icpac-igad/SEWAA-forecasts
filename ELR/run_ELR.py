@@ -32,9 +32,9 @@ subcounties = None
 def get_model_output(date, model="GAN", day=1):
 
     if model == 'GAN':
-        fcst_root_dir = f'{FCST_PATH}/{accumulation}/cGAN_forecasts/'
+        fcst_root_dir = f'{FCST_PATH}/24/cGAN_forecasts/'
     elif model=='IFS':
-        fcst_root_dir = f'{FCST_PATH}/{accumulation}/{model}_forecast_data/'
+        fcst_root_dir = f'{FCST_PATH}/24/{model}_forecast_data/'
 
     ds_fcst = xr.open_dataset(fcst_root_dir+f'{model}_{date}_00Z_v{day}.nc')
     ds_fcst = ds_fcst.isel({"valid_time":0})
