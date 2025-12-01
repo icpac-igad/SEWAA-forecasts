@@ -30,16 +30,72 @@ let validTimes = [];			// An array of valid times, set in updateDateMenus
 // Called by the modelSelect menu
 async function modelSelect() {
 	modelName = document.getElementById("modelSelect").value;
-	
+
+	console.log("Model selected:", modelName);
+
+	// Check if a specific valid time is selected (before loadDates updates the menu)
+	let validTimeValue = document.getElementById("validTimeSelect").value;
+	let isSpecificTime = (validTimeValue !== "All");
+
+	console.log("Is specific time selected:", isSpecificTime, "Value:", validTimeValue);
+
 	// Set the model description
 	if (modelName == "6h accumulation") {
 		document.getElementById("modelInfo").innerHTML = "The <a href=\"https://www.ecmwf.int/\" target=\"_blank\">ECMWF</a> <a href=\"https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS\" target=\"_blank\">IFS</a> output is post-processed using <a href=\"https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120\" target=\"_blank\">cGAN</a> trained on <a href=\"https://gpm.nasa.gov/data/imerg\" target=\"_blank\"> IMERG</a> v6 from 2018 and 2019 to produce forecasts of 6h rainfall intervals. Model version 1.";
-	
+
 	} else if (modelName == "24h accumulation") {
 		document.getElementById("modelInfo").innerHTML = "The <a href=\"https://www.ecmwf.int/\" target=\"_blank\">ECMWF</a> <a href=\"https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS\" target=\"_blank\">IFS</a> output is post-processed using <a href=\"https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120\" target=\"_blank\">cGAN</a> trained on <a href=\"https://gpm.nasa.gov/data/imerg\" target=\"_blank\"> IMERG</a> v7 from 2018, 2019, 2020 and 2021 to produce forecasts of 24h rainfall intervals. Model version 2.";
 
 	}
+
 	await loadDates();		// Each model has it's own set of available dates
+
+	// After loadDates, check the valid time value again (it may have changed)
+	validTimeValue = document.getElementById("validTimeSelect").value;
+	isSpecificTime = (validTimeValue !== "All");
+
+	console.log("After loadDates - Is specific time:", isSpecificTime, "Value:", validTimeValue);
+
+	// Set canvas visibility based on model and valid time selection
+	if (isSpecificTime) {
+		// Show only 1 canvas centered for specific time
+		console.log("Showing only 1 canvas for specific time");
+		document.getElementById("myCanvas0").parentElement.style.display = "block";
+		document.getElementById("myCanvas0").parentElement.classList.add("single-canvas-view");
+		document.getElementById("myCanvas1").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas2").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas3").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
+	} else {
+		// "Plot all valid times" is selected
+		document.getElementById("myCanvas0").parentElement.classList.remove("single-canvas-view");
+
+		if (modelName == "6h accumulation") {
+			// Show 4 canvases for 6h model
+			console.log("Showing 4 canvases for 6h model");
+			document.getElementById("myCanvas0").parentElement.style.display = "block";
+			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
+			document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
+			document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
+
+		} else if (modelName == "24h accumulation") {
+			// Show all 7 canvases for 24h model
+			console.log("Showing all 7 canvases for 24h model");
+			document.getElementById("myCanvas0").parentElement.style.display = "block";
+			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas4").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas5").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas6").parentElement.classList.remove("hidden-canvas");
+		}
+	}
+
 	await loadForecast();		// Load the currently selected forecast
 	drawMarker = false;	// No longer draw the histograms
 	drawPlots();
@@ -61,7 +117,52 @@ async function initTimeSelect() {
 
 // Called by the validTimeSelect menu
 async function validTimeSelect() {
-	// XXX Create or destroy the correct number of canvases
+	// Get the selected valid time
+	let validTimeValue = document.getElementById("validTimeSelect").value;
+
+	console.log("Valid time selected:", validTimeValue);
+
+	// If a specific time is selected (not "All"), show only 1 canvas
+	if (validTimeValue !== "All") {
+		console.log("Showing only 1 canvas for specific time");
+		// Show only the first canvas centered, hide all others
+		document.getElementById("myCanvas0").parentElement.style.display = "block";
+		document.getElementById("myCanvas0").parentElement.classList.add("single-canvas-view");
+		document.getElementById("myCanvas1").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas2").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas3").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
+	} else {
+		// "Plot all valid times" is selected
+		// Remove single canvas centering class
+		document.getElementById("myCanvas0").parentElement.classList.remove("single-canvas-view");
+
+		// Show appropriate number of canvases based on model
+		console.log("Showing all canvases for model:", modelName);
+
+		if (modelName == "6h accumulation") {
+			// Show 4 canvases for 6h model
+			document.getElementById("myCanvas0").parentElement.style.display = "block";
+			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
+			document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
+			document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
+		} else if (modelName == "24h accumulation") {
+			// Show all 7 canvases for 24h model
+			document.getElementById("myCanvas0").parentElement.style.display = "block";
+			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas4").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas5").parentElement.classList.remove("hidden-canvas");
+			document.getElementById("myCanvas6").parentElement.classList.remove("hidden-canvas");
+		}
+	}
+
 	await loadForecast();
 	drawPlots();
 }
@@ -314,11 +415,25 @@ async function loadDates() {
 
 function initControls() {
 	// XXX Actually should keep the settings on reload and reload the correct plots
-	
+
 	// Following the HTML elements in order
-	
+
 	document.getElementById("modelSelect").value = modelName;
-	
+
+	// Set initial canvas visibility based on model (6h shows 4 canvases, 24h shows 7)
+	console.log("InitControls: Setting canvas visibility for model:", modelName);
+	if (modelName == "6h accumulation") {
+		console.log("InitControls: Hiding canvases 4, 5, 6");
+		document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
+		document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
+	} else if (modelName == "24h accumulation") {
+		console.log("InitControls: Showing all 7 canvases");
+		document.getElementById("myCanvas4").parentElement.classList.remove("hidden-canvas");
+		document.getElementById("myCanvas5").parentElement.classList.remove("hidden-canvas");
+		document.getElementById("myCanvas6").parentElement.classList.remove("hidden-canvas");
+	}
+
 	document.getElementById("regionSelect").value = regionName;
 	
 	document.getElementById("styleSelect").value = style;
@@ -474,39 +589,49 @@ async function init() {
 function listenForMouse(canvasNum, plotRect) {
 	// XXX This still listens for events when the forecast is not drawn.
 	//     Which stops being a (minor) problem when canvases are removed/created as needed.
-	
+
 	// Get canvas for events
 	const canvas = document.getElementById("myCanvas"+canvasNum);
-	
+
 	// Detect the mouse location when it is within the canvas element
 	canvas.addEventListener('mousedown', function(evt) {
-		
-		// Get the mouse position in the canvas element
+
+		// Get the mouse position relative to the canvas element as displayed
 		let canvasRect = canvas.getBoundingClientRect();
 		let clickX = evt.clientX - canvasRect.left;
 		let clickY = evt.clientY - canvasRect.top;
-		
+
+		// Account for canvas scaling (CSS display size vs actual canvas size)
+		// The canvas element has a fixed size (width/height attributes) but may be
+		// displayed at a different size due to CSS (getBoundingClientRect)
+		let scaleX = canvas.width / canvasRect.width;
+		let scaleY = canvas.height / canvasRect.height;
+
+		// Convert click coordinates to actual canvas coordinate system
+		clickX = clickX * scaleX;
+		clickY = clickY * scaleY;
+
 		// Get the mouse location within the plot image boundary
 		let xMouse = Math.floor(clickX) - Math.round(plotRect[0]);
 		let yMouse = Math.floor(clickY) - Math.round(plotRect[1]);
-		
+
 		// Width and height of the plot rectangle
 		let width = Math.round(plotRect[2]-plotRect[0]);
 		let height = Math.round(plotRect[3]-plotRect[1]);
-		
+
 		// If the mouse is within the plot rectangle
 		if (xMouse>=0 && yMouse>=0 && xMouse<width && yMouse<height) {
-			
-			// Save the click location for other functions
+
+			// Save the click location for other functions (in canvas coordinates)
 			canvasClickX = clickX;
 			canvasClickY = clickY;
-			
+
 			// When the plots are drawn, also draw the marker
 			drawMarker = true;
-			
+
 			// The lon/lat location changes with a mouse click
 			locationChanged = true;
-		
+
 			// Draw the plots
 			requestAnimationFrame(drawPlots);
 		}
@@ -567,26 +692,26 @@ async function drawPlots() {
 		
 		// Plot the marker and associated histogram
 		if (drawMarker) {
-		
+
 			// Need the longitude range in the current plot
 			let [minLatIdx,maxLatIdx,minLonIdx,maxLonIdx] = GANForecast[0].computeLatLonIdxBounds(regionName);
-			
+
 			// If the location has changed (set the latitude and longitude indices)
 			if (locationChanged) {
-			
+
 				// Get the mouse location within the plot image boundary
 				let xMouse = Math.floor(canvasClickX) - Math.round(plotRect[0]);
 				let yMouse = Math.floor(canvasClickY) - Math.round(plotRect[1]);
-				
+
 				// Find the corresponding latitude and longitude indices
 				longitudeIdx = minLonIdx + Math.round(xMouse * (maxLonIdx-minLonIdx)
 															 / (plotRect[2]-plotRect[0]));
 				latitudeIdx = maxLatIdx - Math.round(yMouse * (maxLatIdx-minLatIdx)
 															/ (plotRect[3]-plotRect[1]));
-				
+
 				// By default the location hasn't changed so set this flag now
 				locationChanged = false;
-			
+
 			} else {	// The location has not changed (set click location from the lat/lon indices)
 				canvasClickX = (longitudeIdx - minLonIdx) * (plotRect[2]-plotRect[0])
 														  / (maxLonIdx-minLonIdx) + plotRect[0];
@@ -595,7 +720,7 @@ async function drawPlots() {
 			}
 			
 			let markerWidth = 10;	// Width of the plot marker in pixels
-			
+
 			// Thick black cross
 			ctx.beginPath();
 			ctx.strokeStyle = "#000000";

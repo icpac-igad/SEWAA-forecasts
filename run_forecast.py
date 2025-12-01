@@ -222,7 +222,6 @@ if __name__ == "__main__":
     )
 
     print(f"Producing forecasts of {accumulation_time}h accumulations")
-    print(f"initialised on {year}-{month:02d}-{day:02d} at {hour:02d}{minute:02d}.")
 
     # What are the valid hours of the forecast
     valid_hours_6h = [30, 36, 42, 48]
@@ -271,40 +270,52 @@ if __name__ == "__main__":
         # Create the directory for the IFS downloads if it doesn't exist
         pathlib.Path(IFS_data_path_6h).mkdir(exist_ok=True)
 
-        file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
+        # try data download with current date and previous day's date if accumulation time 18h
+        fcst_date = datetime.datetime.strptime(date_str, "%Y%m%d")
+        prev_day = fcst_date - datetime.timedelta(days=1)
+        fcst_dates = (
+            [date_str]
+            if time_str != "1800"
+            else [prev_day.strftime("%Y%m%d"), date_str]
+        )
+        for fcst_date_str in fcst_dates:
+            print(f"initialised on {fcst_date_str} at {hour:02d}{minute:02d}.")
+            
+            file_name = f"IFS_{fcst_date_str}_{hour:02d}Z.nc"
 
-        # Check to see if the file is here first
-        if os.path.isfile(f"{IFS_data_path_6h}/{file_name}"):
-            print(f"{IFS_data_path_6h}/{file_name} already exists.")
+            # Check to see if the file is here first
+            if os.path.isfile(f"{IFS_data_path_6h}/{file_name}"):
+                print(f"{IFS_data_path_6h}/{file_name} already exists.")
 
-        else:
-            print(f"Copying 6h accumulation data, {file_name}, from gbmc")
-            print(f"to {IFS_data_path_6h}/.")
-            cp = subprocess.run(
-                [
-                    "scp",
-                    f"gbmc@136.156.130.165:/data/Operational/{file_name}",
-                    IFS_data_path_6h,
-                ]
-            )
-            if cp.returncode != 0:
-                print(
-                    f"Unable to copy {file_name} from gbmc. Trying one more time with host key verification disabled!"
-                )
+            else:
+                print(f"Copying 6h accumulation data, {file_name}, from gbmc")
+                print(f"to {IFS_data_path_6h}/.")
                 cp = subprocess.run(
                     [
                         "scp",
-                        "-v",
-                        "-o StrictHostKeyChecking=no",
                         f"gbmc@136.156.130.165:/data/Operational/{file_name}",
                         IFS_data_path_6h,
                     ]
                 )
                 if cp.returncode != 0:
-                    print(f"unresolvable failure to copy {file_name} from gbmc")
-                    sys.exit()
+                    print(
+                        f"Unable to copy {file_name} from gbmc. Trying one more time with host key verification disabled!"
+                    )
+                    cp = subprocess.run(
+                        [
+                            "scp",
+                            "-v",
+                            "-o StrictHostKeyChecking=no",
+                            f"gbmc@136.156.130.165:/data/Operational/{file_name}",
+                            IFS_data_path_6h,
+                        ]
+                    )
+                    if cp.returncode != 0:
+                        print(f"unresolvable failure to copy {file_name} from gbmc")
+                        sys.exit()
 
     elif accumulation_time == 24:
+        print(f"initialised on {year}-{month:02d}-{day:02d} at {hour:02d}{minute:02d}.")
         # Create the directory for the IFS downloads if it doesn't exist
         pathlib.Path(IFS_data_path_24h).mkdir(exist_ok=True)
 
@@ -489,7 +500,7 @@ if __name__ == "__main__":
 
             run_dir = f"{root_dir}/24h_accumulations"
             subprocess.run(
-                ["python", f"forecast2histogram_7d_lowRAM.py", date_str, str(hour)],
+                ["python", "forecast2histogram_7d_lowRAM.py", date_str, str(hour)],
                 cwd=run_dir,
             )
 
@@ -509,7 +520,7 @@ if __name__ == "__main__":
                 subprocess.run(
                     [
                         "python",
-                        f"run_ELR.py",
+                        "run_ELR.py",
                         "--date",
                         date_str,
                         "--model",
@@ -536,7 +547,7 @@ if __name__ == "__main__":
                 subprocess.run(
                     [
                         "python",
-                        f"run_ELR.py",
+                        "run_ELR.py",
                         "--date",
                         date_str,
                         "--model",
@@ -559,13 +570,13 @@ if __name__ == "__main__":
         # Histogram counts
         print("Listing 6h counts for the interface.")
         run_dir = "6h_accumulations"
-        subprocess.run(["python", f"find_available_dates.py"], cwd=run_dir)
+        subprocess.run(["python", "find_available_dates.py"], cwd=run_dir)
 
     elif accumulation_time == 24:
         # Histogram counts
         print("Listing 24h counts for the interface.")
         run_dir = "24h_accumulations"
-        subprocess.run(["python", f"find_available_dates.py"], cwd=run_dir)
+        subprocess.run(["python", "find_available_dates.py"], cwd=run_dir)
 
     # Delete the cGAN forecast
     if delete_forecasts:
