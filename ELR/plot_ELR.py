@@ -97,10 +97,7 @@ if __name__=='__main__':
        
     model = args.model
     day = args.day
-    if day==1:
-        accumulation = 6
-    else:
-        accumulation = 24
+    accumulation = 24
         
     country = args.country
     Locations = args.loc

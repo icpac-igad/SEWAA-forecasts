@@ -1,5 +1,8 @@
 MODEL:
     folder: "../logs_17"
+    set_seed: True # set the seed used in NoiseGenerator when making forecasts. If True, this will set the seed as"
+    # "dayofforecastissue+ensemble_member"
+    # NOTE: Using this is not good for a proper forecast that represents unbiased uncertainty and is strongly discouraged.
     checkpoint: 172544
 
 INPUT:

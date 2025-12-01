@@ -29,21 +29,15 @@ subcounty = True
 counties = None
 subcounties = None
 
-def get_model_output(date, accumulation = "6h_accumulations", model="GAN", day=1):
+def get_model_output(date, model="GAN", day=1):
 
     if model == 'GAN':
         fcst_root_dir = f'{FCST_PATH}/{accumulation}/cGAN_forecasts/'
     elif model=='IFS':
         fcst_root_dir = f'{FCST_PATH}/{accumulation}/{model}_forecast_data/'
 
-    if accumulation == "6h_accumulations":
-        ds_fcst = xr.open_dataset(fcst_root_dir+f'{model}_{date}_00Z.nc')
-        ds_fcst = ds_fcst.mean("valid_time")
-        ds_fcst['fcst_valid_time'] = xr.DataArray(ds_fcst.time.values+np.timedelta64(30,'h'),dims=['time'],
-                                                  coords={'time':ds_fcst.time.values})
-    else:
-        ds_fcst = xr.open_dataset(fcst_root_dir+f'{model}_{date}_00Z_v{day}.nc')
-        ds_fcst = ds_fcst.isel({"valid_time":0})
+    ds_fcst = xr.open_dataset(fcst_root_dir+f'{model}_{date}_00Z_v{day}.nc')
+    ds_fcst = ds_fcst.isel({"valid_time":0})
 
     return ds_fcst
     
@@ -213,7 +207,7 @@ if __name__=='__main__':
         for d in day:
             d = int(d)
             assert isinstance(d,int)
-            ds = get_model_output(date, accumulation = accumulation, model=model, day=d)
+            ds = get_model_output(date, model=model, day=d)
     
             if subcounty_loop:
                 
