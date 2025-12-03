@@ -21,6 +21,9 @@ let latitudeIDx = 0;
 // Hack to make sure clicking in the plot is handled correctly
 let canvasMouseDownRects = [];
 
+// Hack to force reloading of dates files
+let dateLoadNumber = Math.floor(Math.random() * 10);
+
 let availableDates;						// An object containing the dates we can use
 let GANForecast = [];			// An array of countsData objects
 
@@ -412,9 +415,14 @@ async function loadDates() {
 	// Fetch a remote file
 	let fileName;
 	if (modelName == "6h accumulation") {
-		fileName = "../data/counts_6h/available_dates.json";
+		fileName = "../data/counts_6h/available_dates.json?"+dateLoadNumber;
 	} else if (modelName == "24h accumulation") {
-		fileName = "../data/counts_24h/available_dates.json";
+		fileName = "../data/counts_24h/available_dates.json?"+dateLoadNumber;
+	}
+	// dateLoadNumber ensures that the available_dates.json file is not cached
+	dateLoadNumber += 1;
+	if (dateLoadNumber > 10000) {
+		dateLoadNumber = 0;
 	}
 	const response = await fetch(fileName);
 	
