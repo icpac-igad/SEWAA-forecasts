@@ -305,7 +305,7 @@ if (True):
     for ii in range(ensemble_members):
         if set_seed:
             noise_gen = NoiseGenerator(noise_shape, batch_size=1, 
-                                       random_seed=int(tdelta+(out_time_idx*1e5)+(ii*1e6)))
+                                       random_seed=int(tdelta+((in_time_idx[0][valid_time_num])*1e5)+(ii*1e6)))
         gan_inputs = [network_fcst_input, network_const_input, noise_gen()]
         gan_prediction = gen.predict(gan_inputs, verbose=False)  # 1 x lat x lon x 1
         netcdf_dict["precipitation"][0, ii, 0, :, :] = denormalise(gan_prediction[0, :, :, 0])
