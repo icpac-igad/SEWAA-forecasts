@@ -192,32 +192,18 @@ def check_counts_files(counts_path, date_str, hour, valid_hours):
 # Checks that all of the ELR output files for this date and time are there or not.
 # Returns:
 #    If all files that should be there, are there.
-def check_ELR_files(model_path, save_path, accumulation_time, countries, date, model='GAN', county=True, subcounty=True):
-    num_files_expected = 0
+def check_ELR_files(model_path, save_path, accumulation_time, countries, 
+                    country_admin_regions, date, model='GAN', day=[1]):
+    num_files_expected = len(ELR_countries)*len(day)
     num_files_actual = 0
     for country in ELR_countries:
-        if county:
-            counties_loop = glob.glob(model_path+f'{country}/counties/*')
-            counties_loop = [c.split('counties')[-1].split('_')[0].replace('/','').replace('\\','') for c in counties_loop]
+        for d in day:
+            if os.path.exists(\
+                save_path+f'{accumulation_time}h_accumulations/{country}/{country_admin_regions[country]}/{model}_{date}_ELR_v{d}.nc'):
+                num_files_actual+=1
     
-            if len(counties_loop)!=0:
-                num_files_expected+=len(counties_loop)
-                for Location in counties_loop:
-                    if os.path.exists(save_path+f'{accumulation_time}h_accumulations/{country}/county/{model}_{Location}_{date}_logreg.nc'):
-                        num_files_actual+=1
-    
-        if subcounty:
-            subcounties_loop = glob.glob(model+f'{country}/subcounties/*')
-            subcounties_loop = [c.split('subcounties')[-1].split('_')[0].replace('/','').replace('\\','') for c in subcounties_loop]
-            
-            if len(subcounties_loop)==0:
-                num_files_expected+=len(subcounties_loop)
-                for Location in subcounties_loop:
-                    if os.path.exists(save_path+f'{accumulation}h_accumulations/{country}/subcounty/{model}_{Location}_{date}_logreg.nc'):
-                        num_files_actual+=1
     correct_num_files_exist = (num_files_expected==num_files_actual)
-
-    return True#correct_num_files_exist
+    return correct_num_files_exist
 
 
 if __name__=='__main__':
@@ -267,7 +253,8 @@ if __name__=='__main__':
     ELR_predictions_path = f"{root_dir}/interface/ensemble_logistic_regression/ELR_predictions/"
 
     # Countries for ELR
-    ELR_countries = ["Rwanda"]
+    ELR_countries = ["Rwanda","Kenya","Ethiopia"]
+    ELR_country_admin_regions = {"Rwanda":"county","Kenya":"subcounty","Ethiopia":"subcounty"}
     
     # Where all of the cGAN histogram counts will be stored
     cGAN_counts_path = f"{root_dir}/interface/view_forecasts/data"
@@ -337,12 +324,9 @@ if __name__=='__main__':
         correct_num_counts_files = check_counts_files(cGAN_counts_path_6h,
                                                       date_str, hour, valid_hours_6h)
         
-        # Check to see if the ELR files are there first
-        correct_num_ELR_files = check_ELR_files(ELR_model_path, ELR_predictions_path, accumulation_time,
-                                               ELR_countries, date_str)
         
         # If the counts files are there and delete_forecasts is true don't run the forecasts
-        if not (correct_num_counts_files and correct_num_ELR_files and delete_forecasts):
+        if not (correct_num_counts_files and delete_forecasts):
             
             # Create the directory for the cGAN forecasts if it doesn't exist
             pathlib.Path(cGAN_forecast_path_6h).mkdir(exist_ok=True)
@@ -369,7 +353,7 @@ if __name__=='__main__':
         
         # Check to see if the ELR files are there first
         correct_num_ELR_files = check_ELR_files(ELR_model_path, ELR_predictions_path, accumulation_time,
-                                               ELR_countries, date_str)
+                                               ELR_countries, ELR_country_admin_regions, date_str)
         
         # If the counts and ELR files are there and delete_forecasts is true don't run the forecasts
         if not (correct_num_counts_files and correct_num_ELR_files and delete_forecasts):
@@ -468,7 +452,7 @@ if __name__=='__main__':
                                                           
             # Check to see if the ELR files are there first
             correct_num_ELR_files = check_ELR_files(ELR_model_path, ELR_predictions_path, accumulation_time,
-                                               ELR_countries, date_str)
+                                               ELR_countries, ELR_country_admin_regions, date_str)
         
             # If the relevant files are there and delete_forecasts is true don't run the ELR
             if not correct_num_ELR_files:
@@ -482,7 +466,7 @@ if __name__=='__main__':
                 print("ELR files already exist.")
                 
     else:
-        print("Skipping ELR forecats for time not equal to 00:00.")
+        print("Skipping ELR forecasts for time not equal to 00:00.")
     
     # Update .JSON files for the interface. Overwrite if files exist.
     
