@@ -16,6 +16,9 @@ def get_geometry_idx(region_type,country):
             return 2
         elif region_type == 'county':
             return 7
+    elif country == 'Rwanda':
+        if region_type == 'county':
+            return 2
 
 def get_geometry(Location, region_type='county',country='Kenya'):
 
@@ -28,13 +31,11 @@ def get_geometry(Location, region_type='county',country='Kenya'):
     features = sf_region.shapeRecords()
 
     idx = get_geometry_idx(region_type, country)
-
     if country=='Kenya': 
         if region_type=='county':
             Location = Location.upper()
         elif region_type=='subcounty':
             Location = Location.replace('-',' ')
-
     geometry_all = [Polygon(sf_region.shape(i).points) for i in range(len(features)) if\
                                           Location in features[i].record[idx]]
 

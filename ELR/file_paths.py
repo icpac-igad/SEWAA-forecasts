@@ -7,4 +7,5 @@ Kenya_subcounties = {\
     'Kiambu':'../shapes/Kenya_shapes/subcounties/K_Subcounties.shp',
     'Kajiado-East':'../shapes/Kenya_shapes/subcounties/Kajiado_SubC.shp'},
 Ethiopia_shapes = '../shapes/Ethiopia_shapes/eth_adm_csa_bofedb_2021_shp/eth_admbnda_adm3_csa_bofedb_2021.shp',
+Rwanda_shapes = '../shapes/Rwanda_shapes/Rwanda_region.shp',
 )
