@@ -198,7 +198,7 @@ if __name__=='__main__':
             ds = get_model_output(date, model=model, day=d)
             mask_list = region_vectorised.mask_3D(ds.rename({'longitude':'lon','latitude':'lat'}))
             mask_list = np.ma.masked_invalid(mask_list)
-            emp_probs = np.stack([100*np.mean(np.squeeze(np.searchsorted([t],ds.precipitation)),axis=0)\
+            emp_probs = np.stack([np.mean(np.squeeze(np.searchsorted([t],ds.precipitation)),axis=0)\
                                                   for t in [20,30,40,50]])[None,None,...]
             emp_probs[:,:,:,~np.squeeze(mask_list)] = np.nan
             if county_loop:
