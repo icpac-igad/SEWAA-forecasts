@@ -34,7 +34,6 @@
 import argparse
 import sys
 import os
-import glob
 import subprocess
 import pathlib
 import datetime
@@ -343,7 +342,7 @@ if __name__=='__main__':
                 subprocess.run(["python", "forecast_date.py", date_str, str(hour)], cwd=run_dir)
                 
         else:
-            print("Counts and ELR files exist and delete_forecasts is True; no forecast required.")
+            print("Counts files exist and delete_forecasts is True; no forecast required.")
     
     elif (accumulation_time == 24):
         
@@ -459,8 +458,8 @@ if __name__=='__main__':
         
                 print("Running ELR 24h forecasts.")
                 run_dir=ELR_script_path
-                subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
-                                "--accumulation", "24h_accumulations"], cwd=run_dir)
+                #subprocess.run(["python", f"run_ELR.py", "--date", date_str, "--model", "GAN", 
+                #               "--accumulation", "24h_accumulations"], cwd=run_dir)
             
             else:
                 print("ELR files already exist.")
