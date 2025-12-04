@@ -77,7 +77,6 @@ for country in ["Kenya","Ethiopia","Rwanda"]:
                 year_new = str(times_list[idx][0])
                 month_new = str(times_list[idx][1])
                 day_new = str(times_list[idx][2])
-                time_new = str(times_list[idx][3])
             else:
                 # There are no more files in times_list to include
                 break
@@ -89,7 +88,7 @@ for country in ["Kenya","Ethiopia","Rwanda"]:
             available_dates[year][month] = {}
         if day not in available_dates[year][month].keys():
             available_dates[year][month][day] = {}
-        available_dates[year][month][day][time] = valid_times
+        available_dates[year][month][day] = valid_times
     
         # Move to the next date
         year = year_new
