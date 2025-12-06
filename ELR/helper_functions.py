@@ -5,6 +5,10 @@ import shapefile
 from shapely.geometry.polygon import Polygon
 from shapely.ops import unary_union
 
+from cartopy.io.shapereader import Reader
+from cartopy.feature import ShapelyFeature
+import cartopy.crs as ccrs
+
 def get_geometry_idx(region_type,country):
     if country == 'Kenya':
         if region_type == 'subcounty':
@@ -20,24 +24,24 @@ def get_geometry_idx(region_type,country):
         if region_type == 'county':
             return 2
 
-def get_geometry(Location, region_type='county',country='Kenya'):
+def get_geometry(Location, region_type='county',country='Kenya', return_all=False):
 
-    if country == 'Kenya' and region_type == 'subcounty':
-        geometry_path = paths['Kenya_subcounties'][Location]
+    if country=='Kenya' and region_type=='county':
+        geometry_path = paths[f'{country}_shapes_county']
     else:
         geometry_path = paths[f'{country}_shapes']
+
+    if return_all:
+        shape_feature = ShapelyFeature(Reader(geometry_path).geometries(), ccrs.Robinson(), edgecolor='black')
+
+        return shape_feature
 
     sf_region = shapefile.Reader(geometry_path)
     features = sf_region.shapeRecords()
 
     idx = get_geometry_idx(region_type, country)
-    if country=='Kenya': 
-        if region_type=='county':
-            Location = Location.upper()
-        elif region_type=='subcounty':
-            Location = Location.replace('-',' ')
     geometry_all = [Polygon(sf_region.shape(i).points) for i in range(len(features)) if\
-                                          Location in features[i].record[idx]]
+                                          Location in features[i].record[idx].replace('/','-')]
 
     assert len(geometry_all)!=0
 
