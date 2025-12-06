@@ -116,7 +116,7 @@ will
 
 In a terminal change to the SEWAA-forecasts-main directory and run
 
-	python -m http.server 8080 -d interface
+	python -m http.server 8080
    
 Then in a browser window go to the address
 

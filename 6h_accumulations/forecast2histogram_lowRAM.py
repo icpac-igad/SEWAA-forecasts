@@ -34,11 +34,11 @@ hour = int(hour_str)
 # hour = forecast_init_date.hour
 
 # Define the bins we will use on an approximate log scale (mm/h)
-bin_spec_1h = np.array([0,0.04,0.1,0.25,0.4,0.6,0.8,1,1.25,1.5,
-                        1.8,2.2,2.6,3,3.5,4,4.7,5.4,6.1,7,
-                        8,9.1,10.3,11.7,13.25,15,1000])
+# bin_spec_1h = np.array([0,0.04,0.1,0.25,0.4,0.6,0.8,1,1.25,1.5,
+#                         1.8,2.2,2.6,3,3.5,4,4.7,5.4,6.1,7,
+#                         8,9.1,10.3,11.7,13.25,15,1000])
 
-# New bins. Decide in workshop.
+# New bins
 bin_spec_1h = np.array([ 0.        ,  0.04166667,  0.08333333,  0.20833333,  0.41666667,
                         0.625     ,  0.83333333,  1.        ,  1.25      ,  1.5       ,
                         1.8       ,  2.2       ,  2.6       ,  3.        ,  3.5       ,

@@ -6,7 +6,6 @@
 #
 #    Access to the ECMWF computer gbmc@136.156.130.165.
 #    Conda environment for cGAN installed and activated.
-#    The path to the SEWAA-forecasts directory is specified in file_paths.py
 #
 # Before use:
 # 
@@ -71,7 +70,7 @@ def parseArguments():
     python run_forecast.py --delete_forecasts Y  
     """, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--accumulation', help='How long rainfall is accumulated for, either 6h or 24h',default=None,type=str)
-    parser.add_argument('--date', help='Forecast initialisation date (YYMMDD)',default=None,type=str)
+    parser.add_argument('--date', help='Forecast initialisation date (YYYYMMDD)',default=None,type=str)
     parser.add_argument('--time', help='Forecast initialisation time (HHMM)',default=None,type=str)    
     parser.add_argument('--delete_forecasts', help='Should forecasts be deleted or not (Y/N)',default=None,type=str)
     parser.add_argument('--disable_ELR', help='If this option is selected ELR forecasts are not run',nargs='*',type=str)
