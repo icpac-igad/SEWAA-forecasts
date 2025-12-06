@@ -179,8 +179,6 @@ async function loadDates() {
 	// Parse the JSON arrayBuffer of the file and return the resulting object
 	availableDates = await response.json();
 
-	console.log(availableDates);
-
 	updateDateMenus();
 }
 
@@ -244,19 +242,13 @@ function updateDateMenus() {
 	// The available months are listed in availableDates
 	year = updateMenu(availableDates,[],"initYearSelect");
 	
-	console.log("year = "+year);
-	
 	// The available months depend upon the year
 	let yearObject = availableDates[String(year)];
 	month = updateMenu(yearObject,[],"initMonthSelect");
 	
-	console.log("month = "+month);
-	
 	// The available days depend upon the year and month
 	let monthObject = yearObject[String(month)];
 	day = updateMenu(monthObject,[],"initDaySelect");
-	
-	console.log("day = "+day);
 	
 	// The available valid times depend upon the year, month, day and time.
 	validTimes = monthObject[String(day)];	// validTimes is an Array
@@ -320,8 +312,6 @@ async function loadELRClimate() {
 	
 		let month = document.getElementById("initMonthSelect").value;
 		fileName = "../../../ELR/climatological_exceedances/clim_exc_"+threshold+"mmday_"+month+"month.nc";
-		
-		console.log("Calling loadELRClimate with month = "+month);
 		
 		// Load data into the ELRClimate ELRDataObject
 		await ELRForecast.loadELRClimate(fileName, threshold, month);
