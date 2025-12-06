@@ -162,7 +162,7 @@ def parseArguments():
     if (args.disable_ELR is not None):
         run_ELR = False
     
-    return accumulation_time, year, month, day, hour, minute, delete_forecasts
+    return accumulation_time, year, month, day, hour, minute, delete_forecasts, run_ELR
 
 
 # Checks that all of the histogram counts files for this date and time are there or not.
@@ -213,7 +213,7 @@ def check_ELR_files(model_path, save_path, accumulation_time, countries,
 if __name__=='__main__':
     
     # Parse arguments to this script
-    accumulation_time, year, month, day, hour, minute, delete_forecasts = parseArguments()
+    accumulation_time, year, month, day, hour, minute, delete_forecasts, run_ELR = parseArguments()
     
     print(f"Producing forecasts of {accumulation_time}h accumulations")
     print(f"initialised on {year}-{month:02d}-{day:02d} at {hour:02d}{minute:02d}.")
@@ -470,7 +470,10 @@ if __name__=='__main__':
                 print("ELR files already exist.")
                 
     else:
-        print("Skipping ELR forecasts for time not equal to 00:00.")
+        if (run_ELR):
+            print("Skipping ELR forecasts for time not equal to 00:00.")
+        else:
+            print("ELR forecasts disabled.");
     
     # Update .JSON files for the interface. Overwrite if files exist.
     
