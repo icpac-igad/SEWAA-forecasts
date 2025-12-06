@@ -67,7 +67,6 @@ def parseArguments():
  Run the 24h forecasts for the 10th of February 2025
     python run_forecast.py --accumulation 24h --date 20250210  
     
-
  Run todays 6h forecasts initialised at 0000 and delete the forecasts once
  statistics have been computed
     python run_forecast.py --delete_forecasts Y  
@@ -76,6 +75,7 @@ def parseArguments():
     parser.add_argument('--date', help='Forecast initialisation date (YYMMDD)',default=None,type=str)
     parser.add_argument('--time', help='Forecast initialisation time (HHMM)',default=None,type=str)    
     parser.add_argument('--delete_forecasts', help='Should forecasts be deleted or not (Y/N)',default=None,type=str)
+    parser.add_argument('--disable_ELR', help='If this option is selected ELR forecasts are not run',nargs='*',type=str)
     args = parser.parse_args()
     
     # Parse the accumulation
@@ -157,6 +157,10 @@ def parseArguments():
             (args.delete_forecasts == "Y") or (args.delete_forecasts == "y")):
             delete_forecasts = True
         
+    # Parse disable_ELR
+    run_ELR = True  # Default
+    if (args.disable_ELR is not None):
+        run_ELR = False
     
     return accumulation_time, year, month, day, hour, minute, delete_forecasts
 
@@ -446,7 +450,7 @@ if __name__=='__main__':
             print("Histogram counts files already exist.")
     
     # Run ELR forecasts (only when time is 0)
-    if (hour == 0):
+    if ((hour == 0) and (run_ELR)):
                   
         if (accumulation_time == 24):
                                                           
@@ -484,6 +488,11 @@ if __name__=='__main__':
         run_dir = "24h_accumulations"
         subprocess.run(["python", f"find_available_dates.py"], cwd=run_dir)
     
+    # ELR forecasts run only when time is 0
+    if ((hour == 0) and (run_ELR)):
+        print("Listing ELR available dates.")
+        run_dir = "ELR"
+        subprocess.run(["python", f"ELR_available_dates.py"], cwd=run_dir)
     
     # Delete the cGAN forecast
     if delete_forecasts:

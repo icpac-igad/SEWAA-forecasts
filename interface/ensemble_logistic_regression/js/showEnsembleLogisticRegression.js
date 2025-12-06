@@ -1,5 +1,9 @@
 // Javascript for plotting the results of the ensemble logistic regression.
 
+// Hack to force reloading of dates files
+let dateLoadNumber = Math.floor(Math.random() * 10000);
+let availableDates;				// An object containing the dates we can use
+
 let ELRForecast = new ELRData();		// Create a global ELRData object
 
 // Select a menu item requiring data to be loaded
@@ -24,6 +28,9 @@ async function ELRSelect() {
 	document.getElementById("ClimateCanvas").height = height;
 	document.getElementById("ELRCanvas").width = width;
 	document.getElementById("ELRCanvas").height = height;
+	
+	// Load the dates that are available for this country
+	await loadDates();
 	
 	// Load the ELR forecast
 	await loadELRForecast();
@@ -147,6 +154,132 @@ async function getPBinEdges() {
 	return pBinEdges;
 }
 
+// XXX Needs to be called by ELRSelect
+async function loadDates() {
+
+	// Which country are we looking at
+	regionName = document.getElementById("regionSelect").value;
+
+	// Fetch a remote file
+	let fileName;
+	// XXX Desparate hack
+	if (regionName == "Rwanda") {
+		fileName = "../ELR_predictions/24h_accumulations/"+regionName+"/county/available_dates.json?"+dateLoadNumber;
+	} else {
+		fileName = "../ELR_predictions/24h_accumulations/"+regionName+"/subcounty/available_dates.json?"+dateLoadNumber;
+	}
+	
+	// dateLoadNumber ensures that the available_dates.json file is not cached
+	dateLoadNumber += 1;
+	if (dateLoadNumber > 10000) {
+		dateLoadNumber = 0;
+	}
+	const response = await fetch(fileName);
+	
+	// Parse the JSON arrayBuffer of the file and return the resulting object
+	availableDates = await response.json();
+
+	console.log(availableDates);
+
+	updateDateMenus();
+}
+
+// Update an HTML select menu with dates that are available.
+// dateObject - Can be a years, months, day or time object (from the global
+//              availableDates).
+// dateText   - An array containing the menu item strings to use. If empty the dateObject
+//              keys are used as menu items.
+// id         - The id of the select menu element in the HTML.
+function updateMenu(dateObject,datesText,id) {
+	
+	let dates;
+	if (dateObject instanceof Array) {
+		// dateObject is an array of numbers. Convert it to an array of strings
+		dates = new Array(dateObject.length);
+		for (let i=0;i<dates.length;i++) {
+			dates[i] = String(dateObject[i]);
+		}
+	} else {
+		// dateObject's keys are a list of strings
+		dates = Object.keys(dateObject);
+	}
+	
+	// Select the HTML select menu that we are updating
+	let dateSelect = document.getElementById(id);
+	
+	// Record the menu's value before we remove it
+	let date = dateSelect.value;
+	
+	// Remove all of the current menu items
+	while (dateSelect.hasChildNodes()) {
+		dateSelect.removeChild(dateSelect.firstChild);
+	}
+	
+	// Add the menu items specified in dates
+	for (let i=0;i<dates.length;i++) {
+		let option = document.createElement("option");
+		option.value = dates[i];
+		if (datesText.length > 0) {
+			option.innerHTML = datesText[i];
+		} else {
+			option.innerHTML = dates[i];
+		}
+		dateSelect.appendChild(option);
+	}
+
+	// If the specified year/month/day/time/valid time does not exist.
+	if (!(dates.includes(date))) {
+		date = dates[dates.length-1];	// Pick the final one
+	}
+	
+	// Set the menu to the value it should be
+	dateSelect.value = date;
+	
+	// Return the value set
+	return date;
+}
+
+function updateDateMenus() {
+	
+	// The available months are listed in availableDates
+	year = updateMenu(availableDates,[],"initYearSelect");
+	
+	console.log("year = "+year);
+	
+	// The available months depend upon the year
+	let yearObject = availableDates[String(year)];
+	month = updateMenu(yearObject,[],"initMonthSelect");
+	
+	console.log("month = "+month);
+	
+	// The available days depend upon the year and month
+	let monthObject = yearObject[String(month)];
+	day = updateMenu(monthObject,[],"initDaySelect");
+	
+	console.log("day = "+day);
+	
+	// The available valid times depend upon the year, month, day and time.
+	validTimes = monthObject[String(day)];	// validTimes is an Array
+	// We use a custom string for the valid time menu elements
+	let validTimeStrings = new Array(validTimes.length+1);
+	for (let i=0;i<validTimes.length;i++) {
+		// What's the valid date? (YYYY-MM-DD)
+		// validDate = timeOffsetToDate(validTimes[i],
+		// XXX Hack for now (always a lead time of 30 hours)
+		validDate = timeOffsetToDate(30,
+									 year+"-"+String(month).padStart(2,'0')
+										 +"-"+String(day).padStart(2,'0'));
+				
+		validTimeStrings[i] = validDate.getUTCFullYear()
+							+"-"+String(validDate.getUTCMonth()+1).padStart(2,'0')
+							+"-"+String(validDate.getUTCDate()).padStart(2,'0')
+							+" "+String(validDate.getUTCHours()).padStart(2,'0')
+							+":00 UTC (+"+30+"h)";
+		//					+":00 UTC (+"+validTimes[i]+"h)";
+	}
+	updateMenu(validTimes,validTimeStrings,"validTimeSelect");
+}
+
 // Loads the currently selected ELR forecast (all lead times and thresholds)
 async function loadELRForecast() {
 	let region = document.getElementById("regionSelect").value;
@@ -181,11 +314,14 @@ async function loadELRForecast() {
 // Load the ELR climate for the selected threshold
 async function loadELRClimate() {
 	let threshold = document.getElementById("thresholdSelect").value;
+	let month = document.getElementById("initMonthSelect").value;
 	
-	if (ELRForecast.currentThreshold != threshold) {
+	if ((ELRForecast.currentThreshold != threshold) || (ELRForecast.climateMonth != month)){
 	
 		let month = document.getElementById("initMonthSelect").value;
 		fileName = "../../../ELR/climatological_exceedances/clim_exc_"+threshold+"mmday_"+month+"month.nc";
+		
+		console.log("Calling loadELRClimate with month = "+month);
 		
 		// Load data into the ELRClimate ELRDataObject
 		await ELRForecast.loadELRClimate(fileName, threshold, month);
@@ -272,6 +408,9 @@ async function init() {
 	
 	// Set appropriate menus
 	await ELRSelect();
+	
+	// Load a list of the available forecasts
+	await loadDates();
 	
 	// Load the currently selected forecast
 	await loadELRForecast();
