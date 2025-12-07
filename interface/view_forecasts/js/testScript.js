@@ -5,8 +5,8 @@ let modelName = "6h accumulation"
 //          Sudan, Tanzania, Uganda, ICPAC, East Africa, All.
 let regionName = "East Africa";
 let units = "mm/6h";			// Can be mm/h, mm/6h, mm/day, mm/week
-let style = "Default";			// Can be "Default", "ICPAC", "KMD", "EMI"
-let plotType="Probability";		// Can be "Probability" or "Values"
+let style = "Default";			// Can be "Default", "ICPAC", "KMD", "EMI", "ECMWF".
+let plotType="Probability";		// Can be "Probability", "Values", "Mean" or "Std".
 let showPercentages = true;		// On the colour scale
 let maxRain = 1/24;				// Rainfall threshold in mm/h
 let probability = 0.95;			// Between 0 and 1
@@ -22,9 +22,9 @@ let latitudeIDx = 0;
 let canvasMouseDownRects = [];
 
 // Hack to force reloading of dates files
-let dateLoadNumber = Math.floor(Math.random() * 10);
+let dateLoadNumber = Math.floor(Math.random() * 10000);
 
-let availableDates;						// An object containing the dates we can use
+let availableDates;				// An object containing the dates we can use
 let GANForecast = [];			// An array of countsData objects
 
 let validTimes = [];			// An array of valid times, set in updateDateMenus
@@ -126,6 +126,21 @@ function unitsSelect() {
 // Called by the showExplanations input checkbox
 function showExplanation() {
 	
+	// If the ensemble mean or standard deviation is plotted the explanation box is always checked
+	if ((document.getElementById("plotSelect").value == "Mean") ||
+		(document.getElementById("plotSelect").value == "Std")) {
+		
+		// Check the box
+		document.getElementById("showExplanation").checked = true;
+		
+		// Disable it
+		document.getElementById("showExplanation").disabled = true;
+		
+	} else {
+		// Enable the check box
+		document.getElementById("showExplanation").disabled = false;
+	}
+	
 	// Is the box ticked or not
 	const checked = document.getElementById("showExplanation").checked;
 	
@@ -226,11 +241,83 @@ function showExplanation() {
 					red line. `+thresholdProbability+`% of the ensemble members are to the
 					left of the red line and the rest are to the right of it.
 					
-					The blue line corresponds to a value threshold. The number of ensemble
-					members to the right of the blue line divided by the total number of
-					ensemble members is the predicted probability that the value threshold
-					will be exceeded. This value can be set in the "Value threshold" box
-					above.`;
+					The blue line corresponds to a value threshold (`+thresholdValue+` `+
+					units+`). The number of ensemble members to the right of the blue line
+					divided by the total number of ensemble members is the predicted
+					probability that the value threshold will be exceeded. This value can
+					be set in the "Value threshold" box above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+			
+		} else if (document.getElementById("plotSelect").value == "Mean") {
+			explanationString +=
+				`<b>Map description:</b> The map shows the ensemble mean rainfall
+				 accumulated over `+accumulationTime+` hours between the valid times at
+				 each location.
+				 
+				 <span style="color:red">WARNING: The ensemble mean is usually not a good
+				 summary statistic for rainfall forecasts. </span>
+				 
+				 The predicted rainfall distribution is far from normal (see the
+				 histograms), and the ensemble mean is difficult to interpret. A good
+				 alternative to the ensemble mean when looking at rainfall is the
+				 <i>ensemble median</i>. The ensemble median plot can be made by selecting
+				 "Values below probability" from the plot menu above and setting the
+				 "Probability threshold" box to 50%.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval.
+					
+					The blue line corresponds to a value threshold (`+thresholdValue+` `+
+					units+`). The number of ensemble members to the right of the blue line
+					divided by the total number of ensemble members is the predicted
+					probability that the value threshold will be exceeded. This value can
+					be set in the "Value threshold" box above. `+thresholdProbability+`%
+					of the ensemble members are to the left of the red line and the rest
+					are to the right of it. This percentage can be set in the "Probability
+					threshold" box above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+			
+		} else if (document.getElementById("plotSelect").value == "Std") {
+			explanationString +=
+				`<b>Map description:</b> The map shows the ensemble standard deviation of
+				 rainfall accumulated over `+accumulationTime+` hours between the valid
+				 times at each location.
+				 
+				 <span style="color:red">WARNING: The ensemble standard deviation is
+				 usually not a good summary statistic for rainfall forecasts. </span>
+				 
+				 The predicted rainfall distribution is far from normal (see the
+				 histograms), and the ensemble standard deviation is difficult to
+				 interpret. A good alternative to the ensemble standard deviation when
+				 looking to estimate the range of rainfall is a probability threshold of
+				 95%. This plot can be made by selecting "Values below probability" from
+				 the plot menu above and setting the "Probability threshold" box to 95%.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval.
+					
+					The blue line corresponds to a value threshold (`+thresholdValue+` `+
+					units+`). The number of ensemble members to the right of the blue line
+					divided by the total number of ensemble members is the predicted
+					probability that the value threshold will be exceeded. This value can
+					be set in the "Value threshold" box above. `+thresholdProbability+`%
+					of the ensemble members are to the left of the red line and the rest
+					are to the right of it. This percentage can be set in the "Probability
+					threshold" box above.`;
 			} else {
 				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
 			}
@@ -349,9 +436,21 @@ function updateMenu(dateObject,datesText,id) {
 		dateSelect.appendChild(option);
 	}
 	
-	// If the specified year/month/day/time/valid time does not exist.
-	if (!(dates.includes(date))) {
-		date = dates[dates.length-1];	// Pick the final one
+	// Add the "Plot all valid times" menu item.
+	if (datesText.length > dateObject.length) {
+		if (datesText[datesText.length-1] == "Plot all valid times") {
+			let option = document.createElement("option");
+			option.value = "All";
+			option.innerHTML = "Plot all valid times";
+			dateSelect.appendChild(option);
+		}
+	}
+	
+	if (date != "All") {
+		// If the specified year/month/day/time/valid time does not exist.
+		if (!(dates.includes(date))) {
+			date = dates[dates.length-1];	// Pick the final one
+		}
 	}
 	
 	// Set the menu to the value it should be
@@ -387,7 +486,7 @@ function updateDateMenus() {
 	// The available valid times depend upon the year, month, day and time.
 	validTimes = daysObject[String(time)];	// validTimes is an Array
 	// We use a custom string for the valid time menu elements
-	let validTimeStrings = new Array(validTimes.length);
+	let validTimeStrings = new Array(validTimes.length+1);
 	for (let i=0;i<validTimes.length;i++) {
 		// What's the valid date? (YYYY-MM-DD)
 		validDate = timeOffsetToDate(validTimes[i]+parseInt(time),
@@ -400,15 +499,9 @@ function updateDateMenus() {
 							+" "+String(validDate.getUTCHours()).padStart(2,'0')
 							+":00 UTC (+"+validTimes[i]+"h)";
 	}
-	updateMenu(validTimes,validTimeStrings,"validTimeSelect");
-	
-	// Select the HTML select menu that we are updating
-	let dateSelect = document.getElementById("validTimeSelect");
 	// Add an "Plot all valid times" option
-	let option = document.createElement("option");
-	option.value = "All";
-	option.innerHTML = "Plot all valid times";
-	dateSelect.appendChild(option);
+	validTimeStrings[validTimes.length] = "Plot all valid times";
+	updateMenu(validTimes,validTimeStrings,"validTimeSelect");
 }
 
 async function loadDates() {
@@ -430,32 +523,32 @@ async function loadDates() {
 	availableDates = await response.json();
 	
 	// Pick the final date to load
-	let years = Object.keys(availableDates);
-	let year = years[years.length-1];
-	let yearObject = availableDates[year];
-	let months = Object.keys(yearObject);
-	let month = months[months.length-1];
-	let monthObject = yearObject[month];
-	let days = Object.keys(monthObject);
-	let day = days[days.length-1];
-	let daysObject = monthObject[day];
-	let times = Object.keys(daysObject);
-	let time = times[times.length-1];
-	let validTimes = daysObject[time];
-	let validTime = validTimes[validTimes.length-1];
+// 	let years = Object.keys(availableDates);
+// 	let year = years[years.length-1];
+// 	let yearObject = availableDates[year];
+// 	let months = Object.keys(yearObject);
+// 	let month = months[months.length-1];
+// 	let monthObject = yearObject[month];
+// 	let days = Object.keys(monthObject);
+// 	let day = days[days.length-1];
+// 	let daysObject = monthObject[day];
+// 	let times = Object.keys(daysObject);
+// 	let time = times[times.length-1];
+// 	let validTimes = daysObject[time];
+// 	let validTime = validTimes[validTimes.length-1];
 	
 	// Set the menus to match the loaded dates
 	// Probably doesn't do anything. Overridden by updateDateMenus.
-	document.getElementById("initYearSelect").value = year;
-	document.getElementById("initMonthSelect").value = month;
-	document.getElementById("initDaySelect").value = day;
-	document.getElementById("initTimeSelect").value = time;
-	document.getElementById("validTimeSelect").value = String(validTime);
+// 	document.getElementById("initYearSelect").value = year;
+// 	document.getElementById("initMonthSelect").value = month;
+// 	document.getElementById("initDaySelect").value = day;
+// 	document.getElementById("initTimeSelect").value = time;
+// 	document.getElementById("validTimeSelect").value = String(validTime);
 	
 	updateDateMenus();
 	
 	// By default plot all lead times
-	document.getElementById("validTimeSelect").value = "All";
+// 	document.getElementById("validTimeSelect").value = "All";
 }
 
 function initControls() {
@@ -703,14 +796,6 @@ async function drawPlots() {
 		canvasNum += 1;
 	}
 	
-	// Remove all mapNewLine line breaks
-	let brIdx=0;
-	while (document.getElementById("mapNewLine"+brIdx) != null) {
-		brElement = document.getElementById("mapNewLine"+brIdx);
-		brElement.remove();
-		brIdx += 1;
-	}
-	
 	// Create the necessary histogram canvases (Same code as above almost)
 	if (drawMarker) {
 		// Ensure the correct number of histogram canvases exist
@@ -759,6 +844,14 @@ async function drawPlots() {
 			canvasElement.remove();
 			canvasNum += 1;
 		}
+		
+		// Remove all mapNewLine line breaks
+		let brIdx=0;
+		while (document.getElementById("mapNewLine"+brIdx) != null) {
+			brElement = document.getElementById("mapNewLine"+brIdx);
+			brElement.remove();
+			brIdx += 1;
+		}
 	}
 	
 	// Reset the array of rectangles containing map canvas boundaries
@@ -784,12 +877,18 @@ async function drawPlots() {
 		// The rectangles within which the plots are drawn
 		let plotRect;
 		if (plotType == "Probability") {
-			plotRect = await GANForecast[canvasNum].plotExceedenceProbability(ctx, x, y, width, height,
+			plotRect = await GANForecast[canvasNum].plotExceedanceProbability(ctx, x, y, width, height,
 																   maxRain, units, style,
 																   showPercentages, regionName);
 		} else if (plotType == "Values") {
-			plotRect = await GANForecast[canvasNum].plotExceedenceValue(ctx, x, y, width, height,
+			plotRect = await GANForecast[canvasNum].plotExceedanceValue(ctx, x, y, width, height,
 															 probability, units, style, regionName);
+		} else if (plotType == "Mean") {
+			plotRect = await GANForecast[canvasNum].plotMean(ctx, x, y, width, height,
+															 units, style, regionName);
+		} else if (plotType == "Std") {
+			plotRect = await GANForecast[canvasNum].plotStd(ctx, x, y, width, height,
+															units, style, regionName);
 		}
 		
 		// Save plotRect for understanding map clicks
