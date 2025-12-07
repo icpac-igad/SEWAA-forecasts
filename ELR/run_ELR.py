@@ -1,10 +1,11 @@
 import os
 import glob
 import argparse
-from datetime import datetime
+from datetime import datetime,timedelta
 import warnings
 
 import numpy as np
+from cftime import date2num
 from tqdm import tqdm
 import xarray as xr
 import joblib
@@ -26,12 +27,26 @@ MODEL_PATH = paths['MODEL_PATH']
 if not os.path.exists(OUT_PATH):
     os.makedirs(OUT_PATH)
 
-countries = ['Ethiopia','Kenya','Rwanda']
+countries = ['Kenya','Ethiopia','Rwanda']
 county = {'Ethiopia':False,'Kenya':True,'Rwanda':True}
 subcounty = {'Ethiopia':True,'Kenya':True,'Rwanda':False}
 
+bounding_box = {'Ethiopia':(32.95418, 47.78942, 3.45, 14.837),'Kenya':(33.935689697, 41.5550830926, -4.559, 5.4877),
+                'Rwanda':(28.87, 30.90, -2.81, -1.151)}
+
 counties = None
 subcounties = None
+
+def time_standardised_to_since_1900(times,time_delta=None):
+    times_standardised = []
+    for day in times:
+        day = datetime(day.astype('datetime64[D]').astype(object).year,
+                     day.astype('datetime64[D]').astype(object).month,
+                     day.astype('datetime64[D]').astype(object).day)
+        if time_delta is not None:
+            day = day+timedelta(hours=int(time_delta))
+        times_standardised.append(date2num(day,units="hours since 1900-01-01 00:00:00.0"))
+    return times_standardised
 
 def get_model_output(date, model="GAN", day=1):
 
@@ -133,7 +148,7 @@ if __name__=='__main__':
     start_time = time.time()
     date = args.date
     if date is None:
-        date = np.array(['2025-04-10'],dtype='datetime64[D]')[0].astype(object).strftime("%Y%m%d")#datetime.now().strftime("%Y%M%d")
+        date = np.array(['2025-10-02'],dtype='datetime64[D]')[0].astype(object).strftime("%Y%m%d")#datetime.now().strftime("%Y%M%d")
     model = args.model
     day = args.day
     if day is None:
@@ -198,9 +213,9 @@ if __name__=='__main__':
             ds = get_model_output(date, model=model, day=d)
             mask_list = region_vectorised.mask_3D(ds.rename({'longitude':'lon','latitude':'lat'}))
             mask_list = np.ma.masked_invalid(mask_list)
-            emp_probs = np.stack([np.mean(np.squeeze(np.searchsorted([t],ds.precipitation)),axis=0)\
-                                                  for t in [20,30,40,50]])[None,None,...]
-            emp_probs[:,:,:,~np.squeeze(mask_list)] = np.nan
+            #emp_probs = np.stack([np.mean(np.squeeze(np.searchsorted([t],ds.precipitation)),axis=0)\
+            #                                      for t in [20,30,40,50]])[None,None,...]
+            #emp_probs[:,:,:,~np.squeeze(mask_list)] = np.nan
             if county_loop:
                 full_predictions_county = np.full([1,1,4,384,352],np.nan)
                 if not os.path.exists(OUT_PATH+f'{accumulation}/{country}/county/'):
@@ -267,19 +282,28 @@ if __name__=='__main__':
                     if os.path.exists(file_name):
                         continue
                     else:
-                        timedelta = np.timedelta64(d,'D')+np.timedelta64(6,'h')
-                        nan_mask = np.isnan(full_predictions_subcounty)
-                        full_predictions_subcounty[nan_mask] = emp_probs[nan_mask]
+                        time_delta = (d*24)+6
+                        #nan_mask = np.isnan(full_predictions_subcounty)
+                        #full_predictions_subcounty[nan_mask] = emp_probs[nan_mask]
                         ds_subcounty = xr.DataArray(full_predictions_subcounty, 
                                                     dims = ['time','fcst_valid_time','threshold','latitude','longitude'],
                                   coords = {\
-                                      'time': ds.time.values,
-                                      'fcst_valid_time': ds.time.values+timedelta,
+                                      'time': time_standardised_to_since_1900(ds.time.values),
+                                      'fcst_valid_time': time_standardised_to_since_1900(ds.time.values,time_delta=time_delta),
                                       'threshold': [20,30,40,50],
                                       'latitude': np.unique(ds.latitude.values),
                                       'longitude': np.unique(ds.longitude.values),
                                   }
                                  ).rename('probability_exceedance')
+                        ds_subcounty.fcst_valid_time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        ds_subcounty.time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        
+                        ## If we want to crop to country un-comment
+                        #left = bounding_box[country][0]-0.1
+                        #right = bounding_box[country][1]+0.1
+                        #bottom = bounding_box[country][2]-0.1
+                        #top = bounding_box[country][3]+0.1
+                        #ds_subcounty = ds_subcounty.sel({'longitude':slice(left,right),'latitude':slice(bottom,top)})
                         ds_subcounty.to_netcdf(file_name)
     
                 if county_loop:
@@ -289,19 +313,27 @@ if __name__=='__main__':
                     if os.path.exists(file_name):
                         continue
                     else:
-                        timedelta = np.timedelta64(d,'D')+np.timedelta64(6,'h')
-                        nan_mask = np.isnan(full_predictions_county)
-                        full_predictions_county[nan_mask] = emp_probs[nan_mask]
+                        time_delta = (d*24)+6
+                        #nan_mask = np.isnan(full_predictions_county)
+                        #full_predictions_county[nan_mask] = emp_probs[nan_mask]
                         ds_county = xr.DataArray(full_predictions_county, 
                                                     dims = ['time','fcst_valid_time','threshold','latitude','longitude'],
                                   coords = {\
-                                      'time': ds.time.values,
-                                      'fcst_valid_time': ds.time.values+timedelta,
+                                      'time': time_standardised_to_since_1900(ds.time.values),
+                                      'fcst_valid_time': time_standardised_to_since_1900(ds.time.values,time_delta=time_delta),
                                       'threshold': [20,30,40,50],
                                       'latitude': np.unique(ds.latitude.values),
                                       'longitude': np.unique(ds.longitude.values),
                                   }
                                  ).rename('probability_exceedance')
+                        ds_county.fcst_valid_time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        ds_county.time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        ## If we want to crop to country un-comment
+                        #left = bounding_box[country][0]-0.1
+                        #right = bounding_box[country][1]+0.1
+                        #bottom = bounding_box[country][2]-0.1
+                        #top = bounding_box[country][3]+0.1
+                        #ds_county = ds_county.sel({'longitude':slice(left,right),'latitude':slice(bottom,top)})
                         ds_county.to_netcdf(file_name)
                 
             
