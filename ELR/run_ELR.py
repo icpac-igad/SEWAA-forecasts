@@ -288,15 +288,15 @@ if __name__=='__main__':
                         ds_subcounty = xr.DataArray(full_predictions_subcounty, 
                                                     dims = ['time','fcst_valid_time','threshold','latitude','longitude'],
                                   coords = {\
-                                      'time': time_standardised_to_since_1900(ds.time.values),
-                                      'fcst_valid_time': time_standardised_to_since_1900(ds.time.values,time_delta=time_delta),
+                                      'time': ds.time.values,
+                                      'fcst_valid_time': ds.time.values+time_delta,
                                       'threshold': [20,30,40,50],
                                       'latitude': np.unique(ds.latitude.values),
                                       'longitude': np.unique(ds.longitude.values),
                                   }
                                  ).rename('probability_exceedance')
-                        ds_subcounty.fcst_valid_time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
-                        ds_subcounty.time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        #ds_subcounty.fcst_valid_time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        #ds_subcounty.time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
                         
                         ## If we want to crop to country un-comment
                         #left = bounding_box[country][0]-0.1
@@ -319,15 +319,15 @@ if __name__=='__main__':
                         ds_county = xr.DataArray(full_predictions_county, 
                                                     dims = ['time','fcst_valid_time','threshold','latitude','longitude'],
                                   coords = {\
-                                      'time': time_standardised_to_since_1900(ds.time.values),
-                                      'fcst_valid_time': time_standardised_to_since_1900(ds.time.values,time_delta=time_delta),
+                                      'time': ds.time.values,
+                                      'fcst_valid_time': ds.time.values+time_delta,
                                       'threshold': [20,30,40,50],
                                       'latitude': np.unique(ds.latitude.values),
                                       'longitude': np.unique(ds.longitude.values),
                                   }
                                  ).rename('probability_exceedance')
-                        ds_county.fcst_valid_time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
-                        ds_county.time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        #ds_county.fcst_valid_time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
+                        #ds_county.time.attrs["units"]="hours since 1900-01-01 00:00:00.0"
                         ## If we want to crop to country un-comment
                         #left = bounding_box[country][0]-0.1
                         #right = bounding_box[country][1]+0.1
