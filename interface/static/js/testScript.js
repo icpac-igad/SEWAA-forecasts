@@ -5,8 +5,8 @@ let modelName = "6h accumulation"
 //          Sudan, Tanzania, Uganda, ICPAC, East Africa, All.
 let regionName = "East Africa";
 let units = "mm/6h";			// Can be mm/h, mm/6h, mm/day, mm/week
-let style = "Default";			// Can be "Default", "ICPAC", "KMD", "EMI"
-let plotType="Probability";		// Can be "Probability" or "Values"
+let style = "Default";			// Can be "Default", "ICPAC", "KMD", "EMI", "ECMWF".
+let plotType="Probability";		// Can be "Probability", "Values", "Mean" or "Std".
 let showPercentages = true;		// On the colour scale
 let maxRain = 1/24;				// Rainfall threshold in mm/h
 let probability = 0.95;			// Between 0 and 1
@@ -18,10 +18,13 @@ let canvasClickY = 0;
 let longitudeIdx = 0;			// Which location are we plotting
 let latitudeIDx = 0;
 
-// Hack to make sure multiple event handlers are not registered for the same canvas
-let canvasMouseDownRegistered = [false, false, false, false, false, false, false];
+// Hack to make sure clicking in the plot is handled correctly
+let canvasMouseDownRects = [];
 
-let availableDates;						// An object containing the dates we can use
+// Hack to force reloading of dates files
+let dateLoadNumber = Math.floor(Math.random() * 10000);
+
+let availableDates;				// An object containing the dates we can use
 let GANForecast = [];			// An array of countsData objects
 
 let validTimes = [];			// An array of valid times, set in updateDateMenus
@@ -98,6 +101,7 @@ async function modelSelect() {
 
 	await loadForecast();		// Load the currently selected forecast
 	drawMarker = false;	// No longer draw the histograms
+	document.getElementById("removeHistBttn").style.display = "none";	// Hide the button
 	drawPlots();
 }
 
@@ -105,6 +109,7 @@ async function modelSelect() {
 function regionSelect() {
 	regionName = document.getElementById("regionSelect").value;
 	drawMarker = false;	// No longer draw the histograms
+	document.getElementById("removeHistBttn").style.display = "none";	// Hide the button
 	drawPlots();
 }
 
@@ -117,52 +122,6 @@ async function initTimeSelect() {
 
 // Called by the validTimeSelect menu
 async function validTimeSelect() {
-	// Get the selected valid time
-	let validTimeValue = document.getElementById("validTimeSelect").value;
-
-	console.log("Valid time selected:", validTimeValue);
-
-	// If a specific time is selected (not "All"), show only 1 canvas
-	if (validTimeValue !== "All") {
-		console.log("Showing only 1 canvas for specific time");
-		// Show only the first canvas centered, hide all others
-		document.getElementById("myCanvas0").parentElement.style.display = "block";
-		document.getElementById("myCanvas0").parentElement.classList.add("single-canvas-view");
-		document.getElementById("myCanvas1").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas2").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas3").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
-	} else {
-		// "Plot all valid times" is selected
-		// Remove single canvas centering class
-		document.getElementById("myCanvas0").parentElement.classList.remove("single-canvas-view");
-
-		// Show appropriate number of canvases based on model
-		console.log("Showing all canvases for model:", modelName);
-
-		if (modelName == "6h accumulation") {
-			// Show 4 canvases for 6h model
-			document.getElementById("myCanvas0").parentElement.style.display = "block";
-			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
-			document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
-			document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
-		} else if (modelName == "24h accumulation") {
-			// Show all 7 canvases for 24h model
-			document.getElementById("myCanvas0").parentElement.style.display = "block";
-			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas4").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas5").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas6").parentElement.classList.remove("hidden-canvas");
-		}
-	}
-
 	await loadForecast();
 	drawPlots();
 }
@@ -220,6 +179,231 @@ function unitsSelect() {
 	drawPlots();
 }
 
+// Called by the showExplanations input checkbox
+function showExplanation() {
+	
+	// If the ensemble mean or standard deviation is plotted the explanation box is always checked
+	if ((document.getElementById("plotSelect").value == "Mean") ||
+		(document.getElementById("plotSelect").value == "Std")) {
+		
+		// Check the box
+		document.getElementById("showExplanation").checked = true;
+		
+		// Disable it
+		document.getElementById("showExplanation").disabled = true;
+		
+	} else {
+		// Enable the check box
+		document.getElementById("showExplanation").disabled = false;
+	}
+	
+	// Is the box ticked or not
+	const checked = document.getElementById("showExplanation").checked;
+	
+	// The HTML string that the explanation will be in
+	let explanationString = ``;
+		
+	if (checked == true) {
+	
+		// Get the accumulation time for the description
+		let accumulationTime = 6;
+		let easiestUnits = "mm/6h";
+		if (document.getElementById("modelSelect").value == "24h accumulation") {
+			accumulationTime = 24;
+			easiestUnits = "mm/day";
+		}
+		// Get the value threshold for the description
+		let thresholdValue = document.getElementById("thresholdValueSelect").value;
+		let thresholdProbability = document.getElementById("thresholdProbabilitySelect").value;
+		// Get the units for the description
+		let units = document.getElementById("unitsSelect").value;
+	
+		// Explanation depends on the type of plot in the "Plot" menu.
+		if (document.getElementById("plotSelect").value == "Probability") {
+			explanationString +=
+				`<b>Map description:</b> The map shows the chance that rainfall
+				 accumulated over `+accumulationTime+` hours between the valid times, will
+				 be above `+thresholdValue+` `+units+` at each location. This chance has
+				 been calculated at each location from the histogram at that location.
+				 
+				 Each colour covers a range of probabilities. There are only five
+				 categories to illustrate that we should not be overconfident in the
+				 accuracy of our probability prediction and to make the plot clear. The
+				 precise probabilities calculated are available from the histograms.
+				 
+				 The value threshold (`+thresholdValue+` `+units+`) can be changed to the
+				 value you want in the "Value threshold" box above. The units can be set
+				 in the "Units" menu also above. For example, if you are interested in
+				 rainfall above 20 mm/day, first set the "Units" menu to "mm/day" and then
+				 set the "Value threshold" box to "20". Setting the units to "`+
+				 easiestUnits+`" means that the rainfall values plotted correspond to the
+				 total rainfall over this `+accumulationTime+` hour period.
+				 
+				 The colour scale can be labelled as a percentage or in words by selecting
+				 "Show percentages" or "Show words" in the menu above.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval. The value threshold used in the map (`+
+					thresholdValue+` `+units+`) is represented at this location by the
+					blue line. The number of ensemble members to the right of the blue
+					line divided by the total number of ensemble members is the predicted
+					probability that the threshold will be exceeded. `+
+					thresholdProbability+`% of the ensemble members are to the left of the
+					red line and the rest are to the right of it. This percentage can be
+					set in the "Probability threshold" box above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+								  
+		} else if (document.getElementById("plotSelect").value == "Values") {
+			explanationString +=
+				`<b>Map description:</b> The map shows that for rainfall accumulated over
+				 `+accumulationTime+` hours between the valid times, `+
+				 thresholdProbability+`% of ensemble members predicted rainfall below the
+				 plotted value at each location. The remaining ensemble members predicted
+				 rainfall above the plotted value at each location. This rainfall value
+				 has been calculated at each location from the histogram at that location.
+				 
+				 The probability threshold (`+thresholdProbability+`%) can be changed to
+				 the percentage you want in the "Probability threshold" box above. A
+				 probability threshold of 50% corresponds to the <i>ensemble median</i>
+				 which is a good alternative to the ensemble mean when looking at
+				 rainfall. A probability threshold of 95% indicates that only 5% of
+				 ensemble members exceeded the plotted value. In that case rainfall above
+				 the predicted value is unlikely. A probability threshold of 95% is a
+				 good alternative to using the ensemble standard deviation to estimate the
+				 range of predicted rainfall.
+				 
+				 Each colour covers a range of values and the precise values calculated
+				 are available from the histograms. The units of the colour scale can be
+				 set in the "Units" menu above. The units show the rainfall rate on
+				 average over the `+accumulationTime+` hour period. Setting the units to
+				 "`+easiestUnits+`" means that the rainfall values plotted correspond to
+				 the total rainfall over this `+accumulationTime+` hour period.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval. The probability threshold used in the map
+					(`+thresholdProbability+`%) is represented at this location by the
+					red line. `+thresholdProbability+`% of the ensemble members are to the
+					left of the red line and the rest are to the right of it.
+					
+					The blue line corresponds to a value threshold (`+thresholdValue+` `+
+					units+`). The number of ensemble members to the right of the blue line
+					divided by the total number of ensemble members is the predicted
+					probability that the value threshold will be exceeded. This value can
+					be set in the "Value threshold" box above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+			
+		} else if (document.getElementById("plotSelect").value == "Mean") {
+			explanationString +=
+				`<b>Map description:</b> The map shows the ensemble mean rainfall
+				 accumulated over `+accumulationTime+` hours between the valid times at
+				 each location.
+				 
+				 <span style="color:red">WARNING: The ensemble mean is usually not a good
+				 summary statistic for rainfall forecasts. </span>
+				 
+				 The predicted rainfall distribution is far from normal (see the
+				 histograms), and the ensemble mean is difficult to interpret. A good
+				 alternative to the ensemble mean when looking at rainfall is the
+				 <i>ensemble median</i>. The ensemble median plot can be made by selecting
+				 "Values below probability" from the plot menu above and setting the
+				 "Probability threshold" box to 50%.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval.
+					
+					The blue line corresponds to a value threshold (`+thresholdValue+` `+
+					units+`). The number of ensemble members to the right of the blue line
+					divided by the total number of ensemble members is the predicted
+					probability that the value threshold will be exceeded. This value can
+					be set in the "Value threshold" box above. `+thresholdProbability+`%
+					of the ensemble members are to the left of the red line and the rest
+					are to the right of it. This percentage can be set in the "Probability
+					threshold" box above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+			
+		} else if (document.getElementById("plotSelect").value == "Std") {
+			explanationString +=
+				`<b>Map description:</b> The map shows the ensemble standard deviation of
+				 rainfall accumulated over `+accumulationTime+` hours between the valid
+				 times at each location.
+				 
+				 <span style="color:red">WARNING: The ensemble standard deviation is
+				 usually not a good summary statistic for rainfall forecasts. </span>
+				 
+				 The predicted rainfall distribution is far from normal (see the
+				 histograms), and the ensemble standard deviation is difficult to
+				 interpret. A good alternative to the ensemble standard deviation when
+				 looking to estimate the range of rainfall is a probability threshold of
+				 95%. This plot can be made by selecting "Values below probability" from
+				 the plot menu above and setting the "Probability threshold" box to 95%.`;
+			
+			if (drawMarker) {
+				explanationString += ` <br><b>Histogram description:</b> The histogram
+					plot to the right of each map represents the rainfall predicted by
+					each ensemble member at the location marked by the cross on the map
+					(at the labelled latitude and longitude). Each bar in the histogram
+					shows the number of forecast ensemble members that made a prediction
+					in that rainfall interval.
+					
+					The blue line corresponds to a value threshold (`+thresholdValue+` `+
+					units+`). The number of ensemble members to the right of the blue line
+					divided by the total number of ensemble members is the predicted
+					probability that the value threshold will be exceeded. This value can
+					be set in the "Value threshold" box above. `+thresholdProbability+`%
+					of the ensemble members are to the left of the red line and the rest
+					are to the right of it. This percentage can be set in the "Probability
+					threshold" box above.`;
+			} else {
+				explanationString += ` <br><b>Click on the map to show the histogram at that point.</b>`;
+			}
+		}
+		
+		// Gap between paragraph and plots
+		explanationString += "<br><br>";
+		
+		// Add the string to the paragraph
+		document.getElementById("mapExplanationText").innerHTML = explanationString;
+		
+		// Show the explanation
+		document.getElementById("mapExplanationText").style.display = "inline";
+	} else {
+		// Hide the explanation
+		document.getElementById("mapExplanationText").style.display = "none";
+	}
+	
+	// XXX Give the model description too
+	
+	
+}
+
+// Called by the removeHistBttn button
+function removeHistograms() {
+	drawMarker = false;	// No longer draw the histograms
+	document.getElementById("removeHistBttn").style.display = "none";	// Hide the button
+	drawPlots();
+}
+
 // Loads and plots the currently selected forecast
 async function loadForecast() {
 	let year = document.getElementById("initYearSelect").value;
@@ -250,7 +434,6 @@ async function loadForecast() {
 										 +"_"+validTimes[i]+"h.nc";
 			
 			// Load data into the forecastDataObject
-			// XXX Load to an array of objects
 			await GANForecast[i].loadGANForecast(fileName, modelName, accumulationHours);
 		}
 	} else {	// Load a single valid time
@@ -309,9 +492,21 @@ function updateMenu(dateObject,datesText,id) {
 		dateSelect.appendChild(option);
 	}
 	
-	// If the specified year/month/day/time/valid time does not exist.
-	if (!(dates.includes(date))) {
-		date = dates[dates.length-1];	// Pick the final one
+	// Add the "Plot all valid times" menu item.
+	if (datesText.length > dateObject.length) {
+		if (datesText[datesText.length-1] == "Plot all valid times") {
+			let option = document.createElement("option");
+			option.value = "All";
+			option.innerHTML = "Plot all valid times";
+			dateSelect.appendChild(option);
+		}
+	}
+	
+	if (date != "All") {
+		// If the specified year/month/day/time/valid time does not exist.
+		if (!(dates.includes(date))) {
+			date = dates[dates.length-1];	// Pick the final one
+		}
 	}
 	
 	// Set the menu to the value it should be
@@ -347,7 +542,7 @@ function updateDateMenus() {
 	// The available valid times depend upon the year, month, day and time.
 	validTimes = daysObject[String(time)];	// validTimes is an Array
 	// We use a custom string for the valid time menu elements
-	let validTimeStrings = new Array(validTimes.length);
+	let validTimeStrings = new Array(validTimes.length+1);
 	for (let i=0;i<validTimes.length;i++) {
 		// What's the valid date? (YYYY-MM-DD)
 		validDate = timeOffsetToDate(validTimes[i]+parseInt(time),
@@ -360,24 +555,23 @@ function updateDateMenus() {
 							+" "+String(validDate.getUTCHours()).padStart(2,'0')
 							+":00 UTC (+"+validTimes[i]+"h)";
 	}
-	updateMenu(validTimes,validTimeStrings,"validTimeSelect");
-	
-	// Select the HTML select menu that we are updating
-	let dateSelect = document.getElementById("validTimeSelect");
 	// Add an "Plot all valid times" option
-	let option = document.createElement("option");
-	option.value = "All";
-	option.innerHTML = "Plot all valid times";
-	dateSelect.appendChild(option);
+	validTimeStrings[validTimes.length] = "Plot all valid times";
+	updateMenu(validTimes,validTimeStrings,"validTimeSelect");
 }
 
 async function loadDates() {
 	// Fetch a remote file
 	let fileName;
 	if (modelName == "6h accumulation") {
-		fileName = "/data/counts_6h/available_dates.json";
+		fileName = "/staticdata/counts_6h/available_dates.json?"+dateLoadNumber;
 	} else if (modelName == "24h accumulation") {
-		fileName = "/data/counts_24h/available_dates.json";
+		fileName = "/staticdata/counts_24h/available_dates.json?"+dateLoadNumber;
+	}
+	// dateLoadNumber ensures that the available_dates.json file is not cached
+	dateLoadNumber += 1;
+	if (dateLoadNumber > 10000) {
+		dateLoadNumber = 0;
 	}
 	const response = await fetch(fileName);
 	
@@ -385,32 +579,32 @@ async function loadDates() {
 	availableDates = await response.json();
 	
 	// Pick the final date to load
-	let years = Object.keys(availableDates);
-	let year = years[years.length-1];
-	let yearObject = availableDates[year];
-	let months = Object.keys(yearObject);
-	let month = months[months.length-1];
-	let monthObject = yearObject[month];
-	let days = Object.keys(monthObject);
-	let day = days[days.length-1];
-	let daysObject = monthObject[day];
-	let times = Object.keys(daysObject);
-	let time = times[times.length-1];
-	let validTimes = daysObject[time];
-	let validTime = validTimes[validTimes.length-1];
+// 	let years = Object.keys(availableDates);
+// 	let year = years[years.length-1];
+// 	let yearObject = availableDates[year];
+// 	let months = Object.keys(yearObject);
+// 	let month = months[months.length-1];
+// 	let monthObject = yearObject[month];
+// 	let days = Object.keys(monthObject);
+// 	let day = days[days.length-1];
+// 	let daysObject = monthObject[day];
+// 	let times = Object.keys(daysObject);
+// 	let time = times[times.length-1];
+// 	let validTimes = daysObject[time];
+// 	let validTime = validTimes[validTimes.length-1];
 	
 	// Set the menus to match the loaded dates
 	// Probably doesn't do anything. Overridden by updateDateMenus.
-	document.getElementById("initYearSelect").value = year;
-	document.getElementById("initMonthSelect").value = month;
-	document.getElementById("initDaySelect").value = day;
-	document.getElementById("initTimeSelect").value = time;
-	document.getElementById("validTimeSelect").value = String(validTime);
+// 	document.getElementById("initYearSelect").value = year;
+// 	document.getElementById("initMonthSelect").value = month;
+// 	document.getElementById("initDaySelect").value = day;
+// 	document.getElementById("initTimeSelect").value = time;
+// 	document.getElementById("validTimeSelect").value = String(validTime);
 	
 	updateDateMenus();
 	
 	// By default plot all lead times
-	document.getElementById("validTimeSelect").value = "All";
+// 	document.getElementById("validTimeSelect").value = "All";
 }
 
 function initControls() {
@@ -586,17 +780,18 @@ async function init() {
 }
 
 // Listens for the mouse in the supplied rectangle (corresponding to the plot picture)
-function listenForMouse(canvasNum, plotRect) {
-	// XXX This still listens for events when the forecast is not drawn.
-	//     Which stops being a (minor) problem when canvases are removed/created as needed.
-
+function listenForMouse(canvasNum) {
+	
 	// Get canvas for events
-	const canvas = document.getElementById("myCanvas"+canvasNum);
-
+	const canvas = document.getElementById("mapCanvas"+canvasNum);
+	
 	// Detect the mouse location when it is within the canvas element
 	canvas.addEventListener('mousedown', function(evt) {
-
-		// Get the mouse position relative to the canvas element as displayed
+		
+		// Get the current rectangle for dealing with plot clicks from a global variable
+		plotRect = canvasMouseDownRects[canvasNum];
+		
+		// Get the mouse position in the canvas element
 		let canvasRect = canvas.getBoundingClientRect();
 		let clickX = evt.clientX - canvasRect.left;
 		let clickY = evt.clientY - canvasRect.top;
@@ -628,7 +823,8 @@ function listenForMouse(canvasNum, plotRect) {
 
 			// When the plots are drawn, also draw the marker
 			drawMarker = true;
-
+			document.getElementById("removeHistBttn").style.display = "inline";	// Show the button
+			
 			// The lon/lat location changes with a mouse click
 			locationChanged = true;
 
@@ -639,6 +835,9 @@ function listenForMouse(canvasNum, plotRect) {
 }
 
 async function drawPlots() {
+
+	// It's easier to update the plot explanation every time the plots are drawn
+	showExplanation();
 	
 	// See what the input boxes say
 	let norm = getPlotNormalisation(units);
@@ -653,24 +852,100 @@ async function drawPlots() {
 		numCanvases = 1;
 	}
 	
-	// Erase all canvases, regardless of how many are being drawn to
-	// XXX In future, the correct number of canvases will exist instead.
-	for (let canvasNum=0;canvasNum<7;canvasNum++) {
-		const canvas = document.getElementById("myCanvas"+canvasNum);
-		const ctx = canvas.getContext("2d");
-		ctx.clearRect(0,0,canvas.width,canvas.height);
+	// Ensure the correct number of map canvases exist
+	let canvasNum=0;
+	while (document.getElementById("mapCanvas"+canvasNum) != null) {
+		// If this canvas is not needed
+		if (canvasNum+1 > numCanvases) {
+			canvasElement = document.getElementById("mapCanvas"+canvasNum);
+			canvasElement.remove();
+		}
+		canvasNum += 1;
 	}
+	// If there are insufficient canvases
+	while (canvasNum < numCanvases) {
+		const canvasElement = document.createElement("canvas");
+		canvasElement.id = "mapCanvas"+canvasNum;
+		canvasElement.width = 513;
+		canvasElement.height = 504;
+		canvasElement.innerHTML = "Your browser does not support the HTML canvas tag.";
+		// canvasElement.style="border:1px solid grey";
+		document.body.appendChild(canvasElement);
+		// Listen for clicks in the canvas
+		listenForMouse(canvasNum);
+		canvasNum += 1;
+	}
+	
+	// Create the necessary histogram canvases (Same code as above almost)
+	if (drawMarker) {
+		// Ensure the correct number of histogram canvases exist
+		let canvasNum=0;
+		while (document.getElementById("histogramCanvas"+canvasNum) != null) {
+			// If this canvas is not needed
+			if (canvasNum+1 > numCanvases) {
+				canvasElement = document.getElementById("histogramCanvas"+canvasNum);
+				canvasElement.remove();
+			}
+			canvasNum += 1;
+		}
+		// If there are insufficient canvases
+		brIdx=0;	// Keep track of the number of line breaks
+		while (canvasNum < numCanvases) {
+			const canvasElement = document.createElement("canvas");
+			canvasElement.id = "histogramCanvas"+canvasNum;
+			canvasElement.width = 511;
+			canvasElement.height = 504;
+			canvasElement.innerHTML = "Your browser does not support the HTML canvas tag.";
+			// canvasElement.style="border:1px solid grey";
+			
+			// Place the histogram canvas just after the map canvas
+			const mapElement = document.getElementById("mapCanvas"+canvasNum);
+			mapElement.insertAdjacentElement("afterend", canvasElement);
+			
+			// If the map drawn is to the right of the histogram
+			mapRect = mapElement.getClientRects();
+			histogramRect = canvasElement.getClientRects();
+			// With a buffer to account for funky layout engines
+			if (mapRect[0].x > histogramRect[0].x + mapElement.width/2) {
+				// Insert <br> before the map
+				const brElement = document.createElement("br");
+				brElement.id = "mapNewLine"+brIdx;
+				brIdx += 1;
+				mapElement.insertAdjacentElement("beforebegin", brElement);
+			}
+						
+			canvasNum += 1;
+		}
+	} else {
+		// Remove all histogram canvases
+		let canvasNum=0;
+		while (document.getElementById("histogramCanvas"+canvasNum) != null) {
+			canvasElement = document.getElementById("histogramCanvas"+canvasNum);
+			canvasElement.remove();
+			canvasNum += 1;
+		}
+		
+		// Remove all mapNewLine line breaks
+		let brIdx=0;
+		while (document.getElementById("mapNewLine"+brIdx) != null) {
+			brElement = document.getElementById("mapNewLine"+brIdx);
+			brElement.remove();
+			brIdx += 1;
+		}
+	}
+	
+	// Reset the array of rectangles containing map canvas boundaries
+	canvasMouseDownRects = [];
 	
 	// Draw plots in each canvas
 	for (let canvasNum=0;canvasNum<numCanvases;canvasNum++) {
 		
 		// Get the context for plotting
-		const canvas = document.getElementById("myCanvas"+canvasNum);
+		const canvas = document.getElementById("mapCanvas"+canvasNum);
 		const ctx = canvas.getContext("2d");
 		
 		// Erase the canvas
-		// XXX Will need this when we have the correct number of canvases
-		// ctx.clearRect(0,0,canvas.width,canvas.height);
+		ctx.clearRect(0,0,canvas.width,canvas.height);
 		
 		let x = 2, y=2;			// Location of plot from top left
 		let width = 500;		// Width of plot in pixels
@@ -682,13 +957,22 @@ async function drawPlots() {
 		// The rectangles within which the plots are drawn
 		let plotRect;
 		if (plotType == "Probability") {
-			plotRect = await GANForecast[canvasNum].plotExceedenceProbability(ctx, x, y, width, height,
+			plotRect = await GANForecast[canvasNum].plotExceedanceProbability(ctx, x, y, width, height,
 																   maxRain, units, style,
 																   showPercentages, regionName);
 		} else if (plotType == "Values") {
-			plotRect = await GANForecast[canvasNum].plotExceedenceValue(ctx, x, y, width, height,
+			plotRect = await GANForecast[canvasNum].plotExceedanceValue(ctx, x, y, width, height,
 															 probability, units, style, regionName);
+		} else if (plotType == "Mean") {
+			plotRect = await GANForecast[canvasNum].plotMean(ctx, x, y, width, height,
+															 units, style, regionName);
+		} else if (plotType == "Std") {
+			plotRect = await GANForecast[canvasNum].plotStd(ctx, x, y, width, height,
+															units, style, regionName);
 		}
+		
+		// Save plotRect for understanding map clicks
+		canvasMouseDownRects[canvasMouseDownRects.length] = plotRect;
 		
 		// Plot the marker and associated histogram
 		if (drawMarker) {
@@ -753,26 +1037,20 @@ async function drawPlots() {
 			let barChartSpec = new barChartSpecification();
 			
 			let y2 = y;
-			let x2 = 522;				// Change the location of the second plot
+			let x2 = 8;				// Change the location of the second plot
+			
+			// Get the context for plotting
+			const histogramCanvas = document.getElementById("histogramCanvas"+canvasNum);
+			const histogramCtx = histogramCanvas.getContext("2d");
+			
+			// Erase the canvas
+			histogramCtx.clearRect(0,0,histogramCanvas.width,histogramCanvas.height);
 			
 			// Plot the histogram and wait for it to finish
-			await GANForecast[canvasNum].plotHistogram(ctx, x2, y2, width, height, maxRain, probability,
-											latitudeIdx, longitudeIdx, units, barChartSpec);
-		}
-		
-		// XXX Can make plotRect a local variable and not an array of rectangles. And no
-		//     need to return it.
-		if (canvasMouseDownRegistered[canvasNum] == false) {
-			canvasMouseDownRegistered[canvasNum] = true;
-			listenForMouse(canvasNum, plotRect);
+			await GANForecast[canvasNum].plotHistogram(histogramCtx, x2, y2, width, height,
+						maxRain, probability,latitudeIdx, longitudeIdx, units, barChartSpec);
 		}
 	}
-	
-	// Remove mouse events from empty canvases
-	// XXX In future the canvas itself will be removed instead
-// 	for (let canvasNum=numCanvases;canvasNum<7;canvasNum++) {
-// 		// XXX Work out how to dissavle the event listener
-// 	}
 }
 
 init();

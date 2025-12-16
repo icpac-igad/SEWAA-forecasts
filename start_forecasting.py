@@ -46,58 +46,80 @@ IFS_wait_minutes_for_24h_accumulations = 30
 
 # 6h accumulations
 def run_6h_accumulation_forecasts():
-
     # Time of most recent forecast to check for
-    d_end = datetime.utcnow() - (timedelta(hours = IFS_wait_hours_for_6h_accumulations) +
-                                 timedelta(minutes = IFS_wait_minutes_for_6h_accumulations))
-    
+    d_end = datetime.utcnow() - (
+        timedelta(hours=IFS_wait_hours_for_6h_accumulations)
+        + timedelta(minutes=IFS_wait_minutes_for_6h_accumulations)
+    )
+
     # Time of first forecast to check for
-    d_start = d_end - timedelta(days = days_to_check)
-    
+    d_start = d_end - timedelta(days=days_to_check)
+
     # Always start at 00:00
     d_start = datetime(d_start.year, d_start.month, d_start.day)
-    
+
     # Run all 6h forecasts days_to_check days in the past
     d = d_start
-    while (d < d_end):
-        
+    while d < d_end:
         # Check for the 6h forecast
-        print(f"Running: run_forecast.py --accumulation 6h --date {d.year}{d.month:02d}{d.day:02d} --time {d.hour:02d}{d.minute:02d} --delete_forecasts Y")
-        subprocess.call(["python", f"run_forecast.py",
-                         "--accumulation", "6h",
-                         "--date", f"{d.year}{d.month:02d}{d.day:02d}",
-                         "--time", f"{d.hour:02d}{d.minute:02d}",
-                         "--delete_forecasts", "Y"])
-        
+        print(
+            f"Running: run_forecast.py --accumulation 6h --date {d.year}{d.month:02d}{d.day:02d} --time {d.hour:02d}{d.minute:02d} --delete_forecasts Y"
+        )
+        subprocess.call(
+            [
+                "python",
+                "run_forecast.py",
+                "--accumulation",
+                "6h",
+                "--date",
+                f"{d.year}{d.month:02d}{d.day:02d}",
+                "--time",
+                f"{d.hour:02d}{d.minute:02d}",
+                "--delete_forecasts",
+                "Y",
+            ]
+        )
+
         # Move to the next forecast
         d += timedelta(hours=6)
 
 
 # 24h accumulations
 def run_24h_accumulation_forecasts():
-
     # Time of most recent forecast to check for
-    d_end = datetime.utcnow() - (timedelta(hours = IFS_wait_hours_for_24h_accumulations) +
-                                 timedelta(minutes = IFS_wait_minutes_for_24h_accumulations))
-    
+    d_end = datetime.utcnow() - (
+        timedelta(hours=IFS_wait_hours_for_24h_accumulations)
+        + timedelta(minutes=IFS_wait_minutes_for_24h_accumulations)
+    )
+
     # Time of first forecast to check for
-    d_start = d_end - timedelta(days = days_to_check)
-    
+    d_start = d_end - timedelta(days=days_to_check)
+
     # Always start at 00:00
     d_start = datetime(d_start.year, d_start.month, d_start.day)
-    
+
     # Run all 6h forecasts days_to_check days in the past
     d = d_start
-    while (d < d_end):
-        
+    while d < d_end:
         # Check for the 6h forecast
-        print(f"Running: run_forecast.py --accumulation 24h --date {d.year}{d.month:02d}{d.day:02d} --time {d.hour:02d}{d.minute:02d} --delete_forecasts Y")
-        subprocess.call(["python", f"run_forecast.py",
-                         "--accumulation", "24h",
-                         "--date", f"{d.year}{d.month:02d}{d.day:02d}",
-                         "--time", f"{d.hour:02d}{d.minute:02d}",
-                         "--delete_forecasts", "Y"])
-        
+        print(
+            f"Running: run_forecast.py --accumulation 24h --date {d.year}{d.month:02d}{d.day:02d} --time {d.hour:02d}{d.minute:02d} --delete_forecasts Y"
+        )
+        subprocess.call(
+            [
+                "python",
+                "run_forecast.py",
+                "--accumulation",
+                "24h",
+                "--date",
+                f"{d.year}{d.month:02d}{d.day:02d}",
+                "--time",
+                f"{d.hour:02d}{d.minute:02d}",
+                "--delete_forecasts",
+                "Y",
+            ]
+        )
+
         # Move to the next forecast
         d += timedelta(days=1)
 
@@ -107,16 +129,18 @@ def run_all_forecasts():
     run_24h_accumulation_forecasts()
 
 
-if __name__=='__main__':
-
+if __name__ == "__main__":
     # There are no command line arguments, but the user might want help anyway.
-    parser = argparse.ArgumentParser(description="""Python script to start running forecasts automatically.
+    parser = argparse.ArgumentParser(
+        description="""Python script to start running forecasts automatically.
 
 To run this script:
 
       conda activate tf215gpu
       python start_forecasting.py
-    """, formatter_class=argparse.RawTextHelpFormatter)
+    """,
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.parse_args()
 
     # Start immediately
@@ -124,7 +148,7 @@ To run this script:
 
     # Schedule the forecasts to run every minutes_to_wait minutes.
     schedule.every(minutes_to_wait).minutes.do(run_all_forecasts)
-    
+
     # Check the schedule every minutes_between_schedule_checks minutes.
     while True:
         print(f"Checking shedule at {datetime.utcnow()} UTC.")
