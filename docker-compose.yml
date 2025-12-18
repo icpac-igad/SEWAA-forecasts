@@ -19,6 +19,7 @@ services:
 
   jobs:
     <<: *cgan_web
+    image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
     container_name: ${JOBS_CNTR_NAME:-cgan-jobs}
     command: ["python", "start_forecasting.py"]
     # not used but must be specified to prevent conflicts with web service
