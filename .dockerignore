@@ -1,5 +1,6 @@
 .DS_Store
 .venv
+.ssh
 .ipynb_checkpoints
 *.nc
 *.pyc
