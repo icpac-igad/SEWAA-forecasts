@@ -34,7 +34,7 @@ services:
       - ${COUNTS_DATA_DIR:-./interface/data}:${PROXY_WORK_HOME:-/opt/interface/}counts
       - ${cGAN_6h_FORECASTS_DIR:-./6h_accumulations/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface/}forecasts/6h_cGAN_forecasts
       - ${IFS_6h_FORECASTS_DIR:-./6h_accumulations/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface/}forecasts/6h_IFS_forecast_data
-      - ${cGAN_24h_FORECASTS_DIR:-./24h_accumulations/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface/}forecasts/h_cGAN_forecasts
+      - ${cGAN_24h_FORECASTS_DIR:-./24h_accumulations/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface/}forecasts/24h_cGAN_forecasts
       - ${IFS_24h_FORECASTS_DIR:-./24h_accumulations/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface/}forecasts/24h_IFS_forecast_data
 
       
