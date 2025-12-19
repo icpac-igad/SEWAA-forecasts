@@ -1,9 +1,17 @@
 ARG PYTHON_VERSION=3.11
 
-FROM alpine/git AS builder
-ARG GAN_REPO=https://github.com/icpac-igad/SEWAA-forecasts.git
+FROM python:${PYTHON_VERSION}-slim AS builder
 
-RUN git clone --depth 1 ${GAN_REPO} /tmp/cgan
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends git curl && \
+    curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    python -m venv /tmp/.venv
+
+ENV PATH=/tmp/.venv/bin:/root/.local/bin:${PATH}
+
+COPY . /tmp/cgan/
+
+RUN cd /tmp/cgan && uv sync --all-extras
 
 
 FROM python:${PYTHON_VERSION}-slim AS runner
@@ -19,10 +27,10 @@ ARG API_WORKERS=32
 
 # install system libraries
 RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends git rsync ssh ca-certificates pkg-config \
+    apt-get install -y --no-install-recommends rsync ssh ca-certificates pkg-config \
     libgdal-dev libgeos-dev libproj-dev gdal-bin libcgal-dev libxml2-dev libsqlite3-dev  \
     gcc g++ dvipng libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev \
-    libeccodes-dev libeccodes-tools curl && mkdir -p ${WORK_HOME}/.ssh ${WORK_HOME}/.local
+    libeccodes-dev libeccodes-tools && mkdir -p ${WORK_HOME}/.ssh ${WORK_HOME}/.local
 
 
 RUN groupadd --gid ${GROUP_ID} ${USER_NAME} && \
@@ -33,12 +41,8 @@ USER ${USER_NAME}
 WORKDIR ${WORK_HOME}
 
 COPY --from=builder --chown=${USER_ID}:root /tmp/cgan ${WORK_HOME}
-
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    python -m venv ${WORK_HOME}/.venv
+COPY --from=builder --chown=${USER_ID}:root /tmp/.venv ${WORK_HOME}/.venv
 
 ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS}
-
-RUN uv sync
 
 CMD ["sh", "-c", "fastapi run --proxy-headers --workers ${API_WORKERS}"]
