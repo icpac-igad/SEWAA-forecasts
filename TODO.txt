@@ -1,5 +1,7 @@
 Issues:
 
+Port set_data_directory.sh to python for windows portability.
+
 When a new date is selected the value of the "Valid:" menu is not maintained
 if "Plot all valid times" is selected.
 
