@@ -26,8 +26,8 @@ for country in ["Kenya","Ethiopia","Rwanda"]:
     elr_years = []
     times_list = []
     # Create the directory if it is not there
-    if os.path.exists(elr_dir_country):
-        os.mkdirs(elr_dir_country);
+    if not os.path.exists(elr_dir_country):
+        os.makedirs(elr_dir_country);
     files = os.listdir(elr_dir_country)
     for file in files:        
         file_name = file
