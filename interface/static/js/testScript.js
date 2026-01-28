@@ -34,14 +34,6 @@ let validTimes = [];			// An array of valid times, set in updateDateMenus
 async function modelSelect() {
 	modelName = document.getElementById("modelSelect").value;
 
-	console.log("Model selected:", modelName);
-
-	// Check if a specific valid time is selected (before loadDates updates the menu)
-	let validTimeValue = document.getElementById("validTimeSelect").value;
-	let isSpecificTime = (validTimeValue !== "All");
-
-	console.log("Is specific time selected:", isSpecificTime, "Value:", validTimeValue);
-
 	// Set the model description
 	if (modelName == "6h accumulation") {
 		document.getElementById("modelInfo").innerHTML = "The <a href=\"https://www.ecmwf.int/\" target=\"_blank\">ECMWF</a> <a href=\"https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS\" target=\"_blank\">IFS</a> output is post-processed using <a href=\"https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120\" target=\"_blank\">cGAN</a> trained on <a href=\"https://gpm.nasa.gov/data/imerg\" target=\"_blank\"> IMERG</a> v6 from 2018 and 2019 to produce forecasts of 6h rainfall intervals. Model version 1.";
@@ -52,53 +44,6 @@ async function modelSelect() {
 	}
 
 	await loadDates();		// Each model has it's own set of available dates
-
-	// After loadDates, check the valid time value again (it may have changed)
-	validTimeValue = document.getElementById("validTimeSelect").value;
-	isSpecificTime = (validTimeValue !== "All");
-
-	console.log("After loadDates - Is specific time:", isSpecificTime, "Value:", validTimeValue);
-
-	// Set canvas visibility based on model and valid time selection
-	if (isSpecificTime) {
-		// Show only 1 canvas centered for specific time
-		console.log("Showing only 1 canvas for specific time");
-		document.getElementById("myCanvas0").parentElement.style.display = "block";
-		document.getElementById("myCanvas0").parentElement.classList.add("single-canvas-view");
-		document.getElementById("myCanvas1").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas2").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas3").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
-	} else {
-		// "Plot all valid times" is selected
-		document.getElementById("myCanvas0").parentElement.classList.remove("single-canvas-view");
-
-		if (modelName == "6h accumulation") {
-			// Show 4 canvases for 6h model
-			console.log("Showing 4 canvases for 6h model");
-			document.getElementById("myCanvas0").parentElement.style.display = "block";
-			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
-			document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
-			document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
-
-		} else if (modelName == "24h accumulation") {
-			// Show all 7 canvases for 24h model
-			console.log("Showing all 7 canvases for 24h model");
-			document.getElementById("myCanvas0").parentElement.style.display = "block";
-			document.getElementById("myCanvas1").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas2").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas3").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas4").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas5").parentElement.classList.remove("hidden-canvas");
-			document.getElementById("myCanvas6").parentElement.classList.remove("hidden-canvas");
-		}
-	}
-
 	await loadForecast();		// Load the currently selected forecast
 	drawMarker = false;	// No longer draw the histograms
 	document.getElementById("removeHistBttn").style.display = "none";	// Hide the button
@@ -558,6 +503,9 @@ function updateDateMenus() {
 	// Add an "Plot all valid times" option
 	validTimeStrings[validTimes.length] = "Plot all valid times";
 	updateMenu(validTimes,validTimeStrings,"validTimeSelect");
+
+	// Set "Plot all valid times" as the default
+	document.getElementById("validTimeSelect").value = "All";
 }
 
 async function loadDates() {
@@ -614,19 +562,7 @@ function initControls() {
 
 	document.getElementById("modelSelect").value = modelName;
 
-	// Set initial canvas visibility based on model (6h shows 4 canvases, 24h shows 7)
-	console.log("InitControls: Setting canvas visibility for model:", modelName);
-	if (modelName == "6h accumulation") {
-		console.log("InitControls: Hiding canvases 4, 5, 6");
-		document.getElementById("myCanvas4").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas5").parentElement.classList.add("hidden-canvas");
-		document.getElementById("myCanvas6").parentElement.classList.add("hidden-canvas");
-	} else if (modelName == "24h accumulation") {
-		console.log("InitControls: Showing all 7 canvases");
-		document.getElementById("myCanvas4").parentElement.classList.remove("hidden-canvas");
-		document.getElementById("myCanvas5").parentElement.classList.remove("hidden-canvas");
-		document.getElementById("myCanvas6").parentElement.classList.remove("hidden-canvas");
-	}
+	// Canvas visibility is handled by drawPlots() based on validTimes.length
 
 	document.getElementById("regionSelect").value = regionName;
 	
@@ -851,86 +787,94 @@ async function drawPlots() {
 	} else {
 		numCanvases = 1;
 	}
-	
-	// Ensure the correct number of map canvases exist
-	let canvasNum=0;
-	while (document.getElementById("mapCanvas"+canvasNum) != null) {
-		// If this canvas is not needed
-		if (canvasNum+1 > numCanvases) {
-			canvasElement = document.getElementById("mapCanvas"+canvasNum);
-			canvasElement.remove();
+
+	// Update canvas visibility based on numCanvases
+	for (let i = 0; i < 7; i++) {
+		const plotPair = document.getElementById("plotPair" + i);
+		if (plotPair) {
+			if (i < numCanvases) {
+				plotPair.classList.remove("hidden-canvas");
+				// Handle single canvas centering
+				if (numCanvases === 1 && i === 0) {
+					plotPair.classList.add("single-canvas-view");
+				} else {
+					plotPair.classList.remove("single-canvas-view");
+				}
+			} else {
+				plotPair.classList.add("hidden-canvas");
+				plotPair.classList.remove("single-canvas-view");
+			}
 		}
+	}
+
+	// Ensure the correct number of map canvases exist
+	// Count existing canvases (don't remove pre-defined ones from HTML)
+	let canvasNum = 0;
+	while (document.getElementById("mapCanvas"+canvasNum) != null) {
+		// Set up mouse listener for existing canvases
+		listenForMouse(canvasNum);
 		canvasNum += 1;
 	}
-	// If there are insufficient canvases
+	// If there are insufficient canvases, create more
 	while (canvasNum < numCanvases) {
 		const canvasElement = document.createElement("canvas");
 		canvasElement.id = "mapCanvas"+canvasNum;
 		canvasElement.width = 513;
 		canvasElement.height = 504;
 		canvasElement.innerHTML = "Your browser does not support the HTML canvas tag.";
-		// canvasElement.style="border:1px solid grey";
 		document.body.appendChild(canvasElement);
 		// Listen for clicks in the canvas
 		listenForMouse(canvasNum);
 		canvasNum += 1;
 	}
 	
-	// Create the necessary histogram canvases (Same code as above almost)
+	// Create or remove histogram canvases based on drawMarker state
+	const plotsContainer = document.getElementById("plotsContainer");
 	if (drawMarker) {
-		// Ensure the correct number of histogram canvases exist
-		let canvasNum=0;
-		while (document.getElementById("histogramCanvas"+canvasNum) != null) {
-			// If this canvas is not needed
-			if (canvasNum+1 > numCanvases) {
-				canvasElement = document.getElementById("histogramCanvas"+canvasNum);
-				canvasElement.remove();
-			}
-			canvasNum += 1;
+		// Add has-histograms class to container for grid layout change
+		if (plotsContainer) {
+			plotsContainer.classList.add("has-histograms");
 		}
-		// If there are insufficient canvases
-		brIdx=0;	// Keep track of the number of line breaks
-		while (canvasNum < numCanvases) {
-			const canvasElement = document.createElement("canvas");
-			canvasElement.id = "histogramCanvas"+canvasNum;
-			canvasElement.width = 511;
-			canvasElement.height = 504;
-			canvasElement.innerHTML = "Your browser does not support the HTML canvas tag.";
-			// canvasElement.style="border:1px solid grey";
-			
-			// Place the histogram canvas just after the map canvas
-			const mapElement = document.getElementById("mapCanvas"+canvasNum);
-			mapElement.insertAdjacentElement("afterend", canvasElement);
-			
-			// If the map drawn is to the right of the histogram
-			mapRect = mapElement.getClientRects();
-			histogramRect = canvasElement.getClientRects();
-			// With a buffer to account for funky layout engines
-			if (mapRect[0].x > histogramRect[0].x + mapElement.width/2) {
-				// Insert <br> before the map
-				const brElement = document.createElement("br");
-				brElement.id = "mapNewLine"+brIdx;
-				brIdx += 1;
-				mapElement.insertAdjacentElement("beforebegin", brElement);
+
+		// Ensure histogram canvases exist in each plot pair
+		for (let i = 0; i < numCanvases; i++) {
+			let histCanvas = document.getElementById("histogramCanvas"+i);
+			const plotPair = document.getElementById("plotPair"+i);
+
+			if (!histCanvas && plotPair) {
+				histCanvas = document.createElement("canvas");
+				histCanvas.id = "histogramCanvas"+i;
+				histCanvas.width = 511;
+				histCanvas.height = 504;
+				histCanvas.innerHTML = "Your browser does not support the HTML canvas tag.";
+				// Add histogram canvas to the plot pair, after the map canvas
+				plotPair.appendChild(histCanvas);
 			}
-						
-			canvasNum += 1;
+
+			// Add has-histogram class to plot pair for styling
+			if (plotPair) {
+				plotPair.classList.add("has-histogram");
+			}
 		}
 	} else {
-		// Remove all histogram canvases
-		let canvasNum=0;
+		// Remove has-histograms class from container
+		if (plotsContainer) {
+			plotsContainer.classList.remove("has-histograms");
+		}
+
+		// Remove all histogram canvases and has-histogram class
+		let canvasNum = 0;
 		while (document.getElementById("histogramCanvas"+canvasNum) != null) {
-			canvasElement = document.getElementById("histogramCanvas"+canvasNum);
-			canvasElement.remove();
+			document.getElementById("histogramCanvas"+canvasNum).remove();
 			canvasNum += 1;
 		}
-		
-		// Remove all mapNewLine line breaks
-		let brIdx=0;
-		while (document.getElementById("mapNewLine"+brIdx) != null) {
-			brElement = document.getElementById("mapNewLine"+brIdx);
-			brElement.remove();
-			brIdx += 1;
+
+		// Remove has-histogram class from all plot pairs
+		for (let i = 0; i < 7; i++) {
+			const plotPair = document.getElementById("plotPair"+i);
+			if (plotPair) {
+				plotPair.classList.remove("has-histogram");
+			}
 		}
 	}
 	

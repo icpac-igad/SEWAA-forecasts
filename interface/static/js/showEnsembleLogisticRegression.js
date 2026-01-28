@@ -310,7 +310,7 @@ async function loadELRClimate() {
 	if ((ELRForecast.currentThreshold != threshold) || (ELRForecast.climateMonth != month)){
 	
 		let month = document.getElementById("initMonthSelect").value;
-		fileName = "/static/static/staticELR/climatological_exceedances/clim_exc_"+threshold+"mmday_"+month+"month.nc";
+		fileName = "/staticELR_climate/clim_exc_"+threshold+"mmday_"+month+"month.nc";
 		
 		// Load data into the ELRClimate ELRDataObject
 		await ELRForecast.loadELRClimate(fileName, threshold, month);

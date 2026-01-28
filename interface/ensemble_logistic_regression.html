@@ -216,11 +216,35 @@ Ensemble logistic regression
         border-left: 4px solid #3498db;
     }
 
-    #myCanvas {
+    .canvas-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        justify-items: center;
+    }
+
+    .canvas-item {
+        text-align: center;
+    }
+
+    .canvas-item h5 {
+        font-size: 1rem;
+        color: #2c3e50;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+
+    .canvas-item canvas {
         max-width: 100%;
         height: auto;
         border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    @media (max-width: 1199px) {
+        .canvas-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     @media (max-width: 768px) {
@@ -248,6 +272,15 @@ Ensemble logistic regression
         .visualization-section {
             padding: 1rem;
         }
+
+        .canvas-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .canvas-item h5 {
+            font-size: 0.9rem;
+        }
     }
 </style>
 {% endblock %}
@@ -266,15 +299,7 @@ Ensemble logistic regression
                 <select id="regionSelect" onchange="ELRSelect()">
                     <option value="Kenya">Kenya</option>
                     <option value="Ethiopia">Ethiopia</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="subRegionSelect">Sub-region</label>
-                <select id="subRegionSelect" onchange="ELRSelect()">
-                    <option value="Kiambu">Kiambu</option>
-                    <option value="Nairobi">Nairobi</option>
-                    <option value="Kajiado-East">Kajiado-East</option>
+                    <option value="Rwanda">Rwanda</option>
                 </select>
             </div>
 
@@ -294,7 +319,7 @@ Ensemble logistic regression
             </div>
 
             <div class="control-group">
-                <label for="validTimeSelect">Lead Time</label>
+                <label for="validTimeSelect">Valid Time</label>
                 <select id="validTimeSelect" onchange="validTimeSelect()">
                     <option value="1">1 day 6 hours</option>
                     <option value="2">2 days 6 hours</option>
@@ -311,6 +336,10 @@ Ensemble logistic regression
                     <option value="ICPAC">ICPAC</option>
                     <option value="KMD">KMD</option>
                     <option value="EMI">EMI</option>
+                    <option value="ECMWF">ECMWF</option>
+                    <option value="ECMWF2">ECMWF 2</option>
+                    <option value="ECMWF-EFI">ECMWF-EFI</option>
+                    <option value="ECMWF-ECPOINT">ECMWF-ECPOINT</option>
                 </select>
             </div>
         </div>
@@ -322,10 +351,10 @@ Ensemble logistic regression
             <div class="threshold-group">
                 <label for="thresholdSelect">Threshold (mm/day)</label>
                 <select id="thresholdSelect" onchange="thresholdSelect()">
+                    <option value="20" selected>20</option>
+                    <option value="30">30</option>
                     <option value="40">40</option>
-                    <option value="45">45</option>
                     <option value="50">50</option>
-                    <option value="55">55</option>
                     <option value="60">60</option>
                 </select>
             </div>
@@ -333,10 +362,10 @@ Ensemble logistic regression
             <div class="probability-bins">
                 <label>Probability Bin Edges (%)</label>
                 <div class="bins-input-group">
-                    <input type="text" id="probabilityBin1" value="5" title="Top of first bin" onblur="pBinInput()">
-                    <input type="text" id="probabilityBin2" value="15" title="Bin boundary" onblur="pBinInput()">
-                    <input type="text" id="probabilityBin3" value="25" title="Bin boundary" onblur="pBinInput()">
-                    <input type="text" id="probabilityBin4" value="50" title="Bottom of last bin" onblur="pBinInput()">
+                    <input type="text" id="probabilityBin1" value="1" title="Top of first bin" onblur="pBinInput()">
+                    <input type="text" id="probabilityBin2" value="5" title="Bin boundary" onblur="pBinInput()">
+                    <input type="text" id="probabilityBin3" value="10" title="Bin boundary" onblur="pBinInput()">
+                    <input type="text" id="probabilityBin4" value="20" title="Bottom of last bin" onblur="pBinInput()">
                 </div>
             </div>
         </div>
@@ -344,9 +373,20 @@ Ensemble logistic regression
 
     <div class="visualization-section">
         <p id="statusText" class="status-text">Status</p>
-        <canvas id="myCanvas" width="504" height="504">
-            Your browser does not support the HTML canvas tag.
-        </canvas>
+        <div class="canvas-grid">
+            <div class="canvas-item">
+                <h5>Climatological Exceedance Probability</h5>
+                <canvas id="ClimateCanvas" width="605" height="770">
+                    Your browser does not support the HTML canvas tag.
+                </canvas>
+            </div>
+            <div class="canvas-item">
+                <h5>ELR Forecast Probability</h5>
+                <canvas id="ELRCanvas" width="605" height="770">
+                    Your browser does not support the HTML canvas tag.
+                </canvas>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
