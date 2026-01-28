@@ -85,7 +85,7 @@ print(f"Using model in {model_folder} checkpoint {checkpoint}.")
 
 #model_folder = fcst_params["MODEL"]["folder"]
 #checkpoint = fcst_params["MODEL"]["checkpoint"]
-
+set_seed = fcst_params["MODEL"]["set_seed"]
 input_folder = fcst_params["INPUT"]["folder"]
 
 #input_file = fcst_params["INPUT"]["file"]
@@ -198,6 +198,8 @@ valid_times = nc_in["valid_time"][:]
 
 # The datetime corresponding to this start time
 d = datetime(1900,1,1) + timedelta(hours=int(start_times[0]))
+tdelta = d-datetime(1980,1,1)
+tdelta = tdelta.seconds/(3600*6)
 
 # Create output netCDF file
 pathlib.Path(output_folder).mkdir(parents=True, exist_ok=True)
@@ -297,9 +299,13 @@ if (True):
     network_fcst_input = np.expand_dims(network_fcst_input, axis=0)  # 1 x lat x lon x 2*len(...)
     
     noise_shape = network_fcst_input.shape[1:-1] + (noise_channels,)
-    noise_gen = NoiseGenerator(noise_shape, batch_size=1)
+    if not set_seed:
+        noise_gen = NoiseGenerator(noise_shape, batch_size=1)
     progbar = Progbar(ensemble_members)
     for ii in range(ensemble_members):
+        if set_seed:
+            noise_gen = NoiseGenerator(noise_shape, batch_size=1, 
+                                       random_seed=int(tdelta+((in_time_idx[0][valid_time_num])*1e5)+(ii*1e6)))
         gan_inputs = [network_fcst_input, network_const_input, noise_gen()]
         gan_prediction = gen.predict(gan_inputs, verbose=False)  # 1 x lat x lon x 1
         netcdf_dict["precipitation"][0, ii, 0, :, :] = denormalise(gan_prediction[0, :, :, 0])

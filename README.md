@@ -3,24 +3,54 @@
 Welcome! This project provides operational rainfall forecasts for the ICPAC (IGAD Climate Prediction and Applications Centre) region in East Africa. The system uses advanced machine learning (cGAN - conditional Generative Adversarial Network) to generate accurate rainfall predictions.
 
 ## Table of Contents
-- [What is This Project?](#what-is-this-project)
-- [Prerequisites](#prerequisites)
-- [Installation Guide](#installation-guide)
-  - [Step 1: Install Conda](#step-1-install-conda)
-  - [Step 2: Download the Project](#step-2-download-the-project)
-  - [Step 3: Set Up Python Environment](#step-3-set-up-python-environment)
-  - [Step 4: Access ECMWF Data](#step-4-access-ecmwf-data)
-- [Running the Application](#running-the-application)
-  - [Method 1: Using Docker (Recommended for Beginners)](#method-1-using-docker-recommended-for-beginners)
-  - [Method 2: Using Python Directly](#method-2-using-python-directly)
-- [How to Use the Forecasts](#how-to-use-the-forecasts)
-  - [Making a Single Forecast](#making-a-single-forecast)
-  - [Automatic Forecasting](#automatic-forecasting)
-  - [Using the API to Generate Forecasts](#using-the-api-to-generate-forecasts)
-  - [Viewing Forecasts in the Web Interface](#viewing-forecasts-in-the-web-interface)
-- [Updating the Installation](#updating-the-installation)
-- [Troubleshooting](#troubleshooting)
-- [Getting Help](#getting-help)
+- [SEWAA-Forecasts](#sewaa-forecasts)
+  - [Table of Contents](#table-of-contents)
+  - [What is This Project?](#what-is-this-project)
+  - [Prerequisites](#prerequisites)
+  - [Installation Guide](#installation-guide)
+    - [Step 1: Install Conda](#step-1-install-conda)
+    - [Step 2: Download the Project](#step-2-download-the-project)
+      - [Option A: Using Git (Recommended if you have Git installed)](#option-a-using-git-recommended-if-you-have-git-installed)
+      - [Option B: Download as ZIP (For beginners)](#option-b-download-as-zip-for-beginners)
+    - [Step 3: Set Up Python Environment](#step-3-set-up-python-environment)
+    - [Step 4: Access ECMWF Data](#step-4-access-ecmwf-data)
+  - [Running the Application](#running-the-application)
+    - [Method 1: Using Docker (Recommended for Beginners)](#method-1-using-docker-recommended-for-beginners)
+      - [Prerequisites:](#prerequisites-1)
+      - [Steps:](#steps)
+    - [Method 2: Using Python Directly](#method-2-using-python-directly)
+  - [How to Use the Forecasts](#how-to-use-the-forecasts)
+    - [Making a Single Forecast](#making-a-single-forecast)
+    - [Automatic Forecasting](#automatic-forecasting)
+    - [Using the API to Generate Forecasts](#using-the-api-to-generate-forecasts)
+      - [Accessing the API Documentation](#accessing-the-api-documentation)
+      - [Available API Endpoints](#available-api-endpoints)
+      - [Using the `/gen-forecast` Endpoint](#using-the-gen-forecast-endpoint)
+      - [How to Use the Interactive API Docs](#how-to-use-the-interactive-api-docs)
+      - [Understanding the Response](#understanding-the-response)
+      - [API Usage Examples for Different Scenarios](#api-usage-examples-for-different-scenarios)
+      - [Setting Up Automated API Calls](#setting-up-automated-api-calls)
+      - [Alternative API Documentation](#alternative-api-documentation)
+    - [Viewing Forecasts in the Web Interface](#viewing-forecasts-in-the-web-interface)
+  - [Updating the Installation](#updating-the-installation)
+    - [If You Use Git:](#if-you-use-git)
+    - [If You Downloaded as ZIP:](#if-you-downloaded-as-zip)
+  - [Troubleshooting](#troubleshooting)
+    - [Common Issues and Solutions](#common-issues-and-solutions)
+      - [1. **"conda: command not found"**](#1-conda-command-not-found)
+      - [2. **"ImportError: No module named 'tensorflow'"**](#2-importerror-no-module-named-tensorflow)
+      - [3. **"Port 8000 is already in use"**](#3-port-8000-is-already-in-use)
+      - [4. **"Permission denied" errors**](#4-permission-denied-errors)
+      - [5. **Forecasts not appearing in the web interface**](#5-forecasts-not-appearing-in-the-web-interface)
+      - [6. **"Cannot download ECMWF data"**](#6-cannot-download-ecmwf-data)
+      - [7. **Web page loads but shows no data**](#7-web-page-loads-but-shows-no-data)
+      - [8. **Docker build fails**](#8-docker-build-fails)
+  - [Getting Help](#getting-help)
+    - [Resources](#resources)
+    - [Contact](#contact)
+    - [Contributing](#contributing)
+  - [Project Structure](#project-structure)
+  - [License](#license)
 
 ---
 
@@ -195,12 +225,17 @@ If you prefer not to use Docker, you can run the application directly with Pytho
    cd ~/Documents/SEWAA-forecasts
    ```
 
-2. **Activate your Conda environment:**
+2. **Create virtual enironment using python-venv, uv, conda or any other tool you prefer:**
    ```bash
    conda activate tf215gpu
    ```
 
-3. **Start the web server:**
+3. **Activate your virtual environment:**
+   ```bash
+   conda activate tf215gpu
+   ```
+
+4. **Start the web server:**
    ```bash
    fastapi run --port 8000
    ```
@@ -210,10 +245,10 @@ If you prefer not to use Docker, you can run the application directly with Pytho
    uvicorn main:app --host 0.0.0.0 --port 8000
    ```
 
-4. **Access the web interface:**
+5. **Access the web interface:**
    - Open your browser and go to: http://localhost:8000
 
-5. **To stop the server:**
+6. **To stop the server:**
    - Press `Ctrl + C` in the terminal
 
 ---
@@ -702,9 +737,9 @@ This project is maintained by ICPAC-IGAD for operational rainfall forecasting in
 
 ---
 
-**Last Updated:** November 2025
+**Last Updated:** December 2025
 
-**Version:** 2.0
+**Version:** 1.1.0
 
 ---
 
