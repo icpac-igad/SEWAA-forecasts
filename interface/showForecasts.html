@@ -220,6 +220,37 @@ East African rainfall forecasts.
         cursor: crosshair;
     }
 
+    /* Plot pair styling for map + histogram side by side */
+    .plot-pair {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 0;
+    }
+
+    .plot-pair canvas {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* When histogram is shown, each plot pair takes full row width */
+    .plot-pair.has-histogram {
+        grid-column: span 1;
+    }
+
+    /* When histogram is shown, scale down both canvases to fit side by side */
+    .plot-pair.has-histogram canvas {
+        max-width: 50%;
+        height: auto;
+    }
+
+    /* When histograms are shown, switch to 2-column layout */
+    .maps-grid.has-histograms {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
     /* Large screens (desktops, 1200px and up) - Default styles already defined above */
 
     /* Medium screens (tablets, 768px to 1199px) */
@@ -482,6 +513,10 @@ East African rainfall forecasts.
                         <option value="ICPAC">ICPAC</option>
                         <option value="KMD">KMD</option>
                         <option value="EMI">EMI</option>
+                        <option value="ECMWF">ECMWF</option>
+                        <option value="ECMWF2">ECMWF 2</option>
+                        <option value="ECMWF-EFI">ECMWF-EFI</option>
+                        <option value="ECMWF-ECPOINT">ECMWF-ECPOINT</option>
                     </select>
                 </div>
             </div>
@@ -495,6 +530,8 @@ East African rainfall forecasts.
                     <select id="plotSelect" onchange="plotSelect()">
                         <option value="Probability">Probability to exceed value</option>
                         <option value="Values">Values below probability</option>
+                        <option value="Mean">Ensemble mean</option>
+                        <option value="Std">Ensemble standard deviation</option>
                     </select>
                 </div>
 
@@ -536,34 +573,61 @@ East African rainfall forecasts.
         </div>
     </div>
 
+    <div class="controls-section" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="showExplanation" onclick="showExplanation()" style="width: 18px; height: 18px; cursor: pointer;">
+                <span style="font-weight: 500; color: #2c3e50;">Show plot explanation</span>
+            </label>
+            <button id="removeHistBttn" onclick="removeHistograms()" style="display:none; padding: 0.5rem 1rem; background-color: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Remove histograms</button>
+        </div>
+    </div>
+
     <div class="status-section">
         <p id="statusText">Status</p>
     </div>
 
+    <div id="mapExplanationText" 
+     style="
+        display: none;
+        padding: 1rem 1.25rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border-left: 5px solid #3498db;
+        line-height: 1.6;
+        font-size: 0.9rem;
+        color: #212529;
+        font-family: Arial, Helvetica, sans-serif;
+        max-width: 100%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+     ">
+        Some text to explain the current plots.
+    <br><br></div>
+
     <div class="visualization-section">
-        <div class="maps-grid">
-            <div class="map-item">
-                <canvas id="myCanvas0" width="1024" height="504">
+        <div id="plotsContainer" class="maps-grid">
+            <div id="plotPair0" class="plot-pair map-item">
+                <canvas id="mapCanvas0" width="513" height="504">
                     Your browser does not support the HTML canvas tag.
                 </canvas>
             </div>
-            <div class="map-item">
-                <canvas id="myCanvas1" width="1024" height="504"></canvas>
+            <div id="plotPair1" class="plot-pair map-item">
+                <canvas id="mapCanvas1" width="513" height="504"></canvas>
             </div>
-            <div class="map-item">
-                <canvas id="myCanvas2" width="1024" height="504"></canvas>
+            <div id="plotPair2" class="plot-pair map-item">
+                <canvas id="mapCanvas2" width="513" height="504"></canvas>
             </div>
-            <div class="map-item">
-                <canvas id="myCanvas3" width="1024" height="504"></canvas>
+            <div id="plotPair3" class="plot-pair map-item">
+                <canvas id="mapCanvas3" width="513" height="504"></canvas>
             </div>
-            <div class="map-item hidden-canvas">
-                <canvas id="myCanvas4" width="1024" height="504"></canvas>
+            <div id="plotPair4" class="plot-pair map-item hidden-canvas">
+                <canvas id="mapCanvas4" width="513" height="504"></canvas>
             </div>
-            <div class="map-item hidden-canvas">
-                <canvas id="myCanvas5" width="1024" height="504"></canvas>
+            <div id="plotPair5" class="plot-pair map-item hidden-canvas">
+                <canvas id="mapCanvas5" width="513" height="504"></canvas>
             </div>
-            <div class="map-item hidden-canvas">
-                <canvas id="myCanvas6" width="1024" height="504"></canvas>
+            <div id="plotPair6" class="plot-pair map-item hidden-canvas">
+                <canvas id="mapCanvas6" width="513" height="504"></canvas>
             </div>
         </div>
     </div>

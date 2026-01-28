@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>View forecasts API</title>
+<style>
+h1		{font-family: Arial, Helvetica, sans-serif;}
+h2		{font-family: Arial, Helvetica, sans-serif;}
+h3		{font-family: Arial, Helvetica, sans-serif;}
+h4		{font-family: Arial, Helvetica, sans-serif;}
+p		{font-family: Arial, Helvetica, sans-serif; margin-left: 40px;}
+</style>
+</head>
+<body>
+
+<h1>
+View forecasts API version 4.0
+</h1>
+
+<p>
+To use the functions documented here, reference the file <kbd>plotForecastsMin.js</kbd> in your HTML.
+</p>
+
+<pre>
+	&lt;script src="plotForecastsMin.js"&gt;&lt;/script&gt;
+</pre>
+
+<p>
+The methods for loading and drawing a forecast to an html canvas are defined in a <b>countsData</b> object.
+</p>
+
+<p>
+<b>countsData</b> methods are usually asynchronous.
+</p>
+
+<pre>
+	// Create a countsData object
+	let GANForecast = new countsData();
+</pre>
+
+<h3>
+Methods:
+</h3>
+
+<p>
+<a href="#loadGANForecast">loadGANForecast</a><br>
+<a href="#loadRegionNames">regionSpec.loadRegionNames</a><br>
+<a href="#computeLatLonIdxBounds">computeLatLonIdxBounds</a><br>
+<a href="#plotExceedanceProbability">plotExceedanceProbability</a><br>
+<a href="#plotExceedanceValue">plotExceedanceValue</a><br>
+<a href="#plotMean">plotMean</a><br>
+<a href="#plotStd">plotStd</a><br>
+<a href="#plotHistogram">plotHistogram</a><br>
+</p>
+<hr>
+
+
+<h2 id="loadGANForecast">
+countsData.loadGANForecast
+</h2>
+
+<h4>
+countsData.loadGANForecast(fileName, modelName, accumulationHours)
+</h4>
+
+<p>
+Loads a forecast for a particular initialisation date and valid time.
+</p>
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>fileName</b> : A string containing the forecast data file name including the relative path.<br>
+
+<b>modelName</b> : Can currently be either "6h accumulation" or "24h accumulation".<br>
+
+<b>accumulationHours</b> : Can currently be either 6 or 24, and must correspond to the correct model name.
+</p>
+
+<pre>
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load a forecast
+	let fileName = "PathToFirstForecastFile";
+	let modelName = "6h accumulation";
+	let accumulationHours = 6;
+	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+	
+	// Do some processing/plotting
+	// ...
+	
+	// Load another forecast
+	fileName = "PathToSecondForecastFile";
+	modelName = "24h accumulation";
+	accumulationHours = 24;
+	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+</pre>
+<hr>
+
+
+<h2 id="loadRegionNames">
+countsData.regionSpec.loadRegionNames
+</h2>
+
+<h4>
+countsData.regionSpec.loadRegionNames(path, fileName)
+</h4>
+
+<p>
+Load all of the country and region names and the country bounding latitude and longitude box from a json file. Currently the region names are unused.
+</p>
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>path</b> : Relative path to the json file.<br>
+
+<b>fileName</b> : File name of the json file.
+</p>
+
+<pre>
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load the region names
+	await GANForecast.regionSpec.loadRegionNames("../boundaries", "regional_names.json");
+</pre>
+<hr>
+
+
+<h2 id="computeLatLonIdxBounds">
+countsData.computeLatLonIdxBounds
+</h2>
+
+<h4>
+countsData.computeLatLonIdxBounds(regionName)
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>regionName</b> : Regions can currently be "Burundi", "Djibouti", "Eritrea", "Ethiopia", "Kenya", "Rwanda", "Somalia", "South Sudan", "Sudan", "Tanzania", "Uganda", "ICPAC", "East Africa", "All".
+</p>
+
+<h4>
+Returns
+</h4>
+
+<p>
+An array of four numbers in the form
+<kbd>[minimumLatitudeIndex, maximumLatitudeIndex, minimumLongitudeIndex, maximumLongitudeIndex]</kbd>
+corresponding to the index of the grid locations for that region name.
+</p>
+
+<pre>
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load the region names
+	await GANForecast.regionSpec.loadRegionNames("../boundaries", "regional_names.json");
+	
+	// Compute the latitude and longitude index boundaries
+	let regionName = "East Africa";
+	let [minLatIdx, maxLatIdx, minLonIdx, maxLonIdx] = GANForecast.computeLatLonIdxBounds(regionName);
+</pre>
+<hr>
+
+
+<h2 id="plotExceedanceProbability">
+countsData.plotExceedanceProbability
+</h2>
+
+<h4>
+countsData.plotExceedanceProbability(ctx, x, y, width, height, maxRain, units, style, showPercentages, regionName)
+</h4>
+
+<p>
+Draw a map of the probability of exceeding a given rainfall threshold at each location.
+</p>
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>ctx</b> : The html canvas to draw to.<br>
+
+<b>x</b> : Pixels from the left of the canvas where the plot starts.<br>
+
+<b>y</b> : Pixels from the top of the canvas where the plot starts.<br>
+
+<b>width</b> : Width of the plot in pixels including the heading and legend etc.<br>
+
+<b>height</b> : Height of the plot in pixels including the heading and legend etc.<br>
+
+<b>maxRain</b> : Rainfall threshold in mm/h.<br>
+
+<b>units</b> : The units to use in the plot. Can be "mm/h", "mm/6h", "mm/day", "mm/week".<br>
+
+<b>style</b> : The plot style. Can be "Default", "ICPAC", "KMD", "EMI".<br>
+
+<b>showPercentages</b> : Either true to display a legend with percentages, or false to display a legend with words.<br>
+
+<b>regionName</b> : Regions can currently be "Burundi", "Djibouti", "Eritrea", "Ethiopia", "Kenya", "Rwanda", "Somalia", "South Sudan", "Sudan", "Tanzania", "Uganda", "ICPAC", "East Africa", "All".<br>
+</p>
+
+<h4>
+Returns
+</h4>
+
+<p>
+An array of four numbers in the form
+<kbd>[xMin, yMin, xMax, yMax]</kbd>
+corresponding to the canvas rectangle within which the exceedance probability is drawn. Used for example to detect where on the map the user has clicked.
+</p>
+
+<pre>
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load a forecast
+	let fileName = "PathToForecastFile";
+	let modelName = "6h accumulation";
+	let accumulationHours = 6;
+	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+	
+	// Find the context to draw to
+	const canvas = document.getElementById("myCanvas");
+	const ctx = canvas.getContext("2d");
+	
+	// Draw the exceedance probabilities
+	let x = 5;
+	let y = 10;
+	let width = 500;
+	let height = 500;
+	let maxRain = 1/24;  // Rainfall threshold in mm/h
+	let units = "mm/6h";
+	let style = "Default";
+	let showPercentages = true;
+	let regionName = "East Africa";
+	let plotRect = await GANForecast.plotExceedanceProbability(ctx, x, y, width, height, maxRain, units, style, showPercentages, regionName);
+</pre>
+<hr>
+
+
+<h2 id="plotExceedanceValue">
+countsData.plotExceedanceValue
+</h2>
+
+<h4>
+countsData.plotExceedanceValue(ctx, x, y, width, height, probability, units, style, regionName)
+</h4>
+
+<p>
+Draw a map of the maximum rainfall that will occur at each location with a given probability.
+</p>
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>ctx</b> : The html canvas to draw to.<br>
+
+<b>x</b> : Pixels from the left of the canvas where the plot starts.<br>
+
+<b>y</b> : Pixels from the top of the canvas where the plot starts.<br>
+
+<b>width</b> : Width of the plot in pixels including the heading and legend etc.<br>
+
+<b>height</b> : Height of the plot in pixels including the heading and legend etc.<br>
+
+<b>probability</b> : Probability threshold between 0 and 1. The plotted rainfall value corresponds to the maximum rainfall with the given probability.<br>
+
+<b>units</b> : The units to use in the plot. Can be "mm/h", "mm/6h", "mm/day", "mm/week".<br>
+
+<b>style</b> : The plot style. Can be "Default", "ICPAC", "KMD", "EMI".<br>
+
+<b>regionName</b> : Regions can currently be "Burundi", "Djibouti", "Eritrea", "Ethiopia", "Kenya", "Rwanda", "Somalia", "South Sudan", "Sudan", "Tanzania", "Uganda", "ICPAC", "East Africa", "All".
+</p>
+
+<h4>
+Returns
+</h4>
+
+<p>
+An array of four numbers in the form
+<kbd>[xMin, yMin, xMax, yMax]</kbd>
+corresponding to the canvas rectangle within which the exceedance probability is drawn. Used for example to detect where on the map the user has clicked.
+</p>
+		
+<pre>						
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load a forecast
+	let fileName = "PathToForecastFile";
+	let modelName = "6h accumulation";
+	let accumulationHours = 6;
+	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+	
+	// Find the context to draw to
+	const canvas = document.getElementById("myCanvas");
+	const ctx = canvas.getContext("2d");
+	
+	// Draw the exceedance values
+	let x = 5;
+	let y = 10;
+	let width = 500;
+	let height = 500;
+	let probability = 0.95;
+	let units = "mm/6h";
+	let style = "Default";
+	let regionName = "East Africa";
+	let plotRect = await GANForecast.plotExceedanceValue(ctx, x, y, width, height, probability, units, style, regionName);
+</pre>
+<hr>
+
+
+<h2 id="plotMean">
+countsData.plotMean
+</h2>
+
+<h4>
+countsData.plotMean(ctx, x, y, width, height, units, style, regionName)
+</h4>
+
+<p>
+Draw a map of the ensemble mean rainfall.
+</p>
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>ctx</b> : The html canvas to draw to.<br>
+
+<b>x</b> : Pixels from the left of the canvas where the plot starts.<br>
+
+<b>y</b> : Pixels from the top of the canvas where the plot starts.<br>
+
+<b>width</b> : Width of the plot in pixels including the heading and legend etc.<br>
+
+<b>height</b> : Height of the plot in pixels including the heading and legend etc.<br>
+
+<b>units</b> : The units to use in the plot. Can be "mm/h", "mm/6h", "mm/day", "mm/week".<br>
+
+<b>style</b> : The plot style. Can be "Default", "ICPAC", "KMD", "EMI".<br>
+
+<b>regionName</b> : Regions can currently be "Burundi", "Djibouti", "Eritrea", "Ethiopia", "Kenya", "Rwanda", "Somalia", "South Sudan", "Sudan", "Tanzania", "Uganda", "ICPAC", "East Africa", "All".
+</p>
+
+<h4>
+Returns
+</h4>
+
+<p>
+An array of four numbers in the form
+<kbd>[xMin, yMin, xMax, yMax]</kbd>
+corresponding to the canvas rectangle within which the exceedance probability is drawn. Used for example to detect where on the map the user has clicked.
+</p>
+		
+<pre>						
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load a forecast
+	let fileName = "PathToForecastFile";
+	let modelName = "6h accumulation";
+	let accumulationHours = 6;
+	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+	
+	// Find the context to draw to
+	const canvas = document.getElementById("myCanvas");
+	const ctx = canvas.getContext("2d");
+	
+	// Draw the ensemble mean
+	let x = 5;
+	let y = 10;
+	let width = 500;
+	let height = 500;
+	let units = "mm/6h";
+	let style = "Default";
+	let regionName = "East Africa";
+	let plotRect = await GANForecast.plotMean(ctx, x, y, width, height, units, style, regionName);
+</pre>
+<hr>
+
+
+<h2 id="plotStd">
+countsData.plotStd
+</h2>
+
+<h4>
+countsData.plotStd(ctx, x, y, width, height, units, style, regionName)
+</h4>
+
+<p>
+Draw a map of the ensemble standard deviation of rainfall.
+</p>
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>ctx</b> : The html canvas to draw to.<br>
+
+<b>x</b> : Pixels from the left of the canvas where the plot starts.<br>
+
+<b>y</b> : Pixels from the top of the canvas where the plot starts.<br>
+
+<b>width</b> : Width of the plot in pixels including the heading and legend etc.<br>
+
+<b>height</b> : Height of the plot in pixels including the heading and legend etc.<br>
+
+<b>units</b> : The units to use in the plot. Can be "mm/h", "mm/6h", "mm/day", "mm/week".<br>
+
+<b>style</b> : The plot style. Can be "Default", "ICPAC", "KMD", "EMI".<br>
+
+<b>regionName</b> : Regions can currently be "Burundi", "Djibouti", "Eritrea", "Ethiopia", "Kenya", "Rwanda", "Somalia", "South Sudan", "Sudan", "Tanzania", "Uganda", "ICPAC", "East Africa", "All".
+</p>
+
+<h4>
+Returns
+</h4>
+
+<p>
+An array of four numbers in the form
+<kbd>[xMin, yMin, xMax, yMax]</kbd>
+corresponding to the canvas rectangle within which the exceedance probability is drawn. Used for example to detect where on the map the user has clicked.
+</p>
+		
+<pre>						
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load a forecast
+	let fileName = "PathToForecastFile";
+	let modelName = "6h accumulation";
+	let accumulationHours = 6;
+	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+	
+	// Find the context to draw to
+	const canvas = document.getElementById("myCanvas");
+	const ctx = canvas.getContext("2d");
+	
+	// Draw the ensemble standard deviation
+	let x = 5;
+	let y = 10;
+	let width = 500;
+	let height = 500;
+	let units = "mm/6h";
+	let style = "Default";
+	let regionName = "East Africa";
+	let plotRect = await GANForecast.plotStd(ctx, x, y, width, height, units, style, regionName);
+</pre>
+<hr>
+
+
+<h2 id="plotHistogram">
+countsData.plotHistogram
+</h2>
+
+<h4>
+countsData.plotHistogram(ctx, x, y, width, height, maxRain, probability, latitudeIdx, longitudeIdx, units, barChartSpec)
+</h4>
+
+<p>
+Draw a histogram of the rainfall predicted to fall at a particular latitude and longitude grid box.
+</p>
+
+<h4>
+Arguments
+</h4>
+
+<p>
+<b>ctx</b> : The html canvas to draw to.<br>
+
+<b>x</b> : Pixels from the left of the canvas where the plot starts.<br>
+
+<b>y</b> : Pixels from the top of the canvas where the plot starts.<br>
+
+<b>width</b> : Width of the plot in pixels including the heading and legend etc.<br>
+
+<b>height</b> : Height of the plot in pixels including the heading and legend etc.<br>
+
+<b>maxRain</b> : Rainfall threshold in mm/h.<br>
+
+<b>probability</b> : Probability threshold between 0 and 1. The plotted rainfall value corresponds to the maximum rainfall with the given probability.<br>
+
+<b>latitudeIdx</b> : The grid cell latitude index to use for the plot.<br>
+
+<b>longitudeIdx</b> : The grid cell longitude index to use for the plot.<br>
+
+<b>units</b> : The units to use in the plot. Can be "mm/h", "mm/6h", "mm/day", "mm/week".<br>
+
+<b>barChartSpec</b> : <b><i>Depreciated, will be removed.</i></b> A data structure containing the bar chart specification. Create with
+<kbd>let barChartSpec = new barChartSpecification();</kbd>
+</p>
+
+<pre>
+	// Create a countsData object
+	let GANForecast = new countsData();
+	
+	// Load a forecast
+	let fileName = "PathToForecastFile";
+	let modelName = "6h accumulation";
+	let accumulationHours = 6;
+	await GANForecast.loadGANForecast(fileName, modelName, accumulationHours);
+	
+	// Find the context to draw to
+	const canvas = document.getElementById("myCanvas");
+	const ctx = canvas.getContext("2d");
+	
+	// Draw the histogram
+	let x = 5;
+	let y = 10;
+	let width = 500;
+	let height = 500;
+	let maxRain = 1/24;  // Rainfall threshold in mm/h
+	let probability = 0.95;
+	let latitudeIdx = 120;
+	let longitudeIdx = 50;
+	let units = "mm/6h";
+	let barChartSpec = new barChartSpecification();  // Depreciated, will be removed.
+	await GANForecast.plotHistogram(ctx, x, y, width, height, maxRain, probability, latitudeIdx, longitudeIdx, units, barChartSpec);
+</pre>
+<hr>
+
+</body>
+</html> 

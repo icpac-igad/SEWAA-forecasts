@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>East African rainfall</title>
+</head>
+<body>
+
+<h3>
+East African rainfall forecasts.
+</h3>
+
+<p>Click for local distribution. Use arrow keys to change location by 0.1 degrees.</p>
+
+<p>
+Model:
+<select id="modelSelect" onchange="modelSelect()">
+	<option value="6h accumulation">6h accumulation</option>
+    <option value="24h accumulation">24h accumulation</option>
+</select>
+<span id="modelInfo">
+: The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a> 
+<a href="https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS" target="_blank">
+IFS</a> output is post-processed using
+<a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">
+cGAN</a> trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank"> IMERG</a>
+v6 to produce forecasts of 6h rainfall intervals. Model version 1.
+</span>
+</p>
+
+<p>
+Region:
+<select id="regionSelect" onchange="regionSelect()">
+	<option value="East Africa">East Africa</option>
+    <option value="Burundi">Burundi</option>
+    <option value="Djibouti">Djibouti</option>
+    <option value="Eritrea">Eritrea</option>
+    <option value="Ethiopia">Ethiopia</option>
+    <option value="Kenya">Kenya</option>
+    <option value="Rwanda">Rwanda</option>
+    <option value="Somalia">Somalia</option>
+    <option value="South Sudan">South Sudan</option>
+    <option value="Sudan">Sudan</option>
+    <option value="Tanzania">Tanzania</option>
+    <option value="Uganda">Uganda</option>
+</select>
+
+Initialisation:
+<select id="initYearSelect" onchange="initTimeSelect()" title="Forecast initialisation year"></select>
+<select id="initMonthSelect" onchange="initTimeSelect()" title="Forecast initialisation month"></select>
+<select id="initDaySelect" onchange="initTimeSelect()" title="Forecast initialisation day"></select>
+<select id="initTimeSelect" onchange="initTimeSelect()" title="Forecast initialisation time"></select>
+
+Valid:
+<select id="validTimeSelect" onchange="validTimeSelect()" title="Start of the time we are forecasting">
+	<option value="All">Plot all valid times</option>
+</select>
+
+Style:
+<select id="styleSelect" onchange="styleSelect()">
+	<option value="Default">Default</option>
+	<option value="ICPAC">ICPAC</option>
+    <option value="KMD">KMD</option>
+    <option value="EMI">EMI</option>
+    <option value="ECMWF">ECMWF</option>
+    <option value="ECMWF2">ECMWF 2</option>
+    <option value="ECMWF-EFI">ECMWF-EFI</option>
+    <option value="ECMWF-ECPOINT">ECMWF-ECPOINT</option>
+</select>
+</p>
+
+<p>
+Plot:
+<select id="plotSelect" onchange="plotSelect()">
+	<option value="Probability">Probability to exceed value</option>
+	<option value="Values">Values below probability</option>
+	<option value="Mean">Ensemble mean</option>
+	<option value="Std">Ensemble standard deviation</option>
+</select>
+
+Value threshold:
+<input type="text" id="thresholdValueSelect" size="6"
+	title="Show the chance of rainfall above this value" onblur="pValueThresholdInput()">
+<span id="unitsDescription">mm/h</span>.
+<select id="percentagesSelect" onchange="percentagesSelect()" disabled>
+	<option value="Percentages">Show percentages</option>
+	<option value="Words">Show words</option>
+</select>
+
+Probability threshold:
+<input type="text" id="thresholdProbabilitySelect" size="3"
+	title="Change this number and look at the plot description" onblur="pProbabilityThresholdInput()">
+%.
+
+Units:
+<select id="unitsSelect" onchange="unitsSelect()">
+	<option value="mm/h">mm/h</option>
+    <option value="mm/6h">mm/6h</option>
+    <option value="mm/day">mm/day</option>
+    <!-- <option value="mm/week">mm/week</option> -->
+</select>
+</p>
+
+<p>
+<input type="checkbox" id="showExplanation" onclick="showExplanation()"> Show plot explanation &nbsp;
+<button id="removeHistBttn" onclick="removeHistograms()" style="display:none;">Remove histograms</button>
+</p>
+
+<p id="statusText"> Status </p>
+
+<div id="mapExplanationText" style="display:none;">
+Some text to explain the current plots.
+<br><br></div>
+
+
+<script src="../js/plotForecastsMin.js"></script>
+<script src="../js/testScript.js"></script>
+
+</body>
+</html> 
