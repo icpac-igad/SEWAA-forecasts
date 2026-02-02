@@ -18,7 +18,7 @@ country_regiontype = {"Kenya":"subcounty","Ethiopia":"subcounty","Rwanda":"count
 
 # Define the sort criteria
 def sortFunc(e):
-    return e[0]*100*100*100*1000 + e[1]*100*100*1000 + e[2]*100*1000 + e[3]*1000;
+    return e[0]*100*100*100*1000 + e[1]*100*100*1000 + e[2]*100*1000 + e[3]*1000
 
 for country in ["Kenya","Ethiopia","Rwanda"]:
     elr_dir_country = elr_dir+f"{country}/{country_regiontype[country]}/"

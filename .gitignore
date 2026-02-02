@@ -7,5 +7,6 @@
 # Jupyter Notebook
 .ipynb_checkpoints
 *.env
+*.json
 data
 *.nc

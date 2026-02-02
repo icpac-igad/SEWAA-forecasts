@@ -33,7 +33,7 @@ minutes_to_wait = 15
 minutes_between_schedule_checks = 1
 
 # Number of days in the past to check for forecasts. Starting at 00:00 every day.
-days_to_check = 2
+days_to_check = 10
 # If the script was stopped, people might want these forecasts to be computed when it is
 # restarted again.
 
