@@ -114,6 +114,6 @@ function leadTimeCategorySelect() {
 	let leadTime = document.getElementById("leadTimeCategorySelect").value;
 	
 	// Set the picture
-	document.getElementById("GHACategoryOfReliabilityPlot").src = "/static/categories_of_reliability/GHA_category_of_reliability_"+leadTime+"-hour_leadtime_"+threshold+"_mmday.png"
+	document.getElementById("GHACategoryOfReliabilityPlot").src = "/static/categories_of_reliability/"+region+"_category_of_reliability_"+leadTime+"-hour_leadtime_"+threshold+"_mmday.png"
 }
 

@@ -40,6 +40,7 @@ import datetime
 
 # Parse arguments to this script
 def parseArguments():
+
     parser = argparse.ArgumentParser(
         description="""Requirements:
 
@@ -99,6 +100,7 @@ def parseArguments():
 
     # Parse the accumulation
     if args.accumulation is not None:
+
         if (args.accumulation == "6h") or (args.accumulation == "6"):
             accumulation_time = 6
 
@@ -112,11 +114,13 @@ def parseArguments():
             sys.exit()
 
     else:
+
         # Default 6h accumulation
         accumulation_time = 6
 
     # Parse the date
     if args.date is not None:
+
         if len(args.date) != 8:
             print("ERROR: Incorrect date.")
             parser.print_help()
@@ -127,6 +131,7 @@ def parseArguments():
         day = int(args.date[6:8])
 
     else:
+
         # Default today
         d = datetime.datetime.today()
         year = d.year
@@ -135,6 +140,7 @@ def parseArguments():
 
     # Parse the time
     if args.time is not None:
+
         if len(args.time) != 4:
             print("ERROR: Incorrect time.")
             parser.print_help()
@@ -162,6 +168,7 @@ def parseArguments():
                 sys.exit()
 
     else:
+
         # Default 0000
         hour = 0
         minute = 0
@@ -169,6 +176,7 @@ def parseArguments():
     # Parse delete_forecasts
     delete_forecasts = False  # Default
     if args.delete_forecasts is not None:
+
         if (
             (args.delete_forecasts == "T")
             or (args.delete_forecasts == "t")
@@ -194,6 +202,7 @@ def parseArguments():
 # Returns:
 #    If all files that should be there, are there.
 def check_counts_files(counts_path, date_str, hour, valid_hours):
+
     # Extract the year from date_str
     year = date_str[0:4]
 
@@ -240,19 +249,21 @@ def check_ELR_files(
 
 
 if __name__ == "__main__":
+
     # Parse arguments to this script
     accumulation_time, year, month, day, hour, minute, delete_forecasts, run_ELR = (
         parseArguments()
     )
 
     print(f"Producing forecasts of {accumulation_time}h accumulations")
+    print(f"initialised on {year}-{month:02d}-{day:02d} at {hour:02d}{minute:02d}.")
 
     # What are the valid hours of the forecast
     valid_hours_6h = [30, 36, 42, 48]
     valid_hours_24h = [6, 30, 54, 78, 102, 126, 150]
 
     # Shorthand
-    fcst_date_str = f"{year}{month:02d}{day:02d}"
+    date_str = f"{year}{month:02d}{day:02d}"
     time_str = f"{hour:02d}{minute:02d}"
 
     # The SEWAA-forecasts directory
@@ -306,97 +317,95 @@ if __name__ == "__main__":
 
     # Download from gbmc
 
-    # try data download with current date and previous day's date if accumulation time 18h
-    fcst_date = datetime.datetime.strptime(fcst_date_str, "%Y%m%d")
-    prev_day = fcst_date - datetime.timedelta(days=1)
-    fcst_dates = (
-        [fcst_date_str]
-        if time_str != "1800"
-        else [prev_day.strftime("%Y%m%d"), fcst_date_str]
-    )
+    if accumulation_time == 6:
 
-    for date_str in fcst_dates:
-        print(f"initialised on {date_str} at {hour:02d}{minute:02d}.")
-
-        if accumulation_time == 6:
-            # Create the directory for the IFS downloads if it doesn't exist
+        # Create the directory for the IFS downloads if it doesn't exist
+        try:
             pathlib.Path(IFS_data_path_6h).mkdir(exist_ok=True)
-            file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
+        except FileExistsError:
+            pass
 
-            # Check to see if the file is here first
-            if os.path.isfile(f"{IFS_data_path_6h}/{file_name}"):
-                print(f"{IFS_data_path_6h}/{file_name} already exists.")
+        file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
 
-            else:
-                print(f"Copying 6h accumulation data, {file_name}, from gbmc")
-                print(f"to {IFS_data_path_6h}/.")
+        # Check to see if the file is here first
+        if os.path.isfile(f"{IFS_data_path_6h}/{file_name}"):
+            print(f"{IFS_data_path_6h}/{file_name} already exists.")
+        else:
+            print(f"Copying 6h accumulation data, {file_name}, from gbmc")
+            print(f"to {IFS_data_path_6h}/.")
+            cp = subprocess.run(
+                [
+                    "scp",
+                    f"gbmc@136.156.130.165:/data/Operational/{file_name}",
+                    IFS_data_path_6h,
+                ]
+            )
+            if cp.returncode != 0:
+                print(
+                    f"Unable to copy {file_name} from gbmc. Trying one more time with host key verification disabled!"
+                )
                 cp = subprocess.run(
                     [
                         "scp",
+                        "-o StrictHostKeyChecking=no",
                         f"gbmc@136.156.130.165:/data/Operational/{file_name}",
                         IFS_data_path_6h,
                     ]
                 )
                 if cp.returncode != 0:
-                    print(
-                        f"Unable to copy {file_name} from gbmc. Trying one more time with host key verification disabled!"
-                    )
-                    cp = subprocess.run(
-                        [
-                            "scp",
-                            "-o StrictHostKeyChecking=no",
-                            f"gbmc@136.156.130.165:/data/Operational/{file_name}",
-                            IFS_data_path_6h,
-                        ]
-                    )
-                    if cp.returncode != 0:
-                        print(f"unresolvable failure to copy {file_name} from gbmc")
-                        sys.exit()
+                    print(f"unresolvable failure to copy {file_name} from gbmc")
+                    sys.exit()
+        
 
-        elif accumulation_time == 24:
-            # Create the directory for the IFS downloads if it doesn't exist
-            pathlib.Path(IFS_data_path_24h).mkdir(exist_ok=True)
+    elif accumulation_time == 24:
 
-            file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
+        # Create the directory for the IFS downloads if it doesn't exist
+        try:
+            pathlib.Path(IFS_data_path_24h).mkdir(exist_ok=True, parents=True)
+        except FileExistsError:
+            pass
 
-            # Check to see if the file is here first
-            if os.path.isfile(f"{IFS_data_path_24h}/{file_name}"):
-                print(f"{IFS_data_path_24h}/{file_name} already exists.")
+        file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
 
-            else:
-                print(f"Copying 24h accumulation data, {file_name}, from gbmc")
-                print(f"to {IFS_data_path_24h}/.")
+        # Check to see if the file is here first
+        if os.path.isfile(f"{IFS_data_path_24h}/{file_name}"):
+            print(f"{IFS_data_path_24h}/{file_name} already exists.")
+            
+        else:
+            print(f"Copying 24h accumulation data, {file_name}, from gbmc")
+            print(f"to {IFS_data_path_24h}/.")
+            cp = subprocess.run(
+                [
+                    "scp",
+                    f"gbmc@136.156.130.165:/data/Operational_7d/{file_name}",
+                    IFS_data_path_24h,
+                ]
+            )
+            if cp.returncode != 0:
+                print(
+                    f"Unable to copy {file_name} from gbmc. Trying one more time with host key verification disabled!"
+                )
                 cp = subprocess.run(
                     [
                         "scp",
+                        "-o StrictHostKeyChecking=no",
                         f"gbmc@136.156.130.165:/data/Operational_7d/{file_name}",
                         IFS_data_path_24h,
                     ]
                 )
                 if cp.returncode != 0:
-                    print(
-                        f"Unable to copy {file_name} from gbmc. Trying one more time with host key verification disabled!"
-                    )
-                    cp = subprocess.run(
-                        [
-                            "scp",
-                            "-o StrictHostKeyChecking=no",
-                            f"gbmc@136.156.130.165:/data/Operational_7d/{file_name}",
-                            IFS_data_path_24h,
-                        ]
-                    )
-                    if cp.returncode != 0:
-                        print(f"unresolvable failure to copy {file_name} from gbmc")
-                        sys.exit()
+                    print(f"unresolvable failure to copy {file_name} from gbmc")
+                    sys.exit()
 
-        else:
-            # Error should have been caught before, but if it wasn't catch it now.
-            print("ERROR: Incorrect accumulation time.")
-            sys.exit()
+    else:
+        # Error should have been caught before, but if it wasn't catch it now.
+        print("ERROR: Incorrect accumulation time.")
+        sys.exit()
 
-        # Run cGAN on this data
+    # Run cGAN on this data
 
     if accumulation_time == 6:
+
         # Check to see if the counts are there first
         correct_num_counts_files = check_counts_files(
             cGAN_counts_path_6h, date_str, hour, valid_hours_6h
@@ -404,6 +413,7 @@ if __name__ == "__main__":
 
         # If the counts files are there and delete_forecasts is true don't run the forecasts
         if not (correct_num_counts_files and delete_forecasts):
+
             # Create the directory for the cGAN forecasts if it doesn't exist
             pathlib.Path(cGAN_forecast_path_6h).mkdir(exist_ok=True)
 
@@ -426,6 +436,7 @@ if __name__ == "__main__":
             )
 
     elif accumulation_time == 24:
+
         # Check to see if the counts are there first
         correct_num_counts_files = check_counts_files(
             cGAN_counts_path_24h, date_str, hour, valid_hours_24h
@@ -445,11 +456,13 @@ if __name__ == "__main__":
         if not (
             correct_num_counts_files and correct_num_ELR_files and delete_forecasts
         ):
+
             # Create the directory for the cGAN forecasts if it doesn't exist
             pathlib.Path(cGAN_forecast_path_24h).mkdir(exist_ok=True)
 
             # Perform a separate forecast for each lead time
             for lead_time_idx in range(7):
+
                 file_name = f"GAN_{date_str}_{hour:02d}Z_v{lead_time_idx}.nc"
 
                 # Check to see if the forecast is there first
@@ -477,6 +490,7 @@ if __name__ == "__main__":
     pathlib.Path(cGAN_counts_path).mkdir(exist_ok=True)
 
     if accumulation_time == 6:
+
         # Create the directory for the data if it doesn't exist
         pathlib.Path(cGAN_counts_path_6h).mkdir(exist_ok=True)
 
@@ -512,6 +526,7 @@ if __name__ == "__main__":
             print("Histogram counts files already exist.")
 
     elif accumulation_time == 24:
+
         # Create the directory for the data if it doesn't exist
         pathlib.Path(cGAN_counts_path_24h).mkdir(exist_ok=True)
 
@@ -548,7 +563,9 @@ if __name__ == "__main__":
 
     # Run ELR forecasts (only when time is 0)
     if (hour == 0) and (run_ELR):
+
         if accumulation_time == 24:
+
             # Check to see if the ELR files are there first
             correct_num_ELR_files = check_ELR_files(
                 ELR_model_path,
@@ -561,6 +578,7 @@ if __name__ == "__main__":
 
             # If the relevant files are there and delete_forecasts is true don't run the ELR
             if not correct_num_ELR_files:
+
                 print("Running ELR 24h forecasts.")
                 run_dir = ELR_script_path
                 subprocess.run(
@@ -589,12 +607,14 @@ if __name__ == "__main__":
     # Update .JSON files for the interface. Overwrite if files exist.
 
     if accumulation_time == 6:
+
         # Histogram counts
         print("Listing 6h counts for the interface.")
         run_dir = "6h_accumulations"
         subprocess.run(["python", "find_available_dates.py"], cwd=run_dir)
 
     elif accumulation_time == 24:
+
         # Histogram counts
         print("Listing 24h counts for the interface.")
         run_dir = "24h_accumulations"
@@ -608,6 +628,7 @@ if __name__ == "__main__":
 
     # Delete the cGAN forecast
     if delete_forecasts:
+
         if accumulation_time == 6:
             file_to_delete = f"{cGAN_forecast_path_6h}/GAN_{date_str}_{hour:02d}Z.nc"
             if os.path.isfile(

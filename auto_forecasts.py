@@ -1,16 +1,15 @@
 from typing import Literal
 from pandas import date_range
 import argparse
-import threading
 import subprocess
 from datetime import datetime, timedelta
 
 
-def make_gen_forecast_request(
+def gen_forecast_request(
     forecast_date: str,
     accumulation: Literal["6h", "24h"] | None = "6h",
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
-) -> bool:
+) -> None:
     accumulation = accumulation if accumulation is not None else "6h"
     time = time if time is not None else "0000"
     params = [
@@ -30,34 +29,37 @@ def make_gen_forecast_request(
 
 
 def forecast_dates_generator(
-    start_date: str | None = None, final_date: str | None = None
+    start_date: str | None = None,
+    final_date: str | None = None,
+    days_to_check: int | None = 2,
 ) -> list[str]:
+    days_to_check = days_to_check if isinstance(days_to_check, int) else 2
     if start_date is None:
-        start_date = datetime.today() - timedelta(days=30)
+        start_dt = datetime.today() - timedelta(days=days_to_check)
     else:
         try:
-            start_date = datetime.strptime(start_date, "%Y%m%d").date()
+            start_dt = datetime.strptime(start_date, "%Y%m%d").date()
         except Exception as err:
             print(
-                f"failed to parse start date parameter {start_date} to a valid date object with error {err}"
+                f"failed to parse start_date {start_date} to a valid date object with error {err}"
             )
-            start_date = datetime.today() - timedelta(days=30)
-            print(f"start date defaulting to 30 days since today -> {start_date}")
+            start_dt = datetime.today() - timedelta(days=days_to_check)
+            print(f"start date defaulting to 2 days since today -> {start_dt}")
 
     if final_date is None:
-        final_date = datetime.today().date()
+        final_dt = datetime.today().date()
     else:
         try:
-            final_date = datetime.strptime(final_date, "%Y%m%d").date()
+            final_dt = datetime.strptime(final_date, "%Y%m%d").date()
         except Exception as err:
             print(
-                f"failed to parse final date parameter {final_date} to a valid date object with error {err}"
+                f"failed to parse final_date {final_date} to a valid date object with error {err}"
             )
-            final_date = datetime.today()
+            final_dt = datetime.today()
             print(f"final date defaulting to today -> {final_date}")
     return [
         dt.strftime("%Y%m%d")
-        for dt in date_range(start=start_date, end=final_date, freq="D")
+        for dt in date_range(start=start_dt, end=final_dt, freq="D")
     ]
 
 
@@ -66,26 +68,24 @@ def auto_gen_forecasts(
     final_date: str | None = None,
     accumulation: Literal["6h", "24h"] | None = "6h",
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
+    days_to_check: int | None = 2,
 ) -> None:
     print(
         f"received request to autogenerate forecasts from {start_date} to {final_date} with "
         + f"accumulation {accumulation} and initialization time {time}"
     )
     forecast_dates = forecast_dates_generator(
-        start_date=start_date, final_date=final_date
+        start_date=start_date, final_date=final_date, days_to_check=days_to_check
     )
     print(f"starting forecasts generation for {' => '.join(forecast_dates)}")
     for forecast_date in forecast_dates:
-        worker = threading.Thread(
-            target=make_gen_forecast_request,
-            kwargs={
+        gen_forecast_request(
+            **{
                 "forecast_date": forecast_date,
                 "accumulation": accumulation,
                 "time": time,
-            },
-            name=f"{forecast_date}-{accumulation}-{time}",
+            }
         )
-        worker.start()
 
 
 if __name__ == "__main__":
@@ -96,6 +96,7 @@ if __name__ == "__main__":
         Arguments:
             --start_date     - generate forecasts starting from this date. By defaults, the program uses 30 days from the date today.
             --final_date     - generate forecasts from start_date to this date. By default, the program uses the date today.
+            --days_to_check  - number of forecasts days to be checked since today. Can be used to dynamically generate start_date and final_date.
             --accumulation   - forecast accumulation period. Either of 6h or 24h. The program uses 6h by default
             --time           - forecast initialization time. Either of 0000, 0600, 1200 or 1800. The program uses 0000 by default
         
@@ -117,6 +118,12 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument(
+        "--days_to_check",
+        help="Forecast days to be checked",
+        default=2,
+        type=int,
+    )
+    parser.add_argument(
         "--accumulation",
         help="How long rainfall is accumulated for, either 6h or 24h",
         default="6h",
@@ -131,4 +138,5 @@ if __name__ == "__main__":
         final_date=args.final_date,
         time=args.time,
         accumulation=args.accumulation,
+        days_to_check=args.days_to_check,
     )
