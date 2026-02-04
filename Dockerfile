@@ -27,6 +27,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     python -m venv ${WORK_HOME}/.venv
 
 COPY --chown=${USER_ID}:root . ${WORK_HOME}/
+COPY --chown=${USER_ID}:root ./configs/forecast.yaml ${WORK_HOME}/6h_accumulations/cGAN/dsrnngan
+COPY --chown=${USER_ID}:root ./configs/forecast.yaml ${WORK_HOME}/24h_accumulations/cGAN/dsrnngan
 
 ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS}
 
