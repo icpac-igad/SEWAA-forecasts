@@ -371,7 +371,7 @@ async function loadForecast() {
 	if (validTimeMenu == "All") {
 		for (let i=0;i<validTimes.length;i++) {
 			// The cGAN forecast file to load
-			let fileName = "../data/"+countsDir+"/"+year+"/counts_"+year
+			let fileName = "/interface/data/"+countsDir+"/"+year+"/counts_"+year
 										 +month.padStart(2,'0')
 										 +day.padStart(2,'0')
 										 +"_"+time.padStart(2,'0')
@@ -382,7 +382,7 @@ async function loadForecast() {
 		}
 	} else {	// Load a single valid time
 		// The cGAN forecast file to load
-		let fileName = "../data/"+countsDir+"/"+year+"/counts_"+year
+		let fileName = "/interface/data/"+countsDir+"/"+year+"/counts_"+year
 									 +month.padStart(2,'0')
 									 +day.padStart(2,'0')
 									 +"_"+time.padStart(2,'0')
@@ -508,9 +508,9 @@ async function loadDates() {
 	// Fetch a remote file
 	let fileName;
 	if (modelName == "6h accumulation") {
-		fileName = "/data/counts_6h/available_dates.json?"+dateLoadNumber;
+		fileName = "/interface/data/counts_6h/available_dates.json?"+dateLoadNumber;
 	} else if (modelName == "24h accumulation") {
-		fileName = "/data/counts_24h/available_dates.json?"+dateLoadNumber;
+		fileName = "/interface/data/counts_24h/available_dates.json?"+dateLoadNumber;
 	}
 	// dateLoadNumber ensures that the available_dates.json file is not cached
 	dateLoadNumber += 1;
@@ -622,7 +622,7 @@ async function init() {
 	
 	// If the region names are not loaded yet, then load them and wait for them to be loaded
 	// First argument is the directory, second argument is the file name.
-	await GANForecast[0].regionSpec.loadRegionNames("../boundaries", "regional_names.json");
+	await GANForecast[0].regionSpec.loadRegionNames("/interface/static/boundaries", "regional_names.json");
 	// All point at the same regionSpec
 	// XXX Make according to validTimes.length
 	for (let i=1;i<7;i++) {
