@@ -152,18 +152,14 @@ def parseArguments():
         if accumulation_time == 6:
             if (hour not in [0, 6, 12, 18]) or (minute != 0):
                 print("ERROR: Incorrect time.")
-                print(
-                    "       Available initialisation times are 0000, 0600, 1200, 1800 for 6h accumulations."
-                )
+                print("Available initialisation times are 0000, 0600, 1200, 1800 for 6h accumulations.")
                 parser.print_help()
                 sys.exit()
 
         elif accumulation_time == 24:
             if hour != 0:
                 print("ERROR: Incorrect time.")
-                print(
-                    "       Available initialisation time is 0000 for 24h accumulations."
-                )
+                print("Available initialisation time is 0000 for 24h accumulations.")
                 parser.print_help()
                 sys.exit()
 
@@ -201,6 +197,8 @@ def parseArguments():
 #    valid_hours - A list of the valid_hours that the forecast is computed at.
 # Returns:
 #    If all files that should be there, are there.
+
+
 def check_counts_files(counts_path, date_str, hour, valid_hours):
 
     # Extract the year from date_str
@@ -295,7 +293,7 @@ if __name__ == "__main__":
 
     # Where the ELR predictions are saved
     ELR_predictions_path = (
-        f"{root_dir}/interface/ensemble_logistic_regression/ELR_predictions/"
+        f"{root_dir}/interface/data/ELR_predictions/"
     )
 
     # Countries for ELR
@@ -307,7 +305,7 @@ if __name__ == "__main__":
     }
 
     # Where all of the cGAN histogram counts will be stored
-    cGAN_counts_path = f"{root_dir}/interface/view_forecasts/data"
+    cGAN_counts_path = f"{root_dir}/interface/data"
 
     # Where the cGAN 6h histogram counts will be stored
     cGAN_counts_path_6h = f"{cGAN_counts_path}/counts_6h"
@@ -355,7 +353,6 @@ if __name__ == "__main__":
                 if cp.returncode != 0:
                     print(f"unresolvable failure to copy {file_name} from gbmc")
                     sys.exit()
-        
 
     elif accumulation_time == 24:
 
@@ -370,7 +367,7 @@ if __name__ == "__main__":
         # Check to see if the file is here first
         if os.path.isfile(f"{IFS_data_path_24h}/{file_name}"):
             print(f"{IFS_data_path_24h}/{file_name} already exists.")
-            
+
         else:
             print(f"Copying 24h accumulation data, {file_name}, from gbmc")
             print(f"to {IFS_data_path_24h}/.")
@@ -451,7 +448,7 @@ if __name__ == "__main__":
             ELR_country_admin_regions,
             date_str,
         )
-
+        
         # If the counts and ELR files are there and delete_forecasts is true don't run the forecasts
         if not (
             correct_num_counts_files and correct_num_ELR_files and delete_forecasts

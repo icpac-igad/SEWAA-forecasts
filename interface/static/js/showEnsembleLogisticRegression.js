@@ -164,9 +164,9 @@ async function loadDates() {
 	let fileName;
 	// XXX Desparate hack
 	if (regionName == "Rwanda") {
-		fileName = "/staticELR_predictions/24h_accumulations/"+regionName+"/county/available_dates.json?"+dateLoadNumber;
+		fileName = "/data/ELR_predictions/24h_accumulations/"+regionName+"/county/available_dates.json?"+dateLoadNumber;
 	} else {
-		fileName = "/staticELR_predictions/24h_accumulations/"+regionName+"/subcounty/available_dates.json?"+dateLoadNumber;
+		fileName = "/data/ELR_predictions/24h_accumulations/"+regionName+"/subcounty/available_dates.json?"+dateLoadNumber;
 	}
 	
 	// dateLoadNumber ensures that the available_dates.json file is not cached
@@ -282,10 +282,10 @@ async function loadELRForecast() {
 	let fileName;
 	// XXX Desparate hack
 	if (region == "Rwanda") {
-		fileName = "/staticELR_predictions/24h_accumulations/"+region+"/county/GAN_"
+		fileName = "/data/ELR_predictions/24h_accumulations/"+region+"/county/GAN_"
 					+year+month.padStart(2,'0')+day.padStart(2,'0')+"_ELR_v1.nc";
 	} else {
-		fileName = "/staticELR_predictions/24h_accumulations/"+region+"/subcounty/GAN_"
+		fileName = "/data/ELR_predictions/24h_accumulations/"+region+"/subcounty/GAN_"
 					+year+month.padStart(2,'0')+day.padStart(2,'0')+"_ELR_v1.nc";
 	}
 	// Load data into the ELRDataObject

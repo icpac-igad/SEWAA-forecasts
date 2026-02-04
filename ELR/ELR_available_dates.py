@@ -8,12 +8,11 @@
 # time objects hold a list of valid times
 
 import os
-import numpy as np
 import json
 
 
 # The directory with the ELR predictions in
-elr_dir = "../interface/ensemble_logistic_regression/ELR_predictions/24h_accumulations/"
+elr_dir = "../interface/data/ELR_predictions/24h_accumulations/"
 country_regiontype = {"Kenya":"subcounty","Ethiopia":"subcounty","Rwanda":"county"}
 
 # Define the sort criteria
@@ -25,6 +24,9 @@ for country in ["Kenya","Ethiopia","Rwanda"]:
     output_dir = elr_dir_country
     elr_years = []
     times_list = []
+    # Create the directory if it is not there
+    if not os.path.exists(elr_dir_country):
+        os.makedirs(elr_dir_country)
     files = os.listdir(elr_dir_country)
     for file in files:        
         file_name = file

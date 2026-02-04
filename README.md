@@ -14,7 +14,6 @@ Welcome! This project provides operational rainfall forecasts for the ICPAC (IGA
       - [Option B: Download as ZIP (For beginners)](#option-b-download-as-zip-for-beginners)
     - [Step 3: Set Up Python Environment](#step-3-set-up-python-environment)
     - [Step 4: Access ECMWF Data](#step-4-access-ecmwf-data)
-  - [Running the Application](#running-the-application)
     - [Method 1: Using Docker (Recommended for Beginners)](#method-1-using-docker-recommended-for-beginners)
       - [Prerequisites:](#prerequisites-1)
       - [Steps:](#steps)
@@ -180,7 +179,9 @@ The forecasts require meteorological data from ECMWF (European Centre for Medium
 
 ---
 
-## Running the Application
+	python -m http.server 8080
+   
+Then in a browser window go to the address
 
 ### Method 1: Using Docker (Recommended for Beginners)
 

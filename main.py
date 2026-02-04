@@ -29,16 +29,12 @@ data_dir = Path("interface/data")
 if not data_dir.exists():
     data_dir.mkdir(parents=True)
 
-elr_predictions_dir = Path("interface/ensemble_logistic_regression/ELR_predictions")
-if not elr_predictions_dir.exists():
-    elr_predictions_dir.mkdir(parents=True)
 
 elr_climate_dir = Path("ELR/climatological_exceedances")
 
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.mount("/data", StaticFiles(directory=data_dir), name="data")
-app.mount("/staticELR_predictions", StaticFiles(directory=elr_predictions_dir), name="elr_predictions")
 app.mount("/staticELR_climate", StaticFiles(directory=elr_climate_dir), name="elr_climate")
 
 templates = Jinja2Templates(directory="interface")

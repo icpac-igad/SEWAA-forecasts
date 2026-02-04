@@ -1,6 +1,6 @@
 paths = dict(
 FCST_PATH = '../',
-OUT_PATH = '../interface/ensemble_logistic_regression/ELR_predictions/',
+OUT_PATH = '../interface/data/ELR_predictions/',
 MODEL_PATH =  './models/',
 Kenya_shapes = '../shapes/Kenya_shapes/subcounties/ke_subcounty.shp',
 Kenya_shapes_county = '../shapes/Kenya_shapes/Kenya_region.shp',
