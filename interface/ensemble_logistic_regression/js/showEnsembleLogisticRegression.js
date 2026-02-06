@@ -164,9 +164,9 @@ async function loadDates() {
 	let fileName;
 	// XXX Desparate hack
 	if (regionName == "Rwanda") {
-		fileName = "../ELR_predictions/24h_accumulations/"+regionName+"/county/available_dates.json?"+dateLoadNumber;
+		fileName = "/interface/data/ELR_predictions/24h_accumulations/"+regionName+"/county/available_dates.json?"+dateLoadNumber;
 	} else {
-		fileName = "../ELR_predictions/24h_accumulations/"+regionName+"/subcounty/available_dates.json?"+dateLoadNumber;
+		fileName = "/interface/data/ELR_predictions/24h_accumulations/"+regionName+"/subcounty/available_dates.json?"+dateLoadNumber;
 	}
 	
 	// dateLoadNumber ensures that the available_dates.json file is not cached
@@ -282,10 +282,10 @@ async function loadELRForecast() {
 	let fileName;
 	// XXX Desparate hack
 	if (region == "Rwanda") {
-		fileName = "../ELR_predictions/24h_accumulations/"+region+"/county/GAN_"
+		fileName = "/interface/data/ELR_predictions/24h_accumulations/"+region+"/county/GAN_"
 					+year+month.padStart(2,'0')+day.padStart(2,'0')+"_ELR_v1.nc";
 	} else {
-		fileName = "../ELR_predictions/24h_accumulations/"+region+"/subcounty/GAN_"
+		fileName = "/interface/data/ELR_predictions/24h_accumulations/"+region+"/subcounty/GAN_"
 					+year+month.padStart(2,'0')+day.padStart(2,'0')+"_ELR_v1.nc";
 	}
 	
@@ -311,7 +311,7 @@ async function loadELRClimate() {
 	if ((ELRForecast.currentThreshold != threshold) || (ELRForecast.climateMonth != month)){
 	
 		let month = document.getElementById("initMonthSelect").value;
-		fileName = "../../../ELR/climatological_exceedances/clim_exc_"+threshold+"mmday_"+month+"month.nc";
+		fileName = "/ELR/climatological_exceedances/clim_exc_"+threshold+"mmday_"+month+"month.nc";
 		
 		// Load data into the ELRClimate ELRDataObject
 		await ELRForecast.loadELRClimate(fileName, threshold, month);

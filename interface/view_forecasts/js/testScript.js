@@ -508,15 +508,9 @@ async function loadDates() {
 	// Fetch a remote file
 	let fileName;
 	if (modelName == "6h accumulation") {
-<<<<<<< HEAD
 		fileName = "/interface/data/counts_6h/available_dates.json?"+dateLoadNumber;
 	} else if (modelName == "24h accumulation") {
 		fileName = "/interface/data/counts_24h/available_dates.json?"+dateLoadNumber;
-=======
-		fileName = "../data/counts_6h/available_dates.json?"+dateLoadNumber;
-	} else if (modelName == "24h accumulation") {
-		fileName = "../data/counts_24h/available_dates.json?"+dateLoadNumber;
->>>>>>> a63ee87e78b9919ea189f05aaba8dc532b5cdc4f
 	}
 	// dateLoadNumber ensures that the available_dates.json file is not cached
 	dateLoadNumber += 1;
@@ -778,93 +772,6 @@ async function drawPlots() {
 		numCanvases = 1;
 	}
 	
-<<<<<<< HEAD
-	// Get or create the plots container
-	let plotsContainer = document.getElementById("plotsContainer");
-	if (!plotsContainer) {
-		// Create plotsContainer and insert before footer
-		plotsContainer = document.createElement("div");
-		plotsContainer.id = "plotsContainer";
-		let footer = document.querySelector("footer");
-		if (footer && footer.parentNode) {
-			footer.parentNode.insertBefore(plotsContainer, footer);
-		} else {
-			// Last resort: append to main or body
-			let main = document.querySelector("main");
-			if (main) {
-				main.appendChild(plotsContainer);
-			} else {
-				document.body.appendChild(plotsContainer);
-			}
-		}
-	}
-
-	// Remove excess plot pairs if we have too many
-	let canvasNum = 0;
-	while (document.getElementById("plotPair"+canvasNum) != null) {
-		if (canvasNum >= numCanvases) {
-			document.getElementById("plotPair"+canvasNum).remove();
-		}
-		canvasNum += 1;
-	}
-
-	// Ensure we have the correct number of plot pairs with map canvases
-	canvasNum = 0;
-	while (canvasNum < numCanvases) {
-		let plotPair = document.getElementById("plotPair"+canvasNum);
-
-		// Create plot pair container if it doesn't exist
-		if (!plotPair) {
-			plotPair = document.createElement("div");
-			plotPair.id = "plotPair"+canvasNum;
-			plotPair.className = "plot-pair";
-			plotsContainer.appendChild(plotPair);
-		}
-
-		// Create map canvas if it doesn't exist
-		let mapCanvas = document.getElementById("mapCanvas"+canvasNum);
-		if (!mapCanvas) {
-			mapCanvas = document.createElement("canvas");
-			mapCanvas.id = "mapCanvas"+canvasNum;
-			mapCanvas.width = 513;
-			mapCanvas.height = 504;
-			mapCanvas.innerHTML = "Your browser does not support the HTML canvas tag.";
-			plotPair.appendChild(mapCanvas);
-			// Listen for clicks in the canvas
-			listenForMouse(canvasNum);
-		}
-
-		canvasNum += 1;
-	}
-
-	// Create or remove histogram canvases based on drawMarker state
-	if (drawMarker) {
-		// Ensure histogram canvases exist in each plot pair
-		for (let i = 0; i < numCanvases; i++) {
-			let histCanvas = document.getElementById("histogramCanvas"+i);
-			if (!histCanvas) {
-				histCanvas = document.createElement("canvas");
-				histCanvas.id = "histogramCanvas"+i;
-				histCanvas.width = 511;
-				histCanvas.height = 504;
-				histCanvas.innerHTML = "Your browser does not support the HTML canvas tag.";
-				// Add histogram canvas to the plot pair, after the map canvas
-				const plotPair = document.getElementById("plotPair"+i);
-				if (plotPair) {
-					plotPair.appendChild(histCanvas);
-				}
-			}
-		}
-	} else {
-		// Remove all histogram canvases
-		let canvasNum = 0;
-		while (document.getElementById("histogramCanvas"+canvasNum) != null) {
-			document.getElementById("histogramCanvas"+canvasNum).remove();
-			canvasNum += 1;
-		}
-	}
-
-=======
 	// Ensure the correct number of map canvases exist
 	let canvasNum=0;
 	while (document.getElementById("mapCanvas"+canvasNum) != null) {
@@ -947,7 +854,6 @@ async function drawPlots() {
 		}
 	}
 	
->>>>>>> a63ee87e78b9919ea189f05aaba8dc532b5cdc4f
 	// Reset the array of rectangles containing map canvas boundaries
 	canvasMouseDownRects = [];
 	
