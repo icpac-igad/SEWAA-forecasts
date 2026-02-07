@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from datetime import datetime
 from pathlib import Path
+import markdown2
 
 
 class HealthCheckPayload(BaseModel):
@@ -82,6 +83,31 @@ async def get_categories_of_reliability(request: Request) -> HTMLResponse:
     """Render Categories Of Reliability Page"""
     return templates.TemplateResponse(
         request=request, name="categoriesOfReliability.html"
+    )
+
+
+@app.get("/CRPS_comparison.html")
+async def get_crps_comparison(request: Request) -> HTMLResponse:
+    """Render CRPS Comparison Page"""
+    return templates.TemplateResponse(request=request, name="CRPS_comparison.html")
+
+
+@app.get("/user-guide")
+async def get_user_guide(request: Request) -> HTMLResponse:
+    """Render the User Guide page"""
+    return templates.TemplateResponse(request=request, name="user_guide.html")
+
+
+@app.get("/documentation")
+async def get_documentation(request: Request) -> HTMLResponse:
+    """Render README.md as styled HTML documentation"""
+    readme_path = Path("README.md")
+    md_content = readme_path.read_text(encoding="utf-8") if readme_path.exists() else "# Documentation\n\nNo README.md found."
+    html_content = markdown2.markdown(md_content, extras=["fenced-code-blocks", "tables", "header-ids"])
+    return templates.TemplateResponse(
+        request=request,
+        name="documentation.html",
+        context={"doc_content": html_content},
     )
 
 
