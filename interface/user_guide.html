@@ -1,0 +1,547 @@
+{% extends 'base.html' %}
+
+{% block title %}User Guide - SEWAA{% endblock %}
+
+{% block styles %}
+<style>
+    .guide-container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .guide-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .guide-header h1 {
+        font-size: 2.25rem;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+    }
+
+    .guide-header h1 i {
+        color: #A2CD3D;
+        margin-right: 0.5rem;
+    }
+
+    .guide-header p {
+        color: #718096;
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* Step card */
+    .step {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2.5rem;
+        align-items: center;
+        margin-bottom: 3.5rem;
+        padding-bottom: 3.5rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .step:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .step.reverse .step-text { order: 2; }
+    .step.reverse .step-visual { order: 1; }
+
+    .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: #A2CD3D;
+        color: white;
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 50%;
+        margin-bottom: 0.75rem;
+    }
+
+    .step-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 0.75rem;
+    }
+
+    .step-description {
+        font-size: 1rem;
+        color: #4a5568;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+
+    .step-tip {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        background: #f0fdf4;
+        border-left: 3px solid #A2CD3D;
+        padding: 0.75rem 1rem;
+        border-radius: 0 8px 8px 0;
+        font-size: 0.9rem;
+        color: #2d3748;
+    }
+
+    .step-tip i {
+        color: #A2CD3D;
+        flex-shrink: 0;
+        margin-top: 0.15rem;
+    }
+
+    /* Screenshot placeholder */
+    .step-visual {
+        background: #f7fafc;
+        border: 2px dashed #cbd5e0;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .screenshot-placeholder {
+        aspect-ratio: 16 / 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .screenshot-placeholder .screen-icon {
+        font-size: 3rem;
+        color: #a0aec0;
+    }
+
+    .screenshot-placeholder .screen-mockup {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .screen-mockup .mock-bar {
+        background: #edf2f7;
+        padding: 0.4rem 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .screen-mockup .mock-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #cbd5e0;
+    }
+
+    .screen-mockup .mock-dot.red { background: #fc8181; }
+    .screen-mockup .mock-dot.yellow { background: #f6e05e; }
+    .screen-mockup .mock-dot.green { background: #68d391; }
+
+    .screen-mockup .mock-url {
+        flex: 1;
+        text-align: center;
+        font-size: 0.7rem;
+        color: #a0aec0;
+        font-family: monospace;
+    }
+
+    .screen-mockup .mock-body {
+        padding: 1rem;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .mock-nav {
+        display: flex;
+        gap: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .mock-nav span {
+        font-size: 0.65rem;
+        color: #a0aec0;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        background: #f7fafc;
+    }
+
+    .mock-nav span.active {
+        background: #A2CD3D;
+        color: white;
+    }
+
+    .mock-content-block {
+        height: 10px;
+        background: #edf2f7;
+        border-radius: 4px;
+        width: 100%;
+    }
+
+    .mock-content-block.short { width: 60%; }
+    .mock-content-block.medium { width: 80%; }
+
+    .mock-map {
+        height: 80px;
+        background: linear-gradient(135deg, #c6f6d5 0%, #bee3f8 50%, #fefcbf 100%);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: #718096;
+    }
+
+    .mock-chart {
+        height: 70px;
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        padding: 0.5rem;
+    }
+
+    .mock-chart .bar {
+        flex: 1;
+        background: #A2CD3D;
+        border-radius: 2px 2px 0 0;
+        opacity: 0.7;
+    }
+
+    .mock-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .mock-controls .mock-select {
+        flex: 1;
+        height: 20px;
+        background: #edf2f7;
+        border-radius: 4px;
+    }
+
+    .screenshot-label {
+        font-size: 0.8rem;
+        color: #a0aec0;
+        font-style: italic;
+    }
+
+    /* Keyboard shortcut badge */
+    .kbd {
+        display: inline-block;
+        padding: 0.15em 0.4em;
+        font-size: 0.85em;
+        font-family: monospace;
+        background: #edf2f7;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+        color: #2d3748;
+    }
+
+    @media (max-width: 768px) {
+        .step {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .step.reverse .step-text { order: 1; }
+        .step.reverse .step-visual { order: 2; }
+
+        .guide-header h1 {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="guide-container">
+    <div class="guide-header">
+        <h1><i class="bi bi-book"></i> User Guide</h1>
+        <p>A step-by-step walkthrough of the SEWAA Forecasts platform and how to navigate its features.</p>
+    </div>
+
+    <!-- Step 1: Homepage -->
+    <div class="step">
+        <div class="step-text">
+            <div class="step-number">1</div>
+            <div class="step-title">Landing Page</div>
+            <div class="step-description">
+                When you open the application, you'll see the homepage with an overview of the SEWAA project, key highlights, and quick links to all tools.
+                Click <strong>"Explore Forecasts"</strong> to jump straight to the forecast viewer, or scroll down to access other resources.
+            </div>
+            <div class="step-tip">
+                <i class="bi bi-info-circle-fill"></i>
+                The navigation bar at the top is available on every page for quick access.
+            </div>
+        </div>
+        <div class="step-visual">
+            <div class="screenshot-placeholder">
+                <div class="screen-mockup">
+                    <div class="mock-bar">
+                        <span class="mock-dot red"></span>
+                        <span class="mock-dot yellow"></span>
+                        <span class="mock-dot green"></span>
+                        <span class="mock-url">localhost:8000</span>
+                    </div>
+                    <div class="mock-body">
+                        <div class="mock-nav">
+                            <span class="active">Home</span>
+                            <span>Forecasts</span>
+                            <span>ELR</span>
+                            <span>Evaluation</span>
+                        </div>
+                        <div class="mock-content-block short"></div>
+                        <div class="mock-content-block"></div>
+                        <div class="mock-content-block medium"></div>
+                        <div style="text-align:center; margin-top: 0.5rem;">
+                            <span style="background:#A2CD3D; color:white; padding:0.2rem 0.8rem; border-radius:20px; font-size:0.65rem;">Explore Forecasts</span>
+                        </div>
+                    </div>
+                </div>
+                <span class="screenshot-label">Homepage overview</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: View Forecasts -->
+    <div class="step reverse">
+        <div class="step-text">
+            <div class="step-number">2</div>
+            <div class="step-title">Viewing Forecasts</div>
+            <div class="step-description">
+                The forecast viewer lets you explore rainfall predictions across East Africa. Use the controls at the top to configure your view:
+            </div>
+            <ul style="color:#4a5568; line-height:2; padding-left:1.25rem; margin-bottom:1rem;">
+                <li><strong>Model:</strong> Choose between 6h or 24h accumulation</li>
+                <li><strong>Region:</strong> Select a specific country or all of East Africa</li>
+                <li><strong>Date &amp; Time:</strong> Pick the forecast initialization</li>
+                <li><strong>Plot Type:</strong> Switch between probability maps and rainfall values</li>
+            </ul>
+            <div class="step-tip">
+                <i class="bi bi-info-circle-fill"></i>
+                Click anywhere on the map to see the local rainfall distribution at that point.
+            </div>
+        </div>
+        <div class="step-visual">
+            <div class="screenshot-placeholder">
+                <div class="screen-mockup">
+                    <div class="mock-bar">
+                        <span class="mock-dot red"></span>
+                        <span class="mock-dot yellow"></span>
+                        <span class="mock-dot green"></span>
+                        <span class="mock-url">localhost:8000/showForecasts.html</span>
+                    </div>
+                    <div class="mock-body">
+                        <div class="mock-controls">
+                            <div class="mock-select"></div>
+                            <div class="mock-select"></div>
+                            <div class="mock-select"></div>
+                        </div>
+                        <div class="mock-map">
+                            <i class="bi bi-geo-alt" style="font-size:1.2rem;"></i> East Africa
+                        </div>
+                    </div>
+                </div>
+                <span class="screenshot-label">Forecast viewer with map controls</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Interact with Map -->
+    <div class="step">
+        <div class="step-text">
+            <div class="step-number">3</div>
+            <div class="step-title">Interacting with the Map</div>
+            <div class="step-description">
+                Once a forecast is loaded, click on any location on the map to see the detailed rainfall probability distribution for that grid point.
+                A histogram will appear showing the likelihood of different rainfall amounts.
+            </div>
+            <ul style="color:#4a5568; line-height:2; padding-left:1.25rem; margin-bottom:1rem;">
+                <li>Use <span class="kbd">&larr;</span> <span class="kbd">&rarr;</span> <span class="kbd">&uarr;</span> <span class="kbd">&darr;</span> arrow keys to nudge the selection by 0.1&deg;</li>
+                <li>Adjust the rainfall threshold slider</li>
+                <li>Toggle between probability levels</li>
+            </ul>
+            <div class="step-tip">
+                <i class="bi bi-info-circle-fill"></i>
+                The histogram updates in real time as you move the cursor across the map.
+            </div>
+        </div>
+        <div class="step-visual">
+            <div class="screenshot-placeholder">
+                <div class="screen-mockup">
+                    <div class="mock-bar">
+                        <span class="mock-dot red"></span>
+                        <span class="mock-dot yellow"></span>
+                        <span class="mock-dot green"></span>
+                        <span class="mock-url">localhost:8000/showForecasts.html</span>
+                    </div>
+                    <div class="mock-body" style="flex-direction:row; gap:0.75rem;">
+                        <div class="mock-map" style="flex:1; height:auto;">
+                            <i class="bi bi-cursor-fill" style="font-size:1rem; color:#e53e3e;"></i>
+                        </div>
+                        <div class="mock-chart" style="flex:1;">
+                            <div class="bar" style="height:20%;"></div>
+                            <div class="bar" style="height:55%;"></div>
+                            <div class="bar" style="height:85%;"></div>
+                            <div class="bar" style="height:70%;"></div>
+                            <div class="bar" style="height:40%;"></div>
+                            <div class="bar" style="height:25%;"></div>
+                            <div class="bar" style="height:10%;"></div>
+                        </div>
+                    </div>
+                </div>
+                <span class="screenshot-label">Click on map to view rainfall histogram</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: ELR -->
+    <div class="step reverse">
+        <div class="step-text">
+            <div class="step-number">4</div>
+            <div class="step-title">Ensemble Logistic Regression</div>
+            <div class="step-description">
+                The ELR page provides county/sub-county level exceedance probabilities for selected countries (Kenya, Rwanda, Ethiopia).
+                Select a country and date to view the probability that rainfall will exceed climatological thresholds in each administrative region.
+            </div>
+            <div class="step-tip">
+                <i class="bi bi-info-circle-fill"></i>
+                ELR forecasts are only available for 24h accumulation initialized at 00:00 UTC.
+            </div>
+        </div>
+        <div class="step-visual">
+            <div class="screenshot-placeholder">
+                <div class="screen-mockup">
+                    <div class="mock-bar">
+                        <span class="mock-dot red"></span>
+                        <span class="mock-dot yellow"></span>
+                        <span class="mock-dot green"></span>
+                        <span class="mock-url">localhost:8000/ensemble_logistic_regression.html</span>
+                    </div>
+                    <div class="mock-body">
+                        <div class="mock-controls">
+                            <div class="mock-select"></div>
+                            <div class="mock-select"></div>
+                        </div>
+                        <div class="mock-map" style="background: linear-gradient(135deg, #fefcbf 0%, #fc8181 50%, #c53030 100%);">
+                            <i class="bi bi-map" style="font-size:1.2rem;"></i> Regional exceedances
+                        </div>
+                    </div>
+                </div>
+                <span class="screenshot-label">ELR exceedance probability map</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 5: Evaluation -->
+    <div class="step">
+        <div class="step-text">
+            <div class="step-number">5</div>
+            <div class="step-title">Evaluation Tools</div>
+            <div class="step-description">
+                The evaluation page provides tools to assess forecast quality:
+            </div>
+            <ul style="color:#4a5568; line-height:2; padding-left:1.25rem; margin-bottom:1rem;">
+                <li><strong>Reliability diagrams:</strong> Check how well forecast probabilities match observed frequencies</li>
+                <li><strong>Cost-Loss ratios:</strong> Evaluate economic value of forecasts for different decision thresholds</li>
+                <li><strong>CRPS comparison:</strong> Compare skill scores between forecast models</li>
+            </ul>
+            <div class="step-tip">
+                <i class="bi bi-info-circle-fill"></i>
+                These tools help forecasters and decision-makers understand when and where the forecasts are most reliable.
+            </div>
+        </div>
+        <div class="step-visual">
+            <div class="screenshot-placeholder">
+                <div class="screen-mockup">
+                    <div class="mock-bar">
+                        <span class="mock-dot red"></span>
+                        <span class="mock-dot yellow"></span>
+                        <span class="mock-dot green"></span>
+                        <span class="mock-url">localhost:8000/categoriesOfReliability.html</span>
+                    </div>
+                    <div class="mock-body">
+                        <div class="mock-chart" style="height:90px;">
+                            <div class="bar" style="height:15%; background:#bee3f8;"></div>
+                            <div class="bar" style="height:30%; background:#90cdf4;"></div>
+                            <div class="bar" style="height:50%; background:#63b3ed;"></div>
+                            <div class="bar" style="height:70%; background:#4299e1;"></div>
+                            <div class="bar" style="height:85%; background:#3182ce;"></div>
+                            <div class="bar" style="height:95%; background:#2b6cb0;"></div>
+                        </div>
+                        <div class="mock-content-block short" style="margin-top:0.25rem;"></div>
+                    </div>
+                </div>
+                <span class="screenshot-label">Reliability and evaluation charts</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 6: Documentation & API -->
+    <div class="step reverse">
+        <div class="step-text">
+            <div class="step-number">6</div>
+            <div class="step-title">Documentation &amp; API</div>
+            <div class="step-description">
+                For technical details, installation instructions, and API usage, visit the <a href="/documentation" style="color:#2d6a9f; font-weight:600;">Documentation</a> page.
+                The system also provides a REST API for programmatic forecast generation.
+            </div>
+            <ul style="color:#4a5568; line-height:2; padding-left:1.25rem; margin-bottom:1rem;">
+                <li>API docs available at <span class="kbd">/docs</span> (Swagger UI)</li>
+                <li>Generate forecasts via <span class="kbd">/gen-forecast</span></li>
+                <li>Health check at <span class="kbd">/app-status</span></li>
+            </ul>
+            <div class="step-tip">
+                <i class="bi bi-info-circle-fill"></i>
+                Use the interactive Swagger UI to test API endpoints directly from your browser.
+            </div>
+        </div>
+        <div class="step-visual">
+            <div class="screenshot-placeholder">
+                <div class="screen-mockup">
+                    <div class="mock-bar">
+                        <span class="mock-dot red"></span>
+                        <span class="mock-dot yellow"></span>
+                        <span class="mock-dot green"></span>
+                        <span class="mock-url">localhost:8000/docs</span>
+                    </div>
+                    <div class="mock-body">
+                        <div style="font-size:0.7rem; font-weight:700; color:#2d3748; margin-bottom:0.3rem;">API Endpoints</div>
+                        <div style="display:flex; align-items:center; gap:0.4rem; padding:0.3rem; background:#f0fff4; border-radius:4px; margin-bottom:0.3rem;">
+                            <span style="background:#68d391; color:white; font-size:0.55rem; padding:0.1rem 0.3rem; border-radius:3px; font-weight:700;">GET</span>
+                            <span style="font-size:0.65rem; color:#4a5568; font-family:monospace;">/app-status</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.4rem; padding:0.3rem; background:#f0fff4; border-radius:4px; margin-bottom:0.3rem;">
+                            <span style="background:#68d391; color:white; font-size:0.55rem; padding:0.1rem 0.3rem; border-radius:3px; font-weight:700;">GET</span>
+                            <span style="font-size:0.65rem; color:#4a5568; font-family:monospace;">/gen-forecast</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.4rem; padding:0.3rem; background:#f0fff4; border-radius:4px;">
+                            <span style="background:#68d391; color:white; font-size:0.55rem; padding:0.1rem 0.3rem; border-radius:3px; font-weight:700;">GET</span>
+                            <span style="font-size:0.65rem; color:#4a5568; font-family:monospace;">/documentation</span>
+                        </div>
+                    </div>
+                </div>
+                <span class="screenshot-label">Swagger API documentation</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
