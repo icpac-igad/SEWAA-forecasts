@@ -8,6 +8,8 @@ services:
     image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
     restart: ${RESTART_POLICY:-always}
     container_name: ${WEB_CNTR_NAME:-cgan-web}
+    environment:
+      - API_WORKERS=${WEB_API_WORKERS:-24}
     volumes:
       - ${VIZ_READY_DATA_DIR:-./interface/data}:${PROXY_WORK_HOME:-/opt/interface}/data
       - ${cGAN_6h_FORECASTS_DIR:-./6h_accumulations/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/cGAN_forecasts
@@ -22,6 +24,13 @@ services:
     restart: ${RESTART_POLICY:-always}
     container_name: ${JOBS_CNTR_NAME:-cgan-jobs}
     command: ["python", "start_forecasting.py"]
+    volumes:
+      - ${VIZ_READY_DATA_DIR:-./interface/data}:${PROXY_WORK_HOME:-/opt/interface}/data
+      - ${cGAN_6h_FORECASTS_DIR:-./6h_accumulations/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/cGAN_forecasts
+      - ${IFS_6h_FORECASTS_DIR:-./6h_accumulations/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/IFS_forecast_data
+      - ${cGAN_24h_FORECASTS_DIR:-./24h_accumulations/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
+      - ${IFS_24h_FORECASTS_DIR:-./24h_accumulations/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
 
   nginx:
     build:

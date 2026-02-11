@@ -35,32 +35,39 @@ def forecast_dates_generator(
 ) -> list[str]:
     days_to_check = days_to_check if isinstance(days_to_check, int) else 2
     if start_date is None:
-        start_dt = datetime.today() - timedelta(days=days_to_check)
+        start_dt = datetime.now() - timedelta(days=days_to_check)
     else:
         try:
-            start_dt = datetime.strptime(start_date, "%Y%m%d").date()
+            start_dt = datetime.strptime(start_date, "%Y%m%d")
         except Exception as err:
             print(
                 f"failed to parse start_date {start_date} to a valid date object with error {err}"
             )
-            start_dt = datetime.today() - timedelta(days=days_to_check)
+            start_dt = datetime.now() - timedelta(days=days_to_check)
             print(f"start date defaulting to 2 days since today -> {start_dt}")
 
     if final_date is None:
-        final_dt = datetime.today().date()
+        final_dt = datetime.now()
     else:
         try:
-            final_dt = datetime.strptime(final_date, "%Y%m%d").date()
+            final_dt = datetime.strptime(final_date, "%Y%m%d")
         except Exception as err:
             print(
                 f"failed to parse final_date {final_date} to a valid date object with error {err}"
             )
-            final_dt = datetime.today()
+            final_dt = datetime.now()
             print(f"final date defaulting to today -> {final_date}")
-    return [
-        dt.strftime("%Y%m%d")
-        for dt in date_range(start=start_dt, end=final_dt, freq="D")
-    ]
+    return list(
+        sorted(
+            [
+                dt.strftime("%Y%m%d")
+                for dt in date_range(
+                    start=start_dt, end=final_dt + timedelta(days=1), freq="D"
+                )
+            ],
+            reverse=True,
+        )
+    )
 
 
 def auto_gen_forecasts(
