@@ -36,6 +36,7 @@ import os
 import subprocess
 import pathlib
 import datetime
+import platform
 
 
 # Parse arguments to this script
@@ -268,54 +269,75 @@ if __name__=='__main__':
     cGAN_counts_path_24h = f"{cGAN_counts_path}/counts_24h"
     
     
-    # Download from gbmc
+    # Download IFS data
+
+    file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
     
+    # Where to download the data to
     if (accumulation_time == 6):
-        
-        # Create the directory for the IFS downloads if it doesn't exist
-        pathlib.Path(IFS_data_path_6h).mkdir(exist_ok=True)
-        
-        file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
-        
-        # Check to see if the file is here first
-        if os.path.isfile(f"{IFS_data_path_6h}/{file_name}"):
-            print(f"{IFS_data_path_6h}/{file_name} already exists.")
-    
-        else:
-            print(f"Copying 6h accumulation data, {file_name}, from gbmc")
-            print(f"to {IFS_data_path_6h}/.")
-            cp = subprocess.run(["scp",
-                                 f"gbmc@136.156.130.165:/data/Operational/{file_name}",
-                                 IFS_data_path_6h])  
-            if (cp.returncode != 0):
-                print(f"Unable to copy {file_name} from gbmc.")
-                sys.exit()
-        
+        IFS_data_path = IFS_data_path_6h
     elif (accumulation_time == 24):
-    
-        # Create the directory for the IFS downloads if it doesn't exist
-        pathlib.Path(IFS_data_path_24h).mkdir(exist_ok=True)
-        
-        file_name = f"IFS_{date_str}_{hour:02d}Z.nc"
-        
-        # Check to see if the file is here first
-        if os.path.isfile(f"{IFS_data_path_24h}/{file_name}"):
-            print(f"{IFS_data_path_24h}/{file_name} already exists.")
-    
-        else:
-            print(f"Copying 24h accumulation data, {file_name}, from gbmc")
-            print(f"to {IFS_data_path_24h}/.")
-            cp = subprocess.run(["scp",
-                                 f"gbmc@136.156.130.165:/data/Operational_7d/{file_name}",
-                                 IFS_data_path_24h])
-            if (cp.returncode != 0):
-                print(f"Unable to copy {file_name} from gbmc.")
-                sys.exit()
-        
+        IFS_data_path = IFS_data_path_24h
     else:
         # Error should have been caught before, but if it wasn't catch it now.
         print("ERROR: Incorrect accumulation time.")
         sys.exit()
+    
+    # Create the directory for the IFS downloads if it doesn't exist
+    pathlib.Path(IFS_data_path).mkdir(exist_ok=True)
+    
+    # Check to see if the file is here first
+    if os.path.isfile(f"{IFS_data_path}/{file_name}"):
+        print(f"{IFS_data_path}/{file_name} already exists.")
+    else:
+        
+        # XXX Replace the if with a list of servers (including ICPAC).
+        
+        # Used with curl
+        if (platform.system() == "Windows"):
+            oblivion = "nul"
+        else:
+            oblivion = "/dev/null"
+        
+        # The server to download from
+        file_URL = f"https://rain.physics.ox.ac.uk/ICPAC/operational/{accumulation_time}h_accumulations/IFS_forecast_data/{year}/{file_name}"
+        
+        # Check to see if the file exists
+        print(f"Checking University of Oxford for {file_name}")
+        return_value = subprocess.run(["curl","-Isw","%{http_code}",file_URL,"-o",oblivion],
+                                      capture_output = True, text = True)
+        
+        if (return_value.stdout == "200"):  # The file is there to get
+        
+            # Get the file
+            print(f"Copying 6h accumulation data, {file_name}, from University of Oxford.")
+            print(f"to {IFS_data_path}/.")
+            subprocess.run(["curl",file_URL,"-o",f"{IFS_data_path}/{file_name}"])
+        
+        else:  # The file is not there for some reason
+            
+            print(f"Unable to copy {file_name} from {file_URL}. HTTP error {return_value.stdout}.")
+            
+            # Try another server
+            file_URL = f"http://megacorr.dynu.net/ICPAC/SEWAA_forecasts/{accumulation_time}h_accumulations/IFS_forecast_data/{year}/{file_name}"
+            
+            # Check to see if the file exists
+            print(f"Checking Fenwick's home for {file_name}")
+            return_value = subprocess.run(["curl","-Isw","%{http_code}",file_URL,"-o",oblivion],
+                                          capture_output = True, text = True)
+            
+            if (return_value.stdout == "200"):  # The file is there to get
+        
+                # Get the file
+                print(f"Copying 6h accumulation data, {file_name}, from Fenwick's home.")
+                print(f"to {IFS_data_path}/.")
+                subprocess.run(["curl",file_URL,"-o",f"{IFS_data_path}/{file_name}"])
+                
+            else:
+            
+                # Couldn't get the file at all
+                print(f"Unable to copy {file_name} from {file_URL}. HTTP error {return_value.stdout}.")
+                sys.exit()
     
     
     # Run cGAN on this data
