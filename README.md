@@ -6,7 +6,6 @@ Welcome! This project provides operational rainfall forecasts for the ICPAC (IGA
 - [SEWAA-Forecasts](#sewaa-forecasts)
   - [Table of Contents](#table-of-contents)
   - [What is This Project?](#what-is-this-project)
-  - [Prerequisites](#prerequisites)
   - [Installation Guide](#installation-guide)
     - [Step 1: Install Conda](#step-1-install-conda)
     - [Step 2: Download the Project](#step-2-download-the-project)
@@ -15,7 +14,7 @@ Welcome! This project provides operational rainfall forecasts for the ICPAC (IGA
     - [Step 3: Set Up Python Environment](#step-3-set-up-python-environment)
     - [Step 4: Access ECMWF Data](#step-4-access-ecmwf-data)
     - [Method 1: Using Docker (Recommended for Beginners)](#method-1-using-docker-recommended-for-beginners)
-      - [Prerequisites:](#prerequisites-1)
+      - [Prerequisites:](#prerequisites)
       - [Steps:](#steps)
     - [Method 2: Using Python Directly](#method-2-using-python-directly)
   - [How to Use the Forecasts](#how-to-use-the-forecasts)
@@ -77,7 +76,31 @@ This application generates and visualizes rainfall forecasts for East African co
 
 ---
 
-## Prerequisites
+	conda config --add channels conda-forge
+	conda config --set channel_priority strict
+	conda create -n tf215gpu python=3.11
+	conda activate tf215gpu
+	python -m pip install tensorflow==2.15
+	pip install numba
+	pip install matplotlib
+	pip install seaborn
+	pip install cartopy
+	pip install jupyter
+	pip install xarray
+	pip install netcdf4
+	pip install scikit-learn
+	pip install cfgrib
+	pip install dask
+	pip install tqdm
+	pip install properscoring
+	pip install climlab
+	pip install iris
+	pip install ecmwf-api-client
+	pip install xesmf
+	pip install flake8
+	pip install regionmask
+	pip install schedule
+	conda install conda-forge::curl
 
 Before you begin, make sure you have:
 
