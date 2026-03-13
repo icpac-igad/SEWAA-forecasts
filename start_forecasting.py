@@ -1,15 +1,5 @@
 #!/usr/bin/env python
 
-# XXX Shruti: Time limited:
-#                Note that "pip install schedule" has been added to the README.md.
-#                Run this script: "python start_forecasting.py"
-#                You don't need to do anything else.
-#             Plenty of time:
-#                We must check for existing ELR files before run_ELR.py.
-#                See in run_forecasts.py in the function check_ELR_files().
-#                Without changing check_ELR_files(), currently ELR will not run.
-#                The only number you might want to change in this file is minutes_to_wait below.
-
 # Python script to start running forecasts automatically.
 #
 # To run this script:
