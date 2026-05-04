@@ -2807,7 +2807,7 @@ wheels = [
 [[package]]
 name = "sewaa-forecasts-v2"
 version = "1.2.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "cartopy" },
     { name = "cfgrib" },

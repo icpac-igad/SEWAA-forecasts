@@ -9,6 +9,7 @@ def gen_forecast_request(
     forecast_date: str,
     accumulation: Literal["6h", "24h"] | None = "6h",
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
+    delete_forecasts: Literal["Y", "N"] | None = "Y",
 ) -> None:
     accumulation = accumulation if accumulation is not None else "6h"
     time = time if time is not None else "0000"
@@ -16,7 +17,7 @@ def gen_forecast_request(
         "python",
         "run_forecast.py",
         "--delete_forecasts",
-        "Y",
+        delete_forecasts,
         "--date",
         forecast_date,
         "--accumulation",
@@ -76,6 +77,7 @@ def auto_gen_forecasts(
     accumulation: Literal["6h", "24h"] | None = "6h",
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
     days_to_check: int | None = 2,
+    delete_forecasts: Literal["Y", "N"] | None = "Y",
 ) -> None:
     print(
         f"received request to autogenerate forecasts from {start_date} to {final_date} with "
@@ -88,6 +90,7 @@ def auto_gen_forecasts(
     for forecast_date in forecast_dates:
         gen_forecast_request(
             **{
+                "delete_forecasts": delete_forecasts,
                 "forecast_date": forecast_date,
                 "accumulation": accumulation,
                 "time": time,
@@ -139,6 +142,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--time", help="Forecast initialisation time (HHMM)", default="0000", type=str
     )
+    parser.add_argument(
+        "--delete_forecasts",
+        help="Should forecasts be deleted or not (Y/N)",
+        default=None,
+        type=str,
+    )
     args = parser.parse_args()
     auto_gen_forecasts(
         start_date=args.start_date,
@@ -146,4 +155,5 @@ if __name__ == "__main__":
         time=args.time,
         accumulation=args.accumulation,
         days_to_check=args.days_to_check,
+        delete_forecasts=args.delete_forecasts,
     )
