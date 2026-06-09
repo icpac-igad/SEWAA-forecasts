@@ -7,9 +7,9 @@ East African rainfall forecasts.
 {% block styles %}
 <style>
     .forecasts-container {
-        max-width: 1400px;
+        max-width: 1800px;
         margin: 0 auto;
-        padding: 2rem 0 0 0;
+        padding: 2rem 1.5rem 0 1.5rem;
     }
 
     .page-header {
@@ -184,20 +184,16 @@ East African rainfall forecasts.
 
     .maps-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
         gap: 1.5rem;
         margin-bottom: 0;
     }
 
     .map-item {
         text-align: center;
-    }
-
-    /* Center the last item when there are 7 items (odd number) */
-    .map-item:nth-child(7):last-child {
-        grid-column: 1 / -1;
-        max-width: 50%;
+        max-width: 900px;
         margin: 0 auto;
+        width: 100%;
     }
 
     /* Hide canvases 5, 6, and 7 by default (for 6h model) */
@@ -205,15 +201,8 @@ East African rainfall forecasts.
         display: none !important;
     }
 
-    /* Center a single canvas when it's the only one visible */
-    .map-item.single-canvas-view {
-        grid-column: 1 / -1;
-        max-width: 50%;
-        margin: 0 auto;
-    }
-
     .map-item canvas {
-        max-width: 100%;
+        width: 100%;
         height: auto;
         border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -226,29 +215,28 @@ East African rainfall forecasts.
         flex-wrap: nowrap;
         justify-content: center;
         align-items: flex-start;
-        gap: 0;
+        gap: 0.5rem;
     }
 
     .plot-pair canvas {
-        max-width: 100%;
+        width: 100%;
         height: auto;
     }
 
-    /* When histogram is shown, each plot pair takes full row width */
+    /* When histogram is shown, map and histogram sit side by side */
     .plot-pair.has-histogram {
-        grid-column: span 1;
+        max-width: 100%;
     }
 
-    /* When histogram is shown, scale down both canvases to fit side by side */
     .plot-pair.has-histogram canvas {
-        max-width: 50%;
+        width: 50%;
         height: auto;
     }
 
-    /* When histograms are shown, switch to 2-column layout */
+    /* Keep single-column layout when histograms are shown */
     .maps-grid.has-histograms {
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
 
     /* Large screens (desktops, 1200px and up) - Default styles already defined above */
@@ -269,18 +257,11 @@ East African rainfall forecasts.
         }
 
         .maps-grid {
-            grid-template-columns: 1fr;
             gap: 1.25rem;
         }
 
-        /* On medium screens, center the 7th canvas differently */
-        .map-item:nth-child(7):last-child {
-            max-width: 60%;
-        }
-
-        /* Adjust single canvas view on medium screens */
-        .map-item.single-canvas-view {
-            max-width: 60%;
+        .map-item {
+            max-width: 100%;
         }
     }
 
@@ -371,15 +352,10 @@ East African rainfall forecasts.
             gap: 1rem;
         }
 
-        /* On small screens, make 7th canvas larger */
-        .map-item:nth-child(7):last-child {
-            max-width: 90%;
+        .map-item {
+            max-width: 100%;
         }
 
-        /* Adjust single canvas view on small screens */
-        .map-item.single-canvas-view {
-            max-width: 90%;
-        }
 
         .map-item canvas {
             border-radius: 3px;
@@ -431,13 +407,7 @@ East African rainfall forecasts.
             padding: 0.75rem 0.25rem 0 0.25rem;
         }
 
-        /* On extra small screens, 7th canvas takes full width */
-        .map-item:nth-child(7):last-child {
-            max-width: 100%;
-        }
-
-        /* Single canvas takes full width on extra small screens */
-        .map-item.single-canvas-view {
+        .map-item {
             max-width: 100%;
         }
     }
