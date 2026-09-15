@@ -1,0 +1,54 @@
+## CHIRPS run07 -- recalibrate run06. run06's 5-bin EXTREME reweight ([0.05,0.1,0.15,0.2,0.5],
+## ~10x the top-5% bin) proved the tail lever works cape-free (final ckpt: >=50 area bias 0.62,
+## FSS>clim @>=50) BUT overshot: the mean broke (twCRPS@0 -3.2%) and no single checkpoint balanced
+## -- CRPS-best 187392 = +4.1% mean / 0.22 tail, final 204800 = -3.2% mean / 0.62 tail, nothing in
+## between (mean unstable 0.048-0.067 after 187k). run07 halves the extreme push and restores the
+## common bins so training stays stable and the CRPS-best ckpt carries BOTH mean and tail.
+## SAME everything as run06 -- 14 fields (no cape, 28 ch), run02 FCSTNorm, run06's 5-bin tfrecords
+## (/home/ezra/chirps_tfrecords/run06/) -- ONLY training_weights + log_folder change. NO REBUILD.
+## Natural bin freq = [0.25,0.25,0.25,0.20,0.05]; weights below oversample: dry/light ~0.6-0.8x,
+## heavy 1.0x, EXTREME 5x (vs run06's 10x). JUDGE ON TAIL (area bias @>=50, FSS@64), mean ~+4%.
+
+GENERAL:
+    mode: "GAN"  # choices 'GAN', 'VAEGAN', 'det'
+    problem_type: "normal"  # choices 'normal' (forecast to truth), 'autocoarsen' (coarsened truth to truth)
+
+MODEL:
+    architecture: "forceconv"  # choices 'normal', 'forceconv', 'forceconv-long'
+    padding: "reflect"  # convolution padding: 'same', 'reflect', or 'symmetric'
+
+SETUP:
+    log_folder: "../logs_CHIRPS_run07"
+    trackio_project: "sewaa-cgan-chirps"  # separate from RFE2: the two CRPS scales are not comparable
+
+GENERATOR:
+    filters_gen: 64  # RFE2 sweet spot; 128 gave only marginal gains for ~4x cost
+    noise_channels: 4  # only used for GAN
+    latent_variables: 50  # latent variables per pixel; only used for VAEGAN
+    learning_rate_gen: 1e-5  # if training blows up, decrease this
+
+DISCRIMINATOR:
+    filters_disc: 256  # RFE2 sweet spot
+    learning_rate_disc: 1e-5  # if training blows up, decrease this
+
+TRAIN:
+    train_years: [2018, 2019, 2020]  # 2021 held out for validation
+    training_weights: [0.15, 0.2, 0.2, 0.2, 0.25]  # run07: extreme bin 5x (half of run06's 10x); dry/light restored
+    num_samples: 204800  # full run, ~24h on the RTX 5000
+    steps_per_checkpoint: 128
+    batch_size: 8  # CRPS is batch-invariant -- use the largest that fits (8 at 64/256)
+    kl_weight: 1e-8  # used for VAEGAN
+    ensemble_size: 8
+    CL_type: "ensmeanMSE"  # 'CRPS', 'CRPS_phys', 'ensmeanMSE', 'ensmeanMSE_phys'
+    content_loss_weight: 1000.0  # 1000 for ensmeanMSE, 100 for CRPS
+
+VAL:
+    val_years: [2021]  # held out -- never trained on, so this CRPS is a real skill number
+    val_size: 8
+
+EVAL:
+    num_batches: 25
+    add_postprocessing_noise: True
+    postprocessing_noise_factor: 1e-3
+    max_pooling: True
+    avg_pooling: True

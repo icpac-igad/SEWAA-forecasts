@@ -1,0 +1,16 @@
+MODEL:
+    folder: /home/ezra/CHIRPS_cGAN_run/logs_CHIRPS_run07
+    checkpoint: 204800
+    include_cape: False
+INPUT:
+    fcst_folder:          /home/ezra/IFS_training
+    truth_folder:         /home/ezra/CHIRPS_truth
+    constants_folder:     /home/ezra/SEWAA-forecasts-RFE2/SEWAA-forecasts/cGAN_data
+    normalisation_folder: /home/ezra/CHIRPS_cGAN_run
+PERIOD:
+    start: 20210415
+    end:   20210418
+OUTPUT:
+    folder: /home/ezra/CHIRPS_cGAN_run/fcst_run07_demo
+    ensemble_members: 20
+    save_crps_only: False
