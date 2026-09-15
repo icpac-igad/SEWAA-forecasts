@@ -1,0 +1,14 @@
+# Path configuration. local_config.yaml selects the active block (GPU_SERVER).
+# Operational forecasting needs only CONSTANTS_PATH and NORMALISATION_PATH (relative to
+# dsrnngan/). TRUTH_PATH / FORECAST_PATH / tfrecords_path are training/scoring only.
+
+GPU_SERVER:
+    GENERAL:
+        TRUTH_PATH: ''
+        FORECAST_PATH: ''
+        CONSTANTS_PATH: '../../../cGAN_data/'
+        NORMALISATION_PATH: '../'
+        LEAD_IDX: 1
+
+    TFRecords:
+        tfrecords_path: ''
