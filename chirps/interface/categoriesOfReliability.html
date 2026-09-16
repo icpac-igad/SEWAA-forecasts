@@ -1,0 +1,249 @@
+{% extends 'base.html' %} {% block title %}Evaluation plots{% endblock %} {%
+block styles %}
+<style>
+  .evaluation-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 0;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .page-header h2 {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+  }
+
+  .page-nav {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+
+  .page-nav a {
+    color: #3498db;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.3s;
+    border: 1px solid #a2cd3d;
+  }
+
+  .page-nav a:hover {
+    background-color: #a2cd3d;
+    color: white;
+  }
+
+  .page-nav .active {
+    background-color: #3498db;
+    color: white;
+  }
+
+  .description-section {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .description-section p {
+    margin-bottom: 1rem;
+    color: #555;
+  }
+
+  .description-section p:last-child {
+    margin-bottom: 0;
+  }
+
+  .description-section a {
+    color: #3498db;
+    text-decoration: none;
+  }
+
+  .description-section a:hover {
+    text-decoration: underline;
+  }
+
+  .controls-section {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    align-items: end;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .control-group label {
+    font-weight: 600;
+    text-align: center;
+    color: #2c3e50;
+    font-size: 0.95rem;
+  }
+
+  .control-group select {
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .control-group select:hover {
+    border-color: #a2cd3d;
+  }
+
+  .control-group select:focus {
+    outline: none;
+    border-color: #a2cd3d;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
+
+  .plot-section {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+
+  .plot-section img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .info-badge {
+    display: inline-block;
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .evaluation-container {
+      padding: 1rem 0;
+    }
+
+    .page-header h2 {
+      font-size: 1.5rem;
+    }
+
+    .controls-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .plot-section {
+      padding: 1rem;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="evaluation-container">
+  <div class="page-header">
+    <h2>Categories of Reliability</h2>
+    <div class="page-nav">
+      <a href="#" class="active">Categories of Reliability</a>
+      <a href="costLossRatios.html">Cost-Loss Ratios</a>
+      <a href="CRPS_comparison.html">CRPS Comparison</a>
+    </div>
+  </div>
+
+  <div class="description-section">
+    <p>
+      <strong>Categories of reliability</strong> calculated for Ensemble
+      Logistic Regression (ELR) fine-tuning of IFS and cGAN to predict
+      probabilities of exceedances across different rainfall thresholds (in
+      mm/day) and lead times (in days).
+    </p>
+    <p>
+      Categories of reliability are calculated using test years 2021, 2023 and
+      2024 following the methodology detailed in
+      <a
+        href="https://doi.org/10.1098/rsif.2013.1162"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Weisheimer and Palmer (2014)</a
+      >.
+    </p>
+    <p class="info-badge" style="text-align: center">
+      ℹ️ Blank spaces indicate where no values were computed.
+    </p>
+  </div>
+
+  <div class="controls-section">
+    <div class="controls-grid">
+      <div class="control-group">
+        <label for="regionSelect">Region</label>
+        <select id="regionSelect" onchange="thresholdCategorySelect()">
+          <option value="GHA">Greater Horn of Africa</option>
+          <option value="Kenya">Kenya</option>
+          <option value="Ethiopia">Ethiopia</option>
+          <option value="Rwanda">Rwanda</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="leadTimeCategorySelect">Lead Time</label>
+        <select id="leadTimeCategorySelect" onchange="leadTimeCategorySelect()">
+          <option value="30">1 day 6 hours</option>
+          <option value="54">2 day 6 hours</option>
+          <option value="78">3 day 6 hours</option>
+          <option value="102">4 day 6 hours</option>
+          <option value="126">5 day 6 hours</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="thresholdCategorySelect">Threshold (mm/day)</label>
+        <select
+          id="thresholdCategorySelect"
+          onchange="thresholdCategorySelect()"
+        >
+          <option value="5">5</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+          <option value="40">40</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="plot-section">
+    <img
+      id="GHACategoryOfReliabilityPlot"
+      src="/static/categories_of_reliability/GHA_category_of_reliability_30-hour_leadtime_5_mmday.png"
+      alt="GHA Category of Reliability Plot"
+    />
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="/static/js/categoriesOfReliability.js"></script>
+{% endblock %}

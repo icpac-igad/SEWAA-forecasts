@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Evaluation plots{% endblock %}
+
+{% block styles %}
+<style>
+    .evaluation-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 0;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .page-header h2 {
+        font-size: 2rem;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+
+    .page-nav {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+    }
+
+    .page-nav a {
+        color: #3498db;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        transition: all 0.3s;
+        border: 1px solid #a2cd3d;
+    }
+
+    .page-nav a:hover {
+        background-color: #a2cd3d;
+        color: white;
+    }
+
+    .page-nav .active {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .description-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .description-section p {
+        margin-bottom: 1rem;
+        color: #555;
+    }
+
+    .description-section p:last-child {
+        margin-bottom: 0;
+    }
+
+    .description-section a {
+        color: #3498db;
+        text-decoration: none;
+    }
+
+    .description-section a:hover {
+        text-decoration: underline;
+    }
+
+    .plot-section {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .plot-section img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .info-badge {
+        display: inline-block;
+        background-color: #e3f2fd;
+        color: #1976d2;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .evaluation-container {
+            padding: 1rem 0;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .plot-section {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="evaluation-container">
+    <div class="page-header">
+        <h2>CRPS Comparison</h2>
+        <div class="page-nav">
+            <a href="categoriesOfReliability.html">Categories of Reliability</a>
+            <a href="costLossRatios.html">Cost-Loss Ratios</a>
+            <a href="#" class="active">CRPS Comparison</a>
+        </div>
+    </div>
+
+    <div class="description-section">
+        <p>
+            The <strong>Continuous Ranked Probability Score (CRPS)</strong> difference between several models and the IMERG climatology.
+            <strong style="color: #3182ce;">Blue</strong> means the model has a lower (better) CRPS.
+            <strong style="color: #e53e3e;">Red</strong> means IMERG climatology has a lower (better) CRPS.
+        </p>
+        <p>
+            CRPS is a proper scoring rule that measures the accuracy of probabilistic forecasts. A lower CRPS indicates better forecast performance. The comparison against IMERG climatology shows where and by how much each model improves upon the baseline.
+        </p>
+    </div>
+
+    <div class="plot-section">
+        <img id="CRPSComparisonPlot1"
+            src="/static/CRPS_comparison/big_comparison1.png"
+            alt="CRPS comparison between models and IMERG climatology">
+    </div>
+
+    <div class="plot-section">
+        <img id="CRPSComparisonPlot2"
+            src="/static/CRPS_comparison/big_comparison2.png"
+            alt="Additional CRPS comparison between models and IMERG climatology">
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,4 @@
+data_paths: "GPU_SERVER"
+gpu_mem_incr: True
+use_gpu: True
+disable_tf32: False

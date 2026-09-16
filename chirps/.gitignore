@@ -1,0 +1,14 @@
+# runtime inputs / raw ensembles (regenerated; never commit)
+24h_accumulations/IFS_forecast_data/*.nc
+24h_accumulations/cGAN/fcst_*/
+**/cGAN_forecasts/
+*.log
+# python / editor
+__pycache__/
+**/__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv
+.DS_Store
+# NOTE: the CHIRPS demo counts (interface/data/counts_24h) and run07 weights ARE committed
+# on purpose so the interface works on clone. No file >100MB, so no Git LFS needed.

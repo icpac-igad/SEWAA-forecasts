@@ -1,0 +1,2 @@
+# The RFE2 climatology (~251 MB) is tracked with Git LFS. Run `git lfs install` before cloning.
+cGAN_data/RFE_climatology_meansd_doy.nc filter=lfs diff=lfs merge=lfs -text
