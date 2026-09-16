@@ -1,0 +1,12 @@
+.DS_Store
+.venv
+.ssh
+.ipynb_checkpoints
+*.nc
+*.pyc
+**/__pycache__/
+interface/data
+6h_accumulations/cGAN_forecasts
+6h_accumulations/IFS_forecast_data
+24h_accumulations/cGAN_forecasts
+24h_accumulations/IFS_forecast_data

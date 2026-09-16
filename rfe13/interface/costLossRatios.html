@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}Evaluation plots{% endblock %}
+
+{% block styles %}
+<style>
+    .evaluation-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 0;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .page-header h2 {
+        font-size: 2rem;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+
+    .page-nav {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+    }
+
+    .page-nav a {
+        color: #3498db;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        transition: all 0.3s;
+        border: 1px solid #3498db;
+    }
+
+    .page-nav a:hover {
+        background-color: #A2CD3D;
+        color: white;
+    }
+
+    .page-nav .active {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .description-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .description-section p {
+        margin-bottom: 1rem;
+        color: #555;
+    }
+
+    .description-section p:last-child {
+        margin-bottom: 0;
+    }
+
+    .description-section a {
+        color: #3498db;
+        text-decoration: none;
+    }
+
+    .description-section a:hover {
+        text-decoration: underline;
+        background-color: #A2CD3D;
+    }
+
+    .controls-section {
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        align-items: end;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .control-group label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.95rem;
+    }
+
+    .control-group select {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .control-group select:hover {
+        border-color: #A2CD3D;
+    }
+
+    .control-group select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .plot-section {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .plot-section img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .info-badge {
+        display: inline-block;
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin-top: 1rem;
+        border: 1px solid #ffeeba;
+    }
+
+    @media (max-width: 768px) {
+        .evaluation-container {
+            padding: 1rem 0;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .controls-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .plot-section {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="evaluation-container">
+    <div class="page-header">
+        <h2>Cost-Loss Ratios</h2>
+        <div class="page-nav">
+            <a href="categoriesOfReliability.html">Categories of Reliability</a>
+            <a href="#" class="active">Cost-Loss Ratios</a>
+            <a href="CRPS_comparison.html">CRPS Comparison</a>
+        </div>
+    </div>
+
+    <div class="description-section">
+        <p>
+            The <strong>Relative Economic Value (REV)</strong> of Ensemble Logistic Regression (ELR) fine-tuning of IFS and cGAN to predict probabilities of exceedances across different rainfall thresholds (in mm/day) and lead times (in days).
+        </p>
+        <p>
+            REV is plotted against the cost-loss ratio equivalent to the forecasted probability of threshold exceedance. REV scores are calculated using test years of 2021, 2023 and 2024.
+        </p>
+        <p class="info-badge">
+            ℹ️ A perfect REV score would be 1, whereas 0 means no value is added on top of a default always/never forecasted event.
+        </p>
+        <p>
+            For further information on the REV refer to <a href="https://rmets.onlinelibrary.wiley.com/doi/pdf/10.1017/S1350482701002092" target="_blank" rel="noopener noreferrer">Wilks (2001)</a>.
+        </p>
+    </div>
+
+    <div class="controls-section">
+        <div class="controls-grid">
+            <div class="control-group">
+                <label for="regionSelect">Region</label>
+                <select id="regionSelect" onchange="CostlossSelect()">
+                    <option value="Kenya">Kenya</option>
+                    <option value="Ethiopia">Ethiopia</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="subRegionSelect">Sub-region</label>
+                <select id="subRegionSelect" onchange="CostlossSelect()">
+                    <option value="Kiambu, Nairobi and Kajiado-East">Kiambu, Nairobi and Kajiado-East</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="leadTimeCostLossSelect">Lead Time</label>
+                <select id="leadTimeCostLossSelect" onchange="leadTimeCostLossSelect()">
+                    <option value="1">1 day 6 hours</option>
+                    <option value="2">2 day 6 hours</option>
+                    <option value="3">3 day 6 hours</option>
+                    <option value="4">4 day 6 hours</option>
+                    <option value="5">5 day 6 hours</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="thresholdCostLossSelect">Threshold (mm/day)</label>
+                <select id="thresholdCostLossSelect" onchange="thresholdCostLossSelect()">
+                    <option value="40">40</option>
+                    <option value="50">50</option>
+                    <option value="60">60</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="xScaleCostLossSelect">Scale</label>
+                <select id="xScaleCostLossSelect" onchange="xScaleCostLossSelect()">
+                    <option value="linear">Linear</option>
+                    <option value="logarithmic">Logarithmic</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="plot-section">
+        <img id="costLossPlot"
+            src="/static/costloss/Kenya_casestudy_costloss_1-day_leadtime_40_mmday.png"
+            alt="Cost-loss curves">
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/costLossRatios.js"></script>
+{% endblock %}

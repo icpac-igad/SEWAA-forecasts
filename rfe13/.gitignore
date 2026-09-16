@@ -1,0 +1,25 @@
+# runtime inputs / outputs (regenerated each run)
+24h_accumulations/IFS_forecast_data/*.nc
+24h_accumulations/cGAN/fcst_*_operational/
+24h_accumulations/cGAN/cGAN_forecasts/
+**/cGAN_forecasts/
+interface/data/counts_24h/**/*.nc
+interface/data/counts_6h/**/*.nc
+interface/data/**/available_dates.json
+interface/data/ELR_predictions/
+*.log
+
+# python / editor
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.venv
+.env
+.DS_Store
+.vscode/
+*.swp
+
+# model assets are committed on purpose (cGAN_data/*.nc via LFS, logs_RFE2_run13/models/*.h5)
+24h_accumulations/cGAN/dsrnngan/forecast_imerg.yaml

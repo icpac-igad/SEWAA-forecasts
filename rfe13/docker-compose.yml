@@ -1,0 +1,43 @@
+services:
+  web: &cgan_web
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - WORK_HOME=${CGAN_WORK_HOME:-/opt/cgan}
+    image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
+    restart: ${RESTART_POLICY:-always}
+    container_name: ${WEB_CNTR_NAME:-cgan-web}
+    environment:
+      - API_WORKERS=${WEB_API_WORKERS:-24}
+    volumes:
+      - ${VIZ_READY_DATA_DIR:-./interface/data}:${CGAN_WORK_HOME:-/opt/cgan}/interface/data
+      - ${cGAN_6h_FORECASTS_DIR:-./6h_accumulations/cGAN_forecasts}:${CGAN_WORK_HOME:-/opt/cgan}/6h_accumulations/cGAN_forecasts
+      - ${IFS_6h_FORECASTS_DIR:-./6h_accumulations/IFS_forecast_data}:${CGAN_WORK_HOME:-/opt/cgan}/6h_accumulations/IFS_forecast_data
+      - ${cGAN_24h_FORECASTS_DIR:-./24h_accumulations/cGAN_forecasts}:${CGAN_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
+      - ${IFS_24h_FORECASTS_DIR:-./24h_accumulations/IFS_forecast_data}:${CGAN_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CGAN_WORK_HOME:-/opt/cgan}/.ssh
+
+  jobs:
+    <<: *cgan_web
+    image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
+    restart: ${RESTART_POLICY:-always}
+    container_name: ${JOBS_CNTR_NAME:-cgan-jobs}
+    command: ["python", "start_forecasting.py"]
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    image: ${IMG_PREFIX:-icpac/sewaa-}cgan-proxy-server
+    restart: ${RESTART_POLICY:-always}
+    container_name: ${NGINX_CNTR_NAME:-cgan-proxy-server}
+    ports:
+      - ${HOST_IP:-0.0.0.0}:${HTTP_PORT:-80}:80
+      - ${HOST_IP:-0.0.0.0}:${HTTPS_PORT:-443}:443
+    volumes:
+      - ${VIZ_READY_DATA_DIR:-./interface/data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/viz-data
+      - ${cGAN_6h_FORECASTS_DIR:-./6h_accumulations/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_cGAN_forecasts
+      - ${IFS_6h_FORECASTS_DIR:-./6h_accumulations/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_IFS_forecast_data
+      - ${cGAN_24h_FORECASTS_DIR:-./24h_accumulations/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_cGAN_forecasts
+      - ${IFS_24h_FORECASTS_DIR:-./24h_accumulations/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_IFS_forecast_data
