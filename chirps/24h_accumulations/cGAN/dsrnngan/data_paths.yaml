@@ -11,23 +11,11 @@ AOPP:
 
 GPU_SERVER:
     GENERAL:
-        # CHIRPS truth, pre-regridded to 384x352 by scripts/download_chirps_truth.py
-        TRUTH_PATH: '/home/ezra/CHIRPS_truth/'
-        # IFS input is IDENTICAL to the RFE2 project -- already downloaded, do not re-fetch
-        FORECAST_PATH: '/home/ezra/IFS_training/'
-        CONSTANTS_PATH: '/home/ezra/SEWAA-forecasts-RFE2/SEWAA-forecasts/cGAN_data/'
-        # FCSTNorm2018.pkl must be regenerated in the CHIRPS cGAN dir (14 fields)
-        NORMALISATION_PATH: '/home/ezra/CHIRPS_cGAN_run/'
+        TRUTH_PATH: ''
+        FORECAST_PATH: ''
+        CONSTANTS_PATH: '../../../cGAN_data/'
+        NORMALISATION_PATH: '../'
         LEAD_IDX: 1
 
     TFRecords:
-        # keep CHIRPS tfrecords separate from the RFE2 ones -- they are not interchangeable.
-        # Every run with a different field set needs its own folder: run01 = cape,
-        # run02 = climatology (both 28 channels), run03 = cape AND climatology (30
-        # channels). Switched run01 -> run02 on 2026-07-24, run02 -> run03 on 2026-07-30,
-        # back to run02 for run04, and run02 -> run03 again on 2026-08-11 for run05
-        # (run05 = run03's 15 fields + run04's heavy-tilted training_weights).
-        # This path is NOT selected by --config: it is the one global knob that a
-        # field-set change silently invalidates, so switch it in the same breath as
-        # data.py's all_fcst_fields. scripts/preflight.py checks the two agree.
-        tfrecords_path: '/home/ezra/chirps_tfrecords/run02/'  # run08: run02's 4-bin set (was run06's 5-bin)
+        tfrecords_path: ''
