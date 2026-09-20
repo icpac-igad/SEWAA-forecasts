@@ -13,7 +13,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-LOGDIR = "/home/ezra/SEWAA-forecasts-RFE2/SEWAA-forecasts/24h_accumulations/cGAN"
+LOGDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 OUT = os.path.join(LOGDIR, "rank_histogram_diagnostics.png")
 
 ENS = 10                      # ensemble_size used at eval time

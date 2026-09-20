@@ -111,7 +111,7 @@ def check_file(tfrecords_path: str, zarr_url: str, n_patches: int = 5):
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser(description="Phase 4: parity check vs real run11 tfrecords")
-    p.add_argument("--tfrecords-dir", default="/home/ezra/rfe_tfrecords/run11_clim_meansd/")
+    p.add_argument("--tfrecords-dir", default="")
     p.add_argument("--zarr-url", default="file:///tank/projects/cGAN/zarr/run11_clim_meansd/")
     p.add_argument("--files", nargs="+", default=None,
                    help="specific .tfrecords basenames to check; default: one per class for 2018")

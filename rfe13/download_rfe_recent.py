@@ -1,4 +1,4 @@
-"""Download recent RFE2 daily truth for the ICPAC region -> /home/ezra/RFE/YYYY/YYYYMMDD.nc"""
+"""Download recent RFE2 daily truth for the ICPAC region."""
 import ftplib, zipfile, os, io, time, sys
 from datetime import date, timedelta
 import numpy as np, netCDF4 as nc_lib, rasterio
@@ -7,10 +7,11 @@ import geopandas as gpd
 from shapely.geometry import mapping
 from shapely.ops import unary_union
 
-SHP="/home/ezra/SEWAA-forecasts-RFE2/Shapefiles/ICPAC_REGIONAL/ICPAC_ADM0.shp"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SHP = os.path.join(SCRIPT_DIR, "shapes", "ICPAC_REGIONAL", "ICPAC_ADM0.shp")
 ICPAC=[mapping(unary_union(gpd.read_file(SHP).geometry))]
 FTP_HOST="ftp.cpc.ncep.noaa.gov"; FTP_DIR="/fews/fewsdata/africa/rfe2/geotiff/"
-OUT_DIR="/home/ezra/RFE"
+OUT_DIR = os.environ.get("RFE_OUT_DIR", os.path.join(SCRIPT_DIR, "RFE_truth"))
 
 def tif_to_nc(tb,out_path,ds):
     with rasterio.MemoryFile(tb) as mf:
