@@ -19,7 +19,7 @@ MODEL:
   architecture: forceconv
   padding: reflect
 SETUP:
-  log_folder: /ppdata/andrew-output/ICPAC-big-ensmeansd
+  log_folder: ../ICPAC-big-ensmeansd
 TRAIN:
   CL_type: ensmeanMSE
   batch_size: 4

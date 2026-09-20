@@ -10,7 +10,7 @@ import read_config
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 
 # input parameters
-log_folder = '/home/c/cooperf/data/cGAN/ICPAC/24h_mk2/logs'; model_numbers = [147200]
+log_folder = os.path.join(os.path.dirname(__file__), '..', 'ICPAC-big-ensmeansd'); model_numbers = [147200]
 val_years = 2021
 
 model_weights_root = os.path.join(log_folder, "models")
