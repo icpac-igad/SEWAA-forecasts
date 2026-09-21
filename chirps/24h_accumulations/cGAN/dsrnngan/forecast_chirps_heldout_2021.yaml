@@ -1,0 +1,16 @@
+MODEL:
+    folder: ../logs_CHIRPS_run02
+    checkpoint: 181248
+    include_cape: False
+INPUT:
+    fcst_folder:          ../../IFS_forecast_data
+    truth_folder:         ''
+    constants_folder:     ../../../cGAN_data
+    normalisation_folder: ..
+PERIOD:
+    start: 20210101
+    end:   20211231
+OUTPUT:
+    folder: ../crps_run02_heldout_2021
+    ensemble_members: 10
+    save_crps_only: True

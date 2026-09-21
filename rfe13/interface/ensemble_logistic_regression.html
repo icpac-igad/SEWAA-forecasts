@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Ensemble logistic regression
+{% endblock %}
+
+{% block styles %}
+<style>
+    .elr-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 0;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .page-header h3 {
+        font-size: 2rem;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .controls-section {
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .controls-section h4 {
+        font-size: 1rem;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .control-group label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.95rem;
+    }
+
+    .control-group select {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .control-group select:hover {
+        border-color: #A2CD3D;
+    }
+
+    .control-group select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .init-date-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+    }
+
+    .init-date-grid select {
+        padding: 0.6rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .init-date-grid select:hover {
+        border-color: #A2CD3D;
+    }
+
+    .init-date-grid select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .threshold-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .threshold-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        align-items: end;
+        margin-top: 2rem;
+    }
+
+    .threshold-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .threshold-group label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.95rem;
+    }
+
+    .threshold-group select {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+        min-width: 120px;
+    }
+
+    .threshold-group select:hover {
+        border-color: #A2CD3D;
+    }
+
+    .threshold-group select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .probability-bins {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .probability-bins label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.95rem;
+    }
+
+    .bins-input-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bins-input-group input {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+        width: 70px;
+        text-align: center;
+        transition: all 0.3s;
+    }
+
+    .bins-input-group input:hover {
+        border-color: #A2CD3D;
+    }
+
+    .bins-input-group input:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .bins-input-group span {
+        color: #555;
+        font-weight: 500;
+    }
+
+    .visualization-section {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .status-text {
+        font-size: 0.95rem;
+        color: #555;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background-color: #e3f2fd;
+        border-radius: 6px;
+        border-left: 4px solid #3498db;
+    }
+
+    .canvas-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        justify-items: center;
+    }
+
+    .canvas-item {
+        text-align: center;
+    }
+
+    .canvas-item h5 {
+        font-size: 1rem;
+        color: #2c3e50;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+
+    .canvas-item canvas {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    @media (max-width: 1199px) {
+        .canvas-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .elr-container {
+            padding: 1rem 0;
+        }
+
+        .page-header h3 {
+            font-size: 1.5rem;
+        }
+
+        .controls-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .threshold-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .bins-input-group {
+            flex-wrap: wrap;
+        }
+
+        .visualization-section {
+            padding: 1rem;
+        }
+
+        .canvas-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .canvas-item h5 {
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="elr-container">
+    <div class="page-header">
+        <h3>Ensemble Logistic Regression</h3>
+    </div>
+
+    <div class="controls-section">
+        <h4>Location & Forecast Settings</h4>
+        <div class="controls-grid">
+            <div class="control-group">
+                <label for="regionSelect">Region</label>
+                <select id="regionSelect" onchange="ELRSelect()">
+                    <option value="Kenya">Kenya</option>
+                    <option value="Ethiopia">Ethiopia</option>
+                    <option value="Rwanda">Rwanda</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="initYearSelect">Initialization Date</label>
+                <div class="init-date-grid">
+                    <select id="initYearSelect" onchange="ELRSelect()" title="Year">
+                        <option value="2024">2024</option>
+                    </select>
+                    <select id="initMonthSelect" onchange="ELRSelect()" title="Month">
+                        <option value="4">4</option>
+                    </select>
+                    <select id="initDaySelect" onchange="ELRSelect()" title="Day">
+                        <option value="23">23</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="validTimeSelect">Valid Time</label>
+                <select id="validTimeSelect" onchange="validTimeSelect()">
+                    <option value="1">1 day 6 hours</option>
+                    <option value="2">2 days 6 hours</option>
+                    <option value="3">3 days 6 hours</option>
+                    <option value="4">4 days 6 hours</option>
+                    <option value="5">5 days 6 hours</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="styleSelect">Style</label>
+                <select id="styleSelect" onchange="styleSelect()">
+                    <option value="Default">Default</option>
+                    <option value="ICPAC">ICPAC</option>
+                    <option value="KMD">KMD</option>
+                    <option value="EMI">EMI</option>
+                    <option value="ECMWF">ECMWF</option>
+                    <option value="ECMWF2">ECMWF 2</option>
+                    <option value="ECMWF-EFI">ECMWF-EFI</option>
+                    <option value="ECMWF-ECPOINT">ECMWF-ECPOINT</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="threshold-section">
+        <h4>Threshold & Probability Settings</h4>
+        <div class="threshold-controls">
+            <div class="threshold-group">
+                <label for="thresholdSelect">Threshold (mm/day)</label>
+                <select id="thresholdSelect" onchange="thresholdSelect()">
+                    <option value="20" selected>20</option>
+                    <option value="30">30</option>
+                    <option value="40">40</option>
+                    <option value="50">50</option>
+                    <option value="60">60</option>
+                </select>
+            </div>
+
+            <div class="probability-bins">
+                <label>Probability Bin Edges (%)</label>
+                <div class="bins-input-group">
+                    <input type="text" id="probabilityBin1" value="1" title="Top of first bin" onblur="pBinInput()">
+                    <input type="text" id="probabilityBin2" value="5" title="Bin boundary" onblur="pBinInput()">
+                    <input type="text" id="probabilityBin3" value="10" title="Bin boundary" onblur="pBinInput()">
+                    <input type="text" id="probabilityBin4" value="20" title="Bottom of last bin" onblur="pBinInput()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="visualization-section">
+        <p id="statusText" class="status-text">Status</p>
+        <div class="canvas-grid">
+            <div class="canvas-item">
+                <h5>Climatological Exceedance Probability</h5>
+                <canvas id="ClimateCanvas" width="605" height="770">
+                    Your browser does not support the HTML canvas tag.
+                </canvas>
+            </div>
+            <div class="canvas-item">
+                <h5>ELR Forecast Probability</h5>
+                <canvas id="ELRCanvas" width="605" height="770">
+                    Your browser does not support the HTML canvas tag.
+                </canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/ensembleLogisticRegressionMin.js"></script>
+<script src="/static/js/showEnsembleLogisticRegression.js"></script>
+{% endblock %}

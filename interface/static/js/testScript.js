@@ -526,29 +526,25 @@ async function loadDates() {
 	// Parse the JSON arrayBuffer of the file and return the resulting object
 	availableDates = await response.json();
 	
-	// Pick the final date to load
-// 	let years = Object.keys(availableDates);
-// 	let year = years[years.length-1];
-// 	let yearObject = availableDates[year];
-// 	let months = Object.keys(yearObject);
-// 	let month = months[months.length-1];
-// 	let monthObject = yearObject[month];
-// 	let days = Object.keys(monthObject);
-// 	let day = days[days.length-1];
-// 	let daysObject = monthObject[day];
-// 	let times = Object.keys(daysObject);
-// 	let time = times[times.length-1];
-// 	let validTimes = daysObject[time];
-// 	let validTime = validTimes[validTimes.length-1];
-	
-	// Set the menus to match the loaded dates
-	// Probably doesn't do anything. Overridden by updateDateMenus.
-// 	document.getElementById("initYearSelect").value = year;
-// 	document.getElementById("initMonthSelect").value = month;
-// 	document.getElementById("initDaySelect").value = day;
-// 	document.getElementById("initTimeSelect").value = time;
-// 	document.getElementById("validTimeSelect").value = String(validTime);
-	
+	// Pick the latest available date to load
+	let years = Object.keys(availableDates);
+	let latestYear = years[years.length-1];
+	let yearObject = availableDates[latestYear];
+	let months = Object.keys(yearObject);
+	let latestMonth = months[months.length-1];
+	let monthObject = yearObject[latestMonth];
+	let days = Object.keys(monthObject);
+	let latestDay = days[days.length-1];
+	let daysObject = monthObject[latestDay];
+	let times = Object.keys(daysObject);
+	let latestTime = times[times.length-1];
+
+	// Pre-set the menus so updateDateMenus picks the latest date
+	document.getElementById("initYearSelect").value = latestYear;
+	document.getElementById("initMonthSelect").value = latestMonth;
+	document.getElementById("initDaySelect").value = latestDay;
+	document.getElementById("initTimeSelect").value = latestTime;
+
 	updateDateMenus();
 	
 	// By default plot all lead times

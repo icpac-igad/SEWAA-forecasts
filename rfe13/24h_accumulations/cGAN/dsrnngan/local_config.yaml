@@ -1,0 +1,5 @@
+data_paths: "GPU_SERVER"
+gpu_mem_incr: True
+use_gpu: True
+disable_tf32: False
+use_xla: True   # XLA JIT: ~1.27x faster/iteration; re-orders float ops so runs are not bit-identical to non-JIT

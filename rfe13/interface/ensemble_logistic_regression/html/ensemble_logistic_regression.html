@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ensemble logistic regression</title>
+</head>
+<body>
+
+<h1>Ensemble logistic regression</h1>
+
+<!--<p>
+To do:
+<ul>
+	<li>days since "date" is difficult to interpret in general. Can we stick to hours
+	since 1900 for all outputs?</li>
+	<li>There is no glob in javascript. Instead, every time a new forecaste is created we
+	need run a script to generate a list of the available locations in JSON format and a
+	list of available dates as in
+	http://megacorr.dynu.net/ICPAC/cGAN_examplePlots/data/Jurre_brishti_counts/available_dates.json
+	Can you write such a script?</li>
+</ul> 
+</p>-->
+
+<p>
+Region:
+<select id="regionSelect" onchange="ELRSelect()">
+	<option value="Kenya">Kenya</option>
+    <option value="Ethiopia" selected>Ethiopia</option>
+    <option value="Rwanda">Rwanda</option>
+</select>
+
+Initialisation:
+<select id="initYearSelect" onchange="ELRSelect()">
+	<option value="2025">2025</option>
+</select>
+<select id="initMonthSelect" onchange="ELRSelect()">
+	<option value="4">4</option>
+</select>
+<select id="initDaySelect" onchange="ELRSelect()">
+	<option value="10">10</option>
+</select>
+
+Valid time:
+<select id="validTimeSelect" onchange="validTimeSelect()">
+	<option value="1">1 day 6 hours</option>
+</select>
+
+Style:
+<select id="styleSelect" onchange="styleSelect()">
+	<option value="Default">Default</option>
+	<option value="ICPAC">ICPAC</option>
+	<option value="KMD">KMD</option>
+	<option value="EMI">EMI</option>
+	<option value="ECMWF">ECMWF</option>
+	<option value="ECMWF2">ECMWF 2</option>
+	<option value="ECMWF-EFI">ECMWF EFI</option>
+	<option value="ECMWF-ECPOINT">ECMWF ECPOINT</option>
+	<option value="Reds" selected>Reds</option>
+</select>
+</p>
+
+<p>
+Threshold:
+<select id="thresholdSelect" onchange="thresholdSelect()">
+	<option value="20" selected>20</option>
+	<option value="30">3</option>
+	<option value="40">4</option>
+	<option value="50">5</option>
+</select>
+mm/day.
+
+Probability bin edges:
+<input type="text" id="probabilityBin1" size="3" value="1" title="Top of first bin" onblur="pBinInput()">
+<input type="text" id="probabilityBin2" size="3" value="5" title="Bin boundary" onblur="pBinInput()">
+<input type="text" id="probabilityBin3" size="3" value="10" title="Bin boundary" onblur="pBinInput()">
+<input type="text" id="probabilityBin4" size="3" value="20" title="Bottom of last bin" onblur="pBinInput()">
+%
+</p>
+
+<p id="statusText"> Status </p>
+
+<canvas id="ClimateCanvas" width="605" height="770">
+Your browser does not support the HTML canvas tag.</canvas>
+<canvas id="ELRCanvas" width="605" height="770"></canvas>
+
+<script src="../js/ensembleLogisticRegressionMin.js"></script>
+<script src="../js/showEnsembleLogisticRegression.js"></script>
+</body>
+</html>
