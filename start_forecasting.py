@@ -1,20 +1,17 @@
 #!/usr/bin/env python
+"""Automatic forecast scheduler.
 
-# Python script to start running forecasts automatically.
-#
-# To run this script:
-#
-#       conda activate tf215gpu
-#       python start_forecasting.py
-#
-# Fault tolerance is delegated to run_forecasts.py.
-# run_forecasts.py checks for existing files.
+Runs forecasts on a recurring schedule, checking for missing outputs
+over the past few days. Dataset selection via CGAN_DATASET env var.
+"""
 
 import argparse
 import subprocess
 from datetime import datetime, timedelta
 import time
 import schedule
+
+from dataset_config import get_active_dataset
 
 # Number of minutes to wait before checking for another forecast
 minutes_to_wait = 15
@@ -115,7 +112,9 @@ def run_24h_accumulation_forecasts():
 
 
 def run_all_forecasts():
-    run_6h_accumulation_forecasts()
+    dataset = get_active_dataset()
+    if "6h" in dataset["accumulations"]:
+        run_6h_accumulation_forecasts()
     run_24h_accumulation_forecasts()
 
 
