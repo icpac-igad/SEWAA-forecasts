@@ -39,6 +39,18 @@ import datetime
 import platform
 
 
+# A partial/interrupted download leaves a file that exists but won't open; check_counts_files
+# and the caller only look at os.path.isfile(), so a corrupt file blocks that date's forecast
+# forever unless removed here so it gets re-downloaded.
+def is_valid_netcdf(path):
+    try:
+        import xarray as xr
+        xr.open_dataset(path).close()
+        return True
+    except Exception:
+        return False
+
+
 # Parse arguments to this script
 def parseArguments():
 
@@ -333,10 +345,14 @@ if __name__ == "__main__":
     pathlib.Path(IFS_data_path).mkdir(exist_ok=True)
     
     # Check to see if the file is here first
-    if os.path.isfile(f"{IFS_data_path}/{file_name}"):
+    if os.path.isfile(f"{IFS_data_path}/{file_name}") and is_valid_netcdf(f"{IFS_data_path}/{file_name}"):
         print(f"{IFS_data_path}/{file_name} already exists.")
     else:
-        
+        if os.path.isfile(f"{IFS_data_path}/{file_name}"):
+            print(f"{IFS_data_path}/{file_name} exists but is corrupt/incomplete; re-downloading.")
+            os.remove(f"{IFS_data_path}/{file_name}")
+
+
         # XXX Replace the if with a list of servers (including ICPAC).
         
         # Used with curl
@@ -358,7 +374,8 @@ if __name__ == "__main__":
             # Get the file
             print(f"Copying 6h accumulation data, {file_name}, from University of Oxford.")
             print(f"to {IFS_data_path}/.")
-            subprocess.run(["curl",file_URL,"-o",f"{IFS_data_path}/{file_name}"])
+            subprocess.run(["curl","-fL","--retry","20","--retry-delay","5","-C","-",
+                            file_URL,"-o",f"{IFS_data_path}/{file_name}"])
         
         else:  # The file is not there for some reason
             
@@ -377,7 +394,8 @@ if __name__ == "__main__":
                 # Get the file
                 print(f"Copying 6h accumulation data, {file_name}, from Fenwick's home.")
                 print(f"to {IFS_data_path}/.")
-                subprocess.run(["curl",file_URL,"-o",f"{IFS_data_path}/{file_name}"])
+                subprocess.run(["curl","-fL","--retry","20","--retry-delay","5","-C","-",
+                                file_URL,"-o",f"{IFS_data_path}/{file_name}"])
                 
             else:
             

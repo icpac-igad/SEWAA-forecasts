@@ -15,9 +15,12 @@ GPU_SERVER:
         TRUTH_PATH: '/home/ezra/CHIRPS_truth/'
         # IFS input is IDENTICAL to the RFE2 project -- already downloaded, do not re-fetch
         FORECAST_PATH: '/home/ezra/IFS_training/'
-        CONSTANTS_PATH: '/home/ezra/SEWAA-forecasts-RFE2/SEWAA-forecasts/cGAN_data/'
-        # FCSTNorm2018.pkl must be regenerated in the CHIRPS cGAN dir (14 fields)
-        NORMALISATION_PATH: '/home/ezra/CHIRPS_cGAN_run/'
+        # Operational forecasting needs only CONSTANTS_PATH and NORMALISATION_PATH; both are
+        # relative to dsrnngan/ so they resolve inside the deployed container (see rfe13's
+        # data_paths.yaml for the same pattern). TRUTH_PATH / FORECAST_PATH / tfrecords_path
+        # above and below are training/scoring only and were never portable off ezra's GPU box.
+        CONSTANTS_PATH: '../../../cGAN_data/'
+        NORMALISATION_PATH: '../'
         LEAD_IDX: 1
 
     TFRecords:

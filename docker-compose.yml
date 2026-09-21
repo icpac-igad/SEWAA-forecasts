@@ -1,5 +1,6 @@
 services:
   web: &cgan_web
+    platform: ${DOCKER_PLATFORM:-}
     build:
       context: .
       dockerfile: Dockerfile
@@ -26,6 +27,7 @@ services:
     command: ["python", "start_forecasting.py"]
 
   nginx:
+    platform: ${DOCKER_PLATFORM:-}
     build:
       context: .
       dockerfile: nginx.Dockerfile
