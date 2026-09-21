@@ -1,30 +1,17 @@
 #!/usr/bin/env python
+"""Automatic forecast scheduler.
 
-# XXX Shruti: Time limited:
-#                Note that "pip install schedule" has been added to the README.md.
-#                Run this script: "python start_forecasting.py"
-#                You don't need to do anything else.
-#             Plenty of time:
-#                We must check for existing ELR files before run_ELR.py.
-#                See in run_forecasts.py in the function check_ELR_files().
-#                Without changing check_ELR_files(), currently ELR will not run.
-#                The only number you might want to change in this file is minutes_to_wait below.
-
-# Python script to start running forecasts automatically.
-#
-# To run this script:
-#
-#       conda activate tf215gpu
-#       python start_forecasting.py
-#
-# Fault tolerance is delegated to run_forecasts.py.
-# run_forecasts.py checks for existing files.
+Runs forecasts on a recurring schedule, checking for missing outputs
+over the past few days. Dataset selection via CGAN_DATASET env var.
+"""
 
 import argparse
 import subprocess
 from datetime import datetime, timedelta
 import time
 import schedule
+
+from dataset_config import get_active_dataset
 
 # Number of minutes to wait before checking for another forecast
 minutes_to_wait = 15
@@ -125,7 +112,9 @@ def run_24h_accumulation_forecasts():
 
 
 def run_all_forecasts():
-    run_6h_accumulation_forecasts()
+    dataset = get_active_dataset()
+    if "6h" in dataset["accumulations"]:
+        run_6h_accumulation_forecasts()
     run_24h_accumulation_forecasts()
 
 
