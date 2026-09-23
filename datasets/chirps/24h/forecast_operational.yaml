@@ -1,6 +1,8 @@
 # CHIRPS run07 operational config. Paths are relative to dsrnngan/.
+# MODEL/constants/normalisation point into datasets/chirps/ rather than the shared
+# 24h_accumulations/cGAN/ tree, which only carries IMERG's model + normalisation assets.
 MODEL:
-    folder: ../logs_CHIRPS_run07
+    folder: ../../../datasets/chirps/24h/logs_CHIRPS_run07
     checkpoint: 204800
     include_cape: False
     field_set: run07             # 14 fields (climatology + 13 IFS) = 28 channels
@@ -9,8 +11,8 @@ INPUT:
     format:               operational
     fcst_folder:          ../../IFS_forecast_data
     truth_folder:         ""
-    constants_folder:     ../../../cGAN_data
-    normalisation_folder: ..
+    constants_folder:     ../../../datasets/chirps/cGAN_data
+    normalisation_folder: ../../../datasets/chirps/24h
 
 PERIOD:
     start: 20260903

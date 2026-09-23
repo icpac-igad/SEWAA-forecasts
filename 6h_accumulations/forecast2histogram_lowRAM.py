@@ -62,7 +62,16 @@ else:
     latitude = np.array(nc_file["latitude"][:])
     longitude = np.array(nc_file["longitude"][:])
     time = np.array(nc_file["time"][:])
-    valid_time = np.array(nc_file["fcst_valid_time"][:])[0]
+    fcst_valid_time = np.array(nc_file["fcst_valid_time"][:])
+    if fcst_valid_time.shape[0] == 0:
+        # A crash/OOM partway through forecast_date.py leaves a file that opens fine but
+        # has zero valid_time records written. run_forecast.py should catch this before
+        # calling this script, but fail clearly here too rather than a bare IndexError.
+        nc_file.close()
+        print(f"ERROR: {file_name} has no valid_time records (incomplete/corrupt "
+              f"forecast); skipping histogram computation.")
+        sys.exit(1)
+    valid_time = fcst_valid_time[0]
 
     # Compute the counts at each valuid time, latitude and longitude
     counts = np.zeros(

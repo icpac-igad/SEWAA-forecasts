@@ -51,7 +51,15 @@ for country in ["Kenya","Ethiopia","Rwanda"]:
     
     # Sort the list of times
     times_list.sort(reverse=False, key=sortFunc)
-    
+
+    # No ELR predictions yet for this country -- write an empty result and move on to the
+    # next country instead of crashing on times_list[0] below (which would also block
+    # every country after this one in the loop).
+    if not times_list:
+        with open(f"{output_dir}/available_dates.json", "w") as text_file:
+            text_file.write(json.dumps({}))
+        continue
+
     # Make dictionaries
     year = str(times_list[0][0])
     month = str(times_list[0][1])

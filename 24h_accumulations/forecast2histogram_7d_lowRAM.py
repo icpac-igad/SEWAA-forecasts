@@ -70,8 +70,19 @@ else:
         file_name = (
             f"{data_dir}/GAN_{year}{month:02d}{day:02d}_{hour:02d}Z_v{valid_time_num}.nc"
         )
-        nc_file = nc.Dataset(file_name, "r")
-        valid_time[valid_time_num] = np.array(nc_file["fcst_valid_time"][:])[0, 0]
+        try:
+            nc_file = nc.Dataset(file_name, "r")
+            fcst_valid_time = np.array(nc_file["fcst_valid_time"][:])
+            if fcst_valid_time.shape[0] == 0:
+                raise IndexError("empty valid_time (incomplete/corrupt forecast)")
+        except Exception as err:
+            # A crash/OOM partway through forecast_date.py leaves a lead's file missing,
+            # or present but with zero valid_time records. run_forecast.py should catch
+            # this before calling this script, but fail clearly here too.
+            print(f"ERROR: failed to read dataset {file_name} with error {err}; "
+                  f"skipping histogram computation.")
+            sys.exit(1)
+        valid_time[valid_time_num] = fcst_valid_time[0, 0]
 
         # Compute the counts at each valid time, latitude and longitude
         for j in range(0, len(latitude), chunk_size):

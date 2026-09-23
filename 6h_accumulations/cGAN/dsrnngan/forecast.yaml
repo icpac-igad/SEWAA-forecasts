@@ -15,4 +15,9 @@ INPUT:
 
 OUTPUT:
     folder: "../../cGAN_forecasts"
+    # gen.predict() called sequentially in forecast_date.py's plain Python loop (no
+    # tf.function/batching) leaks memory per call, and this many calls (x4 lead times in
+    # one process) OOM'd in production; mitigated via container memory sizing instead of
+    # cutting ensemble size (docker-compose.yml's mem_limit / cloudbuild.yaml's
+    # cgan-jobs-imerg-6h memory).
     ensemble_members: 1000
