@@ -2,7 +2,8 @@
 """Unified operational forecast runner for all datasets.
 
 Dataset selection via CGAN_DATASET environment variable (default: imerg).
-Supports IMERG (6h + 24h, SCP from ECMWF), CHIRPS (24h, Oxford), RFE (24h, Oxford).
+Supports IMERG (6h + 24h), CHIRPS (24h), RFE (24h). IFS input data is fetched
+over HTTP from the Oxford archive, falling back to megacorr.dynu.net.
 
     CGAN_DATASET=imerg python run_forecast.py --accumulation 24h --date 20260920
     CGAN_DATASET=chirps python run_forecast.py --date 20260920
@@ -26,13 +27,6 @@ DATASET_CFG = get_active_dataset()
 VALID_HOURS_6H = [30, 36, 42, 48]
 VALID_HOURS_24H = [6, 30, 54, 78, 102, 126, 150]
 
-# Dataset-specific forecast config names
-_FORECAST_CONFIGS = {
-    "imerg": "forecast.yaml",
-    "chirps": "forecast_run07_operational.yaml",
-    "rfe": "forecast_run13_operational.yaml",
-}
-
 # Dataset-specific field set env var values
 _FIELD_SET_ENV = {
     "imerg": "imerg_24h",
@@ -49,6 +43,22 @@ def is_valid_netcdf(path):
         import xarray as xr
         xr.open_dataset(path).close()
         return True
+    except Exception:
+        return False
+
+
+# forecast_date.py's output file defines its dimensions up front (create_output_file) and
+# only fills the unlimited time/valid_time record axis as each lead time finishes. If the
+# process is killed partway (OOM is common at ensemble_members: 1000 -- see forecast.yaml)
+# the file is left behind opening fine but with zero (or fewer than expected) valid_time
+# records, which then crashes forecast2histogram*.py and find_available_dates.py downstream.
+# A bare os.path.isfile() check can't tell a genuinely complete forecast from this, and would
+# skip regenerating it forever -- so check the actual record count instead.
+def has_forecast_output(path, min_valid_times=1):
+    try:
+        import netCDF4 as nc
+        with nc.Dataset(path) as d:
+            return d.dimensions["valid_time"].size >= min_valid_times
     except Exception:
         return False
 
@@ -107,64 +117,56 @@ def resolve_args(args):
     return accumulation_time, date_str, hour, delete, run_elr
 
 
-# ── IFS download methods ─────────────────────────────────────────────────────
+# ── IFS download ──────────────────────────────────────────────────────────────
+# Mirrors to try in order, highest precedence first. All datasets 
+# read from the same IFS archive, so a single HTTP fallback chain covers
+# all of them without any per-dataset download configuration.
+IFS_SOURCES = [
+    ("University of Oxford",
+     "https://rain.physics.ox.ac.uk/ICPAC/operational/{accum}h_accumulations/"
+     "IFS_forecast_data/{year}/{fname}"),
+    ("megacorr.dynu.net",
+     "http://megacorr.dynu.net/ICPAC/SEWAA_forecasts/{accum}h_accumulations/"
+     "IFS_forecast_data/{year}/{fname}"),
+     ("ICPAC data portal",
+     "https://icpac-data-portal-8979869085.europe-west1.run.app/cgan-data/"
+     "{accum}h_accumulations/IFS_forecast_data/{year}/{fname}"),
+]
 
-def download_ifs_ecmwf(date_str, hour, ifs_dir, operational_subdir="Operational"):
-    """Download IFS data via SCP from ECMWF (IMERG)."""
+
+def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
+    """Fetch IFS forecast data, trying each mirror in IFS_SOURCES in turn.
+
+    Exits the program if the file is unavailable from every known source.
+    """
     pathlib.Path(ifs_dir).mkdir(exist_ok=True, parents=True)
     fname = f"IFS_{date_str}_{hour:02d}Z.nc"
     dst = os.path.join(ifs_dir, fname)
 
     if os.path.isfile(dst):
-        print(f"{dst} already exists.")
-        return dst
-
-    print(f"Copying {fname} from gbmc to {ifs_dir}/.")
-    cp = subprocess.run(
-        ["scp", f"gbmc@136.156.130.165:/data/{operational_subdir}/{fname}", ifs_dir]
-    )
-    if cp.returncode != 0:
-        print(f"Unable to copy {fname} from gbmc. Trying with host key verification disabled!")
-        cp = subprocess.run(
-            ["scp", "-o StrictHostKeyChecking=no",
-             f"gbmc@136.156.130.165:/data/{operational_subdir}/{fname}", ifs_dir]
-        )
-        if cp.returncode != 0:
-            print(f"unresolvable failure to copy {fname} from gbmc")
-            return None
-    return dst
-
-
-def download_ifs_oxford(date_str, ifs_dir):
-    """Download IFS data via curl from Oxford archive (CHIRPS/RFE)."""
-    pathlib.Path(ifs_dir).mkdir(exist_ok=True, parents=True)
-    fname = f"IFS_{date_str}_00Z.nc"
-    dst = os.path.join(ifs_dir, fname)
-
-    if os.path.isfile(dst):
-        try:
-            import xarray as xr
-            xr.open_dataset(dst).close()
+        if is_valid_netcdf(dst):
             print(f"{dst} already exists and is valid.")
             return dst
-        except Exception:
-            print(f"{dst} exists but is corrupt; re-downloading.")
-            os.remove(dst)
+        print(f"{dst} exists but is corrupt/incomplete; re-downloading.")
+        os.remove(dst)
 
     year = date_str[:4]
     oblivion = "nul" if platform.system() == "Windows" else "/dev/null"
-    url = (f"https://rain.physics.ox.ac.uk/ICPAC/operational/24h_accumulations/"
-           f"IFS_forecast_data/{year}/{fname}")
-    print(f"Checking University of Oxford for {fname}")
-    r = subprocess.run(["curl", "-Isw", "%{http_code}", url, "-o", oblivion],
-                       capture_output=True, text=True)
-    if r.stdout.strip().endswith("200"):
-        print(f"Downloading {fname} from University of Oxford -> {ifs_dir}/")
-        subprocess.run(["curl", "-fL", "--retry", "20", "--retry-delay", "5",
-                        "-C", "-", url, "-o", dst])
-    else:
-        sys.exit(f"Unable to fetch {fname} from Oxford (HTTP {r.stdout.strip()}).")
-    return dst
+
+    for name, url_template in IFS_SOURCES:
+        url = url_template.format(accum=accumulation_time, year=year, fname=fname)
+        print(f"Checking {name} for {fname}")
+        r = subprocess.run(["curl", "-Isw", "%{http_code}", url, "-o", oblivion],
+                           capture_output=True, text=True)
+        if r.stdout.strip().endswith("200"):
+            print(f"Downloading {fname} from {name} -> {ifs_dir}/")
+            subprocess.run(["curl", "-fL", "--retry", "20", "--retry-delay", "5",
+                            "-C", "-", url, "-o", dst])
+            return dst
+        print(f"{fname} not available from {name} (HTTP {r.stdout.strip()}).")
+
+    sources = ", ".join(name for name, _ in IFS_SOURCES)
+    sys.exit(f"ERROR: {fname} is not available from any known source ({sources}).")
 
 
 # ── Counts checking ──────────────────────────────────────────────────────────
@@ -198,92 +200,20 @@ if __name__ == "__main__":
     print(f"[{DATASET_NAME.upper()}] Producing {accumulation_time}h forecast "
           f"initialised {date_str} {hour:02d}00Z.")
 
-    download_source = DATASET_CFG["download_source"]
     ifs_dir = os.path.join(ROOT, f"{accumulation_time}h_accumulations", "IFS_forecast_data")
     counts_dir = os.path.join(ROOT, "interface", "data", f"counts_{accumulation_time}h")
-
-    # ── Download IFS data ────────────────────────────────────────────────
-    if download_source == "ecmwf":
-        subdir = "Operational" if accumulation_time == 6 else "Operational_7d"
-        ifs_file = download_ifs_ecmwf(date_str, hour, ifs_dir, subdir)
-        if ifs_file is None:
-            sys.exit(1)
-    elif download_source == "oxford":
-        ifs_file = download_ifs_oxford(date_str, ifs_dir)
-
-    # ── Check if counts already exist ────────────────────────────────────
     valid_hours = VALID_HOURS_6H if accumulation_time == 6 else VALID_HOURS_24H
+
+    # CHIRPS/RFE run forecast_date_MW.py, which does forecast + counts in one pass.
+    # IMERG runs forecast_date.py per lead time followed by a separate histogram step.
+    uses_combined_forecast_script = DATASET_NAME in ("chirps", "rfe")
+
     if check_counts_files(counts_dir, date_str, hour, valid_hours) and delete_forecasts:
         print("Histogram counts already exist; nothing to do.")
     else:
-        # Error should have been caught before, but if it wasn't catch it now.
-        print("ERROR: Incorrect accumulation time.")
-        sys.exit()
-    
-    # Create the directory for the IFS downloads if it doesn't exist
-    pathlib.Path(IFS_data_path).mkdir(exist_ok=True)
-    
-    # Check to see if the file is here first
-    if os.path.isfile(f"{IFS_data_path}/{file_name}") and is_valid_netcdf(f"{IFS_data_path}/{file_name}"):
-        print(f"{IFS_data_path}/{file_name} already exists.")
-    else:
-        if os.path.isfile(f"{IFS_data_path}/{file_name}"):
-            print(f"{IFS_data_path}/{file_name} exists but is corrupt/incomplete; re-downloading.")
-            os.remove(f"{IFS_data_path}/{file_name}")
+        # ── Download IFS data ────────────────────────────────────────────
+        download_ifs_data(date_str, hour, accumulation_time, ifs_dir)
 
-
-        # XXX Replace the if with a list of servers (including ICPAC).
-        
-        # Used with curl
-        if (platform.system() == "Windows"):
-            oblivion = "nul"
-        else:
-            oblivion = "/dev/null"
-        
-        # The server to download from
-        file_URL = f"https://rain.physics.ox.ac.uk/ICPAC/operational/{accumulation_time}h_accumulations/IFS_forecast_data/{year}/{file_name}"
-        
-        # Check to see if the file exists
-        print(f"Checking University of Oxford for {file_name}")
-        return_value = subprocess.run(["curl","-Isw","%{http_code}",file_URL,"-o",oblivion],
-                                      capture_output = True, text = True)
-        
-        if (return_value.stdout == "200"):  # The file is there to get
-        
-            # Get the file
-            print(f"Copying 6h accumulation data, {file_name}, from University of Oxford.")
-            print(f"to {IFS_data_path}/.")
-            subprocess.run(["curl","-fL","--retry","20","--retry-delay","5","-C","-",
-                            file_URL,"-o",f"{IFS_data_path}/{file_name}"])
-        
-        else:  # The file is not there for some reason
-            
-            print(f"Unable to copy {file_name} from {file_URL}. HTTP error {return_value.stdout}.")
-            
-            # Try another server
-            file_URL = f"http://megacorr.dynu.net/ICPAC/SEWAA_forecasts/{accumulation_time}h_accumulations/IFS_forecast_data/{year}/{file_name}"
-            
-            # Check to see if the file exists
-            print(f"Checking Fenwick's home for {file_name}")
-            return_value = subprocess.run(["curl","-Isw","%{http_code}",file_URL,"-o",oblivion],
-                                          capture_output = True, text = True)
-            
-            if (return_value.stdout == "200"):  # The file is there to get
-        
-                # Get the file
-                print(f"Copying 6h accumulation data, {file_name}, from Fenwick's home.")
-                print(f"to {IFS_data_path}/.")
-                subprocess.run(["curl","-fL","--retry","20","--retry-delay","5","-C","-",
-                                file_URL,"-o",f"{IFS_data_path}/{file_name}"])
-                
-            else:
-            
-                # Couldn't get the file at all
-                print(f"Unable to copy {file_name} from {file_URL}. HTTP error {return_value.stdout}.")
-                sys.exit()
-    
-    
-    # Run cGAN on this data
         # ── Run forecast ─────────────────────────────────────────────────
         dsr = os.path.join(ROOT, f"{accumulation_time}h_accumulations", "cGAN", "dsrnngan")
         forecast_dir = os.path.join(ROOT, f"{accumulation_time}h_accumulations", "cGAN_forecasts")
@@ -297,37 +227,63 @@ if __name__ == "__main__":
         if ld:
             env["LD_LIBRARY_PATH"] = ld + ":" + env.get("LD_LIBRARY_PATH", "")
 
-        if download_source == "oxford":
-            # CHIRPS/RFE: forecast_date_MW.py does forecast + counts in one pass
-            config = _FORECAST_CONFIGS.get(DATASET_NAME, "forecast.yaml")
+        if uses_combined_forecast_script:
+            # forecast_date_MW.py lives alongside forecast_date.py in dsr; its yaml
+            # config lives under the dataset's own data_root (datasets/<name>/<accum>h/),
+            # not the shared cGAN/ tree, since that only carries IMERG's model assets.
+            config = os.path.join(ROOT, DATASET_CFG["data_root"],
+                                  f"{accumulation_time}h", "forecast_operational.yaml")
+            if not os.path.isfile(config):
+                sys.exit(f"ERROR: missing forecast config for {DATASET_NAME}: {config}")
             print(f"Running {DATASET_NAME} 24h forecast + counts for {date_str}")
             r = subprocess.run(
-                ["python", "../../forecast_date_MW.py", config, date_str],
+                ["python", "forecast_date_MW.py", config, date_str],
                 cwd=dsr, env=env
             )
             if r.returncode != 0:
                 sys.exit(f"ERROR: forecast_date_MW.py failed (exit {r.returncode}).")
         else:
             # IMERG: separate forecast per lead time + histogram step
+            forecast_ok = True
             if accumulation_time == 6:
-                fname = f"GAN_{date_str}_{hour:02d}Z.nc"
-                if not os.path.isfile(os.path.join(forecast_dir, fname)):
+                fpath = os.path.join(forecast_dir, f"GAN_{date_str}_{hour:02d}Z.nc")
+                if not has_forecast_output(fpath, min_valid_times=len(valid_hours)):
+                    if os.path.isfile(fpath):
+                        print(f"{fpath} exists but is incomplete/corrupt; re-generating.")
+                        os.remove(fpath)
                     print(f"Running 6h cGAN: forecast_date.py {date_str} {hour}")
-                    subprocess.run(
+                    r = subprocess.run(
                         ["python", "forecast_date.py", date_str, str(hour)],
                         cwd=dsr, env=env
                     )
+                    forecast_ok = (r.returncode == 0
+                                   and has_forecast_output(fpath, min_valid_times=len(valid_hours)))
+                    if not forecast_ok:
+                        print(f"ERROR: forecast_date.py did not produce a complete "
+                              f"forecast (exit {r.returncode}).")
             else:
                 for lead_idx in range(7):
-                    fname = f"GAN_{date_str}_{hour:02d}Z_v{lead_idx}.nc"
-                    if not os.path.isfile(os.path.join(forecast_dir, fname)):
+                    fpath = os.path.join(forecast_dir, f"GAN_{date_str}_{hour:02d}Z_v{lead_idx}.nc")
+                    if not has_forecast_output(fpath):
+                        if os.path.isfile(fpath):
+                            print(f"{fpath} exists but is incomplete/corrupt; re-generating.")
+                            os.remove(fpath)
                         print(f"Running 24h cGAN: forecast_date.py {lead_idx} {date_str}")
-                        subprocess.run(
+                        r = subprocess.run(
                             ["python", "forecast_date.py", str(lead_idx), date_str],
                             cwd=dsr, env=env
                         )
+                        if r.returncode != 0 or not has_forecast_output(fpath):
+                            print(f"ERROR: forecast_date.py lead {lead_idx} did not "
+                                  f"produce a complete forecast (exit {r.returncode}).")
+                            forecast_ok = False
 
-            # IMERG histogram computation (separate step)
+            # IMERG histogram computation (separate step). Skipped on a failed/incomplete
+            # forecast above -- forecast2histogram*.py assumes every lead file it opens is
+            # complete and crashes hard (not a clean error) otherwise.
+            if not forecast_ok:
+                sys.exit(f"ERROR: {DATASET_NAME} {accumulation_time}h forecast for "
+                         f"{date_str} {hour:02d}00Z incomplete; histogram step skipped.")
             if not check_counts_files(counts_dir, date_str, hour, valid_hours):
                 pathlib.Path(counts_dir).mkdir(exist_ok=True)
                 pathlib.Path(os.path.join(counts_dir, year)).mkdir(exist_ok=True)

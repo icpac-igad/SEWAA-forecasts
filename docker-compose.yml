@@ -12,12 +12,21 @@ services:
     environment:
       - CGAN_DATASET=${CGAN_DATASET:-imerg}
       - API_WORKERS=${WEB_API_WORKERS:-24}
+    # Explicit headroom for the GAN inference jobs (forecast_date.py calls gen.predict() in a
+    # plain Python loop -- no tf.function/batching -- which leaks memory per call and OOM'd
+    # in production at ensemble_members: 1000 (kept at 1000 by design; not reduced). The 6h
+    # job is the heaviest -- it runs 4 lead times in one process, compounding the leak.
+    # mem_reservation is a soft target Docker uses when the host is under pressure; mem_limit
+    # is the hard cap. Override per-host via CGAN_MEM_LIMIT/CGAN_MEM_RESERVATION in .env --
+    # the host running `jobs` needs to actually have this much free.
+    mem_limit: ${CGAN_MEM_LIMIT:-16g}
+    mem_reservation: ${CGAN_MEM_RESERVATION:-4g}
     volumes:
-      - ${VIZ_READY_DATA_DIR:-./interface/data}:${CTNR_WORK_HOME:-/opt/cgan}/interface/data
-      - ${cGAN_6h_FORECASTS_DIR:-./6h_accumulations/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/cGAN_forecasts
-      - ${IFS_6h_FORECASTS_DIR:-./6h_accumulations/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/IFS_forecast_data
-      - ${cGAN_24h_FORECASTS_DIR:-./24h_accumulations/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
-      - ${IFS_24h_FORECASTS_DIR:-./24h_accumulations/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      - ${VIZ_READY_DATA_DIR:-${STORE:-./store}/interface/imerg}:${CTNR_WORK_HOME:-/opt/cgan}/interface/data
+      - ${cGAN_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/cGAN_forecasts
+      - ${IFS_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/IFS_forecast_data
+      - ${cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
+      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
       - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
 
   jobs:
@@ -25,6 +34,34 @@ services:
     image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
     restart: ${RESTART_POLICY:-always}
     container_name: ${JOBS_CNTR_NAME:-cgan-jobs}
+    command: ["python", "start_forecasting.py"]
+
+  jobs-rfe:
+    <<: *cgan_web
+    image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
+    restart: ${RESTART_POLICY:-always}
+    container_name: ${RFE_JOBS_CNTR_NAME:-cgan-rfe-jobs}
+    environment:
+      - CGAN_DATASET=rfe
+    volumes:
+      - ${RFE_VIZ_DATA_DIR:-${STORE:-./store}/interface/rfe}:${CTNR_WORK_HOME:-/opt/cgan}/interface/data
+      - ${RFE_cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/rfe/24h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
+      - ${RFE_IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/rfe/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
+    command: ["python", "start_forecasting.py"]
+
+  jobs-chirps:
+    <<: *cgan_web
+    image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
+    restart: ${RESTART_POLICY:-always}
+    container_name: ${CHIRPS_JOBS_CNTR_NAME:-cgan-chirps-jobs}
+    environment:
+      - CGAN_DATASET=chirps
+    volumes:
+      - ${CHIRPS_VIZ_DATA_DIR:-${STORE:-./store}/interface/chirps}:${CTNR_WORK_HOME:-/opt/cgan}/interface/data
+      - ${CHIRPS_cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/chirps/24h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
+      - ${CHIRPS_IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/chirps/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
     command: ["python", "start_forecasting.py"]
 
   nginx:
@@ -39,8 +76,10 @@ services:
       - ${HOST_IP:-0.0.0.0}:${HTTP_PORT:-80}:80
       - ${HOST_IP:-0.0.0.0}:${HTTPS_PORT:-443}:443
     volumes:
-      - ${VIZ_READY_DATA_DIR:-./interface/data}:${PROXY_WORK_HOME:-/opt/interface}/counts
-      - ${cGAN_6h_FORECASTS_DIR:-./6h_accumulations/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_cGAN_forecasts
-      - ${IFS_6h_FORECASTS_DIR:-./6h_accumulations/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_IFS_forecast_data
-      - ${cGAN_24h_FORECASTS_DIR:-./24h_accumulations/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_cGAN_forecasts
-      - ${IFS_24h_FORECASTS_DIR:-./24h_accumulations/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_IFS_forecast_data
+      - ${VIZ_READY_DATA_DIR:-${STORE:-./store}/interface/imerg}:${PROXY_WORK_HOME:-/opt/interface}/counts
+      - ${cGAN_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_cGAN_forecasts
+      - ${IFS_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_IFS_forecast_data
+      - ${cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_cGAN_forecasts
+      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_IFS_forecast_data
+      - ${RFE_VIZ_DATA_DIR:-${STORE:-./store}/interface/rfe}:${PROXY_WORK_HOME:-/opt/interface}/rfe-counts
+      - ${CHIRPS_VIZ_DATA_DIR:-${STORE:-./store}/interface/chirps}:${PROXY_WORK_HOME:-/opt/interface}/chirps-counts

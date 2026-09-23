@@ -48,9 +48,6 @@ DATASETS = {
         # climatology
         "climatology_channels": 0,
 
-        # IFS data download source
-        "download_source": "ecmwf",     # SSH/rsync from ECMWF server
-
         # paths (relative to project root)
         "data_root": "datasets/imerg",
     },
@@ -76,8 +73,6 @@ DATASETS = {
 
         "climatology_channels": 0,
 
-        "download_source": "oxford",
-
         "data_root": "datasets/chirps",
     },
 
@@ -101,8 +96,6 @@ DATASETS = {
         "truth_unit_conversion": 1.0 / 24.0,   # mm/day → mm/hr
 
         "climatology_channels": 2,
-
-        "download_source": "oxford",
 
         "data_root": "datasets/rfe",
     },

@@ -637,23 +637,24 @@ git pull origin main
 
 3. **Copy your data** from the old installation to the new one:
 
+   If you run via `docker-compose.yml` with `STORE` pointed at a folder **outside** the
+   repo checkout (recommended — see `.env.example`), your data already lives outside
+   both the OLD and NEW checkouts, so nothing needs copying: just point the new
+   checkout's `STORE` at the same location.
+
+   Only copy data if your old installation used the legacy repo-relative defaults
+   (no `STORE` set, data under the checkout itself):
+
    **On macOS/Linux:**
    ```bash
    # Replace OLD and NEW with your actual folder names
-   cp -r SEWAA-forecasts-OLD/interface/data SEWAA-forecasts-NEW/interface/
-   cp -r SEWAA-forecasts-OLD/6h_accumulations/IFS_forecast_data SEWAA-forecasts-NEW/6h_accumulations/
-   cp -r SEWAA-forecasts-OLD/6h_accumulations/cGAN_forecasts SEWAA-forecasts-NEW/6h_accumulations/
-   cp -r SEWAA-forecasts-OLD/24h_accumulations/IFS_forecast_data SEWAA-forecasts-NEW/24h_accumulations/
-   cp -r SEWAA-forecasts-OLD/24h_accumulations/cGAN_forecasts SEWAA-forecasts-NEW/24h_accumulations/
+   cp -r SEWAA-forecasts-OLD/store SEWAA-forecasts-NEW/store
    ```
 
    **On Windows:**
-   - Use File Explorer to copy these folders manually:
-     - `interface/data`
-     - `6h_accumulations/IFS_forecast_data`
-     - `6h_accumulations/cGAN_forecasts`
-     - `24h_accumulations/IFS_forecast_data`
-     - `24h_accumulations/cGAN_forecasts`
+   - Use File Explorer to copy the `store` folder (contains `interface/` and
+     `forecasts/`, each split by dataset: `imerg`, `rfe`, `chirps`) from the old
+     checkout into the new one.
 
 ---
 
@@ -683,7 +684,8 @@ git pull origin main
 
 #### 5. **Forecasts not appearing in the web interface**
    - **Solution:** Check if data files exist
-   - Run: `ls -la interface/data`
+   - Run: `ls -la ${STORE:-./store}/interface/imerg` (swap `imerg` for `rfe` or `chirps`
+     if that's the dataset you're checking)
    - If empty, generate forecasts using `python run_forecast.py`
 
 #### 6. **"Cannot download ECMWF data"**

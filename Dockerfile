@@ -27,8 +27,11 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     python -m venv ${WORK_HOME}/.venv
 
 COPY --chown=${USER_ID}:root . ${WORK_HOME}/
-COPY --chown=${USER_ID}:root ./configs/forecast.yaml ${WORK_HOME}/6h_accumulations/cGAN/dsrnngan
-COPY --chown=${USER_ID}:root ./configs/forecast.yaml ${WORK_HOME}/24h_accumulations/cGAN/dsrnngan
+# The general COPY above already places each accumulation's own forecast.yaml at
+# {6h,24h}_accumulations/cGAN/dsrnngan/forecast.yaml. Do NOT re-COPY a shared
+# configs/forecast.yaml over both here -- 6h and 24h use different trained models
+# (different MODEL.folder/checkpoint), and overwriting both with one file silently
+# made the 24h job run the 6h model.
 
 ARG CGAN_DATASET=imerg
 ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS} CGAN_DATASET=${CGAN_DATASET}
