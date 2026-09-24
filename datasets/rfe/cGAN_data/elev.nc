@@ -1,0 +1,1 @@
+../../imerg/cGAN_data/elev.nc
