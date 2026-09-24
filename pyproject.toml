@@ -18,7 +18,6 @@ dependencies = [
     "jinja2>=3.1.6",
     "markdown2>=2.5.4",
     "jupyter>=1.1.1",
-    "markdown2>=2.5.4",
     "matplotlib>=3.10.6",
     "netcdf4>=1.7.2",
     "numba>=0.62.1",

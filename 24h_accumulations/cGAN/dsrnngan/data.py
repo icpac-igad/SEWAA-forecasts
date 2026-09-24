@@ -32,6 +32,16 @@ LEAD_IDX = data_paths["GENERAL"]["LEAD_IDX"]
 _DATASET_NAME = dataset_config.get_active_dataset_name()
 _DATASET_CFG = dataset_config.get_active_dataset()
 
+# Override CONSTANTS_PATH and NORMALISATION_PATH with dataset-specific directories
+# when they exist. data_paths.yaml always points to the shared IMERG constants/norm;
+# CHIRPS and RFE have their own under datasets/<name>/.
+_ds_constants = os.path.join(_PROJECT_ROOT, _DATASET_CFG["data_root"], "cGAN_data")
+if os.path.isdir(_ds_constants):
+    CONSTANTS_PATH = _ds_constants
+_ds_norm = os.path.join(_PROJECT_ROOT, _DATASET_CFG["data_root"], "24h")
+if os.path.isdir(_ds_norm):
+    NORMALISATION_PATH = _ds_norm
+
 # ── Field set selection ──────────────────────────────────────────────────────
 _F13 = ['cp', 'mcc', 'sp', 'ssr', 't2m', 'tciw', 'tclw', 'tcrw', 'tcw', 'tcwv', 'tp', 'u700', 'v700']
 _F14_CAPE = ['cape'] + _F13
@@ -73,19 +83,28 @@ USE_CLIMATOLOGY = CLIM_CHANNELS > 0
 _CLIM = None
 
 
-def _load_climatology():
+def _load_climatology(constants_path=None):
     global _CLIM
     if _CLIM is None:
-        path = os.path.join(CONSTANTS_PATH, "RFE_climatology_meansd_doy.nc")
-        with nc.Dataset(path) as d:
-            _CLIM = (np.array(d["RFE_mean"][:]),
-                     np.array(d["RFE_sd"][:]))
+        _cpath = CONSTANTS_PATH if constants_path is None else constants_path
+        path = os.path.join(_cpath, "RFE_climatology_meansd_doy.nc")
+        try:
+            with nc.Dataset(path) as d:
+                _CLIM = (np.array(d["RFE_mean"][:]),
+                         np.array(d["RFE_sd"][:]))
+        except (FileNotFoundError, OSError) as e:
+            print(f"WARNING: RFE climatology unavailable ({e}); "
+                  f"using zero-fill placeholder for the {CLIM_CHANNELS} climatology channel(s).")
+            _CLIM = "missing"
     return _CLIM
 
 
-def climatology_channel(date_str, lead_days=0):
+def climatology_channel(date_str, lead_days=0, constants_path=None):
     """Log-normalised climatological mean+sd for the predicted day, shape (H, W, 2)."""
-    clim_mean, clim_sd = _load_climatology()
+    clim = _load_climatology(constants_path=constants_path)
+    if clim == "missing":
+        raise FileNotFoundError("RFE_climatology_meansd_doy.nc not available")
+    clim_mean, clim_sd = clim
     fcst_date = datetime.datetime.strptime(date_str, "%Y%m%d")
     target = fcst_date + datetime.timedelta(hours=(int(LEAD_IDX) + int(lead_days)) * HOURS)
     m, dd = target.month, target.day
@@ -324,7 +343,12 @@ def load_fcst_stack(fields, date, time_idx, log_precip=False, norm=False):
         field_arrays.append(load_fcst(f, date, time_idx, log_precip=log_precip, norm=norm))
     stack = np.concatenate(field_arrays, axis=-1)
     if USE_CLIMATOLOGY:
-        stack = np.concatenate([stack, climatology_channel(date)], axis=-1)
+        try:
+            stack = np.concatenate([stack, climatology_channel(date)], axis=-1)
+        except (FileNotFoundError, OSError):
+            stack = np.concatenate(
+                [stack, np.zeros(stack.shape[:-1] + (CLIM_CHANNELS,), dtype=np.float32)],
+                axis=-1)
     return stack
 
 

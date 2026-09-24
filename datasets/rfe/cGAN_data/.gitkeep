@@ -1,0 +1,8 @@
+# RFE constants directory
+#
+# Shared constants (elev.nc, lsm.nc) are symlinked from datasets/imerg/cGAN_data/.
+#
+# RFE run11 requires RFE_climatology_meansd_doy.nc here for the 2 climatology
+# channels (day-of-year climatological mean and std of RFE2 precipitation).
+# This file is not tracked in git due to size; deploy it from your training
+# data archive. Without it the model falls back to zero-fill placeholders.
