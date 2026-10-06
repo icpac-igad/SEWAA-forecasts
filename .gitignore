@@ -11,3 +11,6 @@
 *.json
 data
 *.nc
+# elev.nc/lsm.nc are runtime constants loaded by load_hires_constants() (24h_accumulations/cGAN/dsrnngan/data.py)
+# and must ship in the repo/image -- datasets/rfe and datasets/chirps symlink into datasets/imerg/cGAN_data.
+!datasets/**/cGAN_data/*.nc

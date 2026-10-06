@@ -3,6 +3,7 @@
 .ssh
 .ipynb_checkpoints
 *.nc
+!datasets/**/cGAN_data/*.nc
 *.pyc
 **/__pycache__/
 interface/data
