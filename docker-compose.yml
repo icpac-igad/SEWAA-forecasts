@@ -11,7 +11,7 @@ services:
     container_name: ${WEB_CNTR_NAME:-cgan-web}
     environment:
       - CGAN_DATASET=${CGAN_DATASET:-imerg}
-      - API_WORKERS=${WEB_API_WORKERS:-24}
+      - API_WORKERS=${WEB_API_WORKERS:-4}
     # Explicit headroom for the GAN inference jobs (forecast_date.py calls gen.predict() in a
     # plain Python loop -- no tf.function/batching -- which leaks memory per call and OOM'd
     # in production at ensemble_members: 1000 (kept at 1000 by design; not reduced). The 6h
@@ -29,14 +29,14 @@ services:
       - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
       - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
 
-  jobs:
+  imerg:
     <<: *cgan_web
     image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
     restart: ${RESTART_POLICY:-always}
-    container_name: ${JOBS_CNTR_NAME:-cgan-jobs}
+    container_name: ${JOBS_CNTR_NAME:-cgan-imerg-jobs}
     command: ["python", "start_forecasting.py"]
 
-  jobs-rfe:
+  rfe:
     <<: *cgan_web
     image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
     restart: ${RESTART_POLICY:-always}
@@ -50,7 +50,7 @@ services:
       - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
     command: ["python", "start_forecasting.py"]
 
-  jobs-chirps:
+  chirps:
     <<: *cgan_web
     image: ${IMG_PREFIX:-icpac/sewaa-}cgan-v2
     restart: ${RESTART_POLICY:-always}
