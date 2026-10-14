@@ -18,7 +18,7 @@ services:
     # job is the heaviest -- it runs 4 lead times in one process, compounding the leak.
     # mem_reservation is a soft target Docker uses when the host is under pressure; mem_limit
     # is the hard cap. Override per-host via CGAN_MEM_LIMIT/CGAN_MEM_RESERVATION in .env --
-    # the host running `jobs` needs to actually have this much free.
+    # the host running `imerg` needs to actually have this much free.
     mem_limit: ${CGAN_MEM_LIMIT:-16g}
     mem_reservation: ${CGAN_MEM_RESERVATION:-4g}
     volumes:

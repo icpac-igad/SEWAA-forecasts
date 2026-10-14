@@ -6,16 +6,22 @@ Welcome! This project provides operational rainfall forecasts for the ICPAC (IGA
 - [SEWAA-Forecasts](#sewaa-forecasts)
   - [Table of Contents](#table-of-contents)
   - [What is This Project?](#what-is-this-project)
+    - [Supported Datasets](#supported-datasets)
+    - [Requirements](#requirements)
   - [Installation Guide](#installation-guide)
-    - [Step 1: Install Conda](#step-1-install-conda)
-    - [Step 2: Download the Project](#step-2-download-the-project)
+    - [Step 1: Download the Project](#step-1-download-the-project)
       - [Option A: Using Git (Recommended if you have Git installed)](#option-a-using-git-recommended-if-you-have-git-installed)
       - [Option B: Download as ZIP (For beginners)](#option-b-download-as-zip-for-beginners)
-    - [Step 3: Set Up Python Environment](#step-3-set-up-python-environment)
-    - [Step 4: Access ECMWF Data](#step-4-access-ecmwf-data)
+    - [Step 2: Set Up Python Environment](#step-2-set-up-python-environment)
+      - [Option A: Using uv (Recommended — the same tool the Docker image uses)](#option-a-using-uv-recommended--the-same-tool-the-docker-image-uses)
+      - [Option B: Using Conda](#option-b-using-conda)
+      - [Verify the installation](#verify-the-installation)
+    - [Step 3: IFS Forecast Data](#step-3-ifs-forecast-data)
+  - [Running the Application](#running-the-application)
     - [Method 1: Using Docker (Recommended for Beginners)](#method-1-using-docker-recommended-for-beginners)
       - [Prerequisites:](#prerequisites)
       - [Steps:](#steps)
+      - [Running the Full Stack with Docker Compose](#running-the-full-stack-with-docker-compose)
     - [Method 2: Using Python Directly](#method-2-using-python-directly)
   - [How to Use the Forecasts](#how-to-use-the-forecasts)
     - [Making a Single Forecast](#making-a-single-forecast)
@@ -35,14 +41,15 @@ Welcome! This project provides operational rainfall forecasts for the ICPAC (IGA
     - [If You Downloaded as ZIP:](#if-you-downloaded-as-zip)
   - [Troubleshooting](#troubleshooting)
     - [Common Issues and Solutions](#common-issues-and-solutions)
-      - [1. **"conda: command not found"**](#1-conda-command-not-found)
+      - [1. **"conda: command not found" / "uv: command not found"**](#1-conda-command-not-found--uv-command-not-found)
       - [2. **"ImportError: No module named 'tensorflow'"**](#2-importerror-no-module-named-tensorflow)
       - [3. **"Port 8000 is already in use"**](#3-port-8000-is-already-in-use)
       - [4. **"Permission denied" errors**](#4-permission-denied-errors)
       - [5. **Forecasts not appearing in the web interface**](#5-forecasts-not-appearing-in-the-web-interface)
-      - [6. **"Cannot download ECMWF data"**](#6-cannot-download-ecmwf-data)
+      - [6. **"Cannot download IFS data"**](#6-cannot-download-ifs-data)
       - [7. **Web page loads but shows no data**](#7-web-page-loads-but-shows-no-data)
       - [8. **Docker build fails**](#8-docker-build-fails)
+      - [9. **Forecast job container keeps restarting / exits with code 137**](#9-forecast-job-container-keeps-restarting--exits-with-code-137)
   - [Getting Help](#getting-help)
     - [Resources](#resources)
     - [Contact](#contact)
@@ -74,39 +81,26 @@ This application generates and visualizes rainfall forecasts for East African co
 - **Automated forecast generation** that runs on a schedule
 - **Historical forecast data** for analysis and comparison
 
----
+### Supported Datasets
 
-	conda config --add channels conda-forge
-	conda config --set channel_priority strict
-	conda create -n tf215gpu python=3.11
-	conda activate tf215gpu
-	python -m pip install tensorflow==2.15
-	pip install numba
-	pip install matplotlib
-	pip install seaborn
-	pip install cartopy
-	pip install jupyter
-	pip install xarray
-	pip install netcdf4
-	pip install scikit-learn
-	pip install cfgrib
-	pip install dask
-	pip install tqdm
-	pip install properscoring
-	pip install climlab
-	pip install iris
-	pip install ecmwf-api-client
-	pip install xesmf
-	pip install flake8
-	pip install regionmask
-	pip install schedule
-	conda install conda-forge::curl
+The same code base produces forecasts from cGAN models trained against three different
+rainfall datasets. Which one a script or container works on is chosen with the
+`CGAN_DATASET` environment variable (see `dataset_config.py`):
+
+| `CGAN_DATASET` | Dataset | Accumulations |
+|----------------|---------|---------------|
+| `imerg` (default) | IMERG | 6h and 24h |
+| `chirps` | CHIRPS | 24h |
+| `rfe` | RFE | 24h |
+
+### Requirements
 
 Before you begin, make sure you have:
 
 1. **A computer** running Windows, macOS, or Linux
 2. **Internet connection** for downloading data and dependencies
-3. **At least 10 GB of free disk space**
+3. **At least 10 GB of free disk space** (plus up to 16 GB of RAM for operational runs,
+   which generate 1000-member ensembles)
 4. **Basic familiarity with using the terminal/command line** (don't worry, we'll guide you through each step!)
 
 **Optional but helpful:**
@@ -117,21 +111,7 @@ Before you begin, make sure you have:
 
 ## Installation Guide
 
-### Step 1: Install Conda
-
-Conda is a package manager that helps organize Python and its dependencies. If you don't have it installed:
-
-1. **Download Miniconda** (a lightweight version of Conda):
-   - Go to: https://docs.conda.io/en/latest/miniconda.html
-   - Download the installer for your operating system (Windows/Mac/Linux)
-   - Run the installer and follow the on-screen instructions
-
-2. **Verify the installation:**
-   - Open a new terminal/command prompt window
-   - Type: `conda --version`
-   - You should see something like: `conda 23.x.x`
-
-### Step 2: Download the Project
+### Step 1: Download the Project
 
 You have two options:
 
@@ -159,52 +139,69 @@ cd SEWAA-forecasts
    cd ~/Documents/SEWAA-forecasts-main
    ```
 
-### Step 3: Set Up Python Environment
+### Step 2: Set Up Python Environment
 
-Now we'll create an isolated Python environment with all the necessary packages.
+> Skip this step if you only plan to run the project with Docker — the image installs
+> everything for you.
 
-1. **Configure Conda channels** (these are sources for packages):
+The project needs **Python 3.11 or 3.12**. Its dependencies are listed in
+`pyproject.toml` and pinned in `uv.lock`.
+
+#### Option A: Using uv (Recommended — the same tool the Docker image uses)
+
+1. **Install uv** (see https://docs.astral.sh/uv/getting-started/installation/):
    ```bash
-   conda config --add channels conda-forge
-   conda config --set channel_priority strict
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. **Create a new environment named `tf215gpu`:**
+2. **Create the environment and install all packages** (this may take 15-30 minutes):
    ```bash
-   conda create -n tf215gpu python=3.11
+   uv sync
    ```
-   - When prompted with `Proceed ([y]/n)?`, type `y` and press Enter
 
 3. **Activate the environment:**
    ```bash
+   source .venv/bin/activate        # macOS/Linux
+   .venv\Scripts\activate           # Windows
+   ```
+
+#### Option B: Using Conda
+
+1. **Install Miniconda** from https://docs.conda.io/en/latest/miniconda.html and verify
+   it with `conda --version`.
+
+2. **Create and activate a new environment named `tf215gpu`:**
+   ```bash
+   conda config --add channels conda-forge
+   conda config --set channel_priority strict
+   conda create -n tf215gpu python=3.11
    conda activate tf215gpu
    ```
    - You should see `(tf215gpu)` appear at the beginning of your terminal prompt
 
-4. **Install all required packages** (this may take 15-30 minutes):
+3. **Install all required packages** (this may take 15-30 minutes):
    ```bash
-   pip install tensorflow==2.15.0 numba matplotlib seaborn cartopy jupyter xarray netcdf4 scikit-learn cfgrib dask tqdm properscoring climlab iris regionmask ecmwf-api-client xesmf flake8 "fastapi[standard]" jinja2 pre-commit ruff
+   pip install tensorflow==2.15.0 cartopy cfgrib climlab dask ecmwf-api-client "fastapi[standard]" flake8 iris jinja2 jupyter markdown2 matplotlib netcdf4 numba pre-commit properscoring regionmask ruff schedule scikit-learn seaborn tqdm xarray xesmf
+   conda install conda-forge::curl
    ```
-5. **Verify TensorFlow installation:**
-   ```bash
-   python -c "import tensorflow as tf; print(tf.config.list_physical_devices('CPU'))"
-   ```
-   - You should see a list of CPU devices. If you see an error, something went wrong with the installation.
 
-### Step 4: Access ECMWF Data
+#### Verify the installation
 
-The forecasts require meteorological data from ECMWF (European Centre for Medium-Range Weather Forecasts).
+```bash
+python -c "import tensorflow as tf; print(tf.config.list_physical_devices('CPU'))"
+```
+You should see a list of CPU devices. If you see an error, something went wrong with the installation.
 
-**Important:** You need special access credentials to download ECMWF data.
+### Step 3: IFS Forecast Data
 
-- **If you work with ICPAC or Oxford team:** Contact your supervisor for access to the ECMWF machine `gbmc`
-- **If you're testing or developing:** You can use existing sample data or contact the project maintainers
+The cGAN models are driven by ECMWF IFS forecasts. **No credentials are needed:**
+`run_forecast.py` downloads the IFS initialization files it needs over HTTP from public
+mirrors, trying each in turn (University of Oxford, megacorr.dynu.net, then the ICPAC data
+portal). The machine only needs outbound internet access to those sites.
 
 ---
 
-	python -m http.server 8080
-   
-Then in a browser window go to the address
+## Running the Application
 
 ### Method 1: Using Docker (Recommended for Beginners)
 
@@ -227,7 +224,7 @@ Docker packages everything you need in a container, making it easier to run.
 
 3. **Run the application:**
    ```bash
-   docker run -p 8000:8000 -v $(pwd)/interface/data:/opt/cgan/interface/data sewaa-forecasts
+   docker run -p 8000:8000 -e CGAN_DATASET=imerg -v $(pwd)/interface/data:/opt/cgan/interface/data sewaa-forecasts
    ```
 
 4. **Access the web interface:**
@@ -237,8 +234,57 @@ Docker packages everything you need in a container, making it easier to run.
 
 **Explanation of the Docker command:**
 - `-p 8000:8000` - Makes the app accessible on port 8000
+- `-e CGAN_DATASET=imerg` - Selects the dataset (`imerg`, `chirps` or `rfe`)
 - `-v $(pwd)/interface/data:/opt/cgan/interface/data` - Shares the data folder so forecasts persist
 - `sewaa-forecasts` - The name of the Docker image we built
+
+The web server starts 4 workers by default; add `-e API_WORKERS=<n>` to change that.
+
+#### Running the Full Stack with Docker Compose
+
+For an operational (always-on) deployment, `docker-compose.yml` runs the web API, one
+forecasting job per dataset, and the nginx data proxy together:
+
+| Service  | Default container name | What it does |
+|----------|------------------------|--------------|
+| `web`    | `cgan-web`             | FastAPI web server (`CGAN_DATASET`, default `imerg`) |
+| `imerg`  | `cgan-imerg-jobs`      | Runs `start_forecasting.py` for IMERG (6h + 24h) |
+| `rfe`    | `cgan-rfe-jobs`        | Runs `start_forecasting.py` for RFE (24h) |
+| `chirps` | `cgan-chirps-jobs`     | Runs `start_forecasting.py` for CHIRPS (24h) |
+| `nginx`  | `cgan-proxy-server`    | Serves the forecast and counts data on ports 80/443 |
+
+1. **Configure the environment** (optional — every setting has a default):
+   ```bash
+   cp .env.example .env
+   ```
+   Set `STORE` to a folder outside the repo (e.g. `/mnt/data/cgan`) so forecast data
+   survives re-checkouts. Container names can be overridden with `WEB_CNTR_NAME`,
+   `JOBS_CNTR_NAME` (imerg), `RFE_JOBS_CNTR_NAME`, `CHIRPS_JOBS_CNTR_NAME` and
+   `NGINX_CNTR_NAME`.
+
+2. **Build and start everything:**
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Start or follow only some services:**
+   ```bash
+   docker compose up -d web imerg nginx    # IMERG only
+   docker compose logs -f rfe              # follow the RFE job logs
+   ```
+
+**Resource settings:**
+- `WEB_API_WORKERS` — number of FastAPI workers in the `web` container (default: `4`;
+  the image's built-in default `API_WORKERS` is also `4`).
+- `CGAN_MEM_LIMIT` / `CGAN_MEM_RESERVATION` — memory cap and soft reservation applied
+  to `web` and every job service (default: `16g` / `4g`). The host running the jobs
+  needs this much free memory, since inference runs `ensemble_members: 1000`.
+
+> **Upgrading from an older compose file:** the job services were renamed
+> (`jobs` → `imerg`, `jobs-rfe` → `rfe`, `jobs-chirps` → `chirps`) and the IMERG job
+> container is now `cgan-imerg-jobs` (was `cgan-jobs`). Remove the old containers with
+> `docker compose up -d --remove-orphans`, and update any scripts that reference the old
+> names (e.g. `docker logs cgan-jobs`).
 
 ### Method 2: Using Python Directly
 
@@ -249,17 +295,13 @@ If you prefer not to use Docker, you can run the application directly with Pytho
    cd ~/Documents/SEWAA-forecasts
    ```
 
-2. **Create virtual enironment using python-venv, uv, conda or any other tool you prefer:**
+2. **Activate the environment you created in [Step 2](#step-2-set-up-python-environment):**
    ```bash
-   conda activate tf215gpu
+   source .venv/bin/activate     # uv
+   conda activate tf215gpu       # or conda
    ```
 
-3. **Activate your virtual environment:**
-   ```bash
-   conda activate tf215gpu
-   ```
-
-4. **Start the web server:**
+3. **Start the web server:**
    ```bash
    fastapi run --port 8000
    ```
@@ -269,10 +311,10 @@ If you prefer not to use Docker, you can run the application directly with Pytho
    uvicorn main:app --host 0.0.0.0 --port 8000
    ```
 
-5. **Access the web interface:**
+4. **Access the web interface:**
    - Open your browser and go to: http://localhost:8000
 
-6. **To stop the server:**
+5. **To stop the server:**
    - Press `Ctrl + C` in the terminal
 
 ---
@@ -283,19 +325,21 @@ If you prefer not to use Docker, you can run the application directly with Pytho
 
 To generate forecasts manually, use the `run_forecast.py` script.
 
-1. **Activate your environment:**
-   ```bash
-   conda activate tf215gpu
-   ```
+1. **Activate your environment** (`source .venv/bin/activate` or `conda activate tf215gpu`)
 
 2. **Navigate to the project directory:**
    ```bash
    cd ~/Documents/SEWAA-forecasts
    ```
 
-3. **Run a basic forecast** (generates 6h accumulation for today):
+3. **Run a basic forecast** (yesterday's UTC date, initialized at 00:00, using the
+   dataset's default accumulation — 6h for IMERG, 24h for CHIRPS and RFE):
    ```bash
    python run_forecast.py
+   ```
+   Use `CGAN_DATASET` to pick the dataset (default `imerg`):
+   ```bash
+   CGAN_DATASET=chirps python run_forecast.py
    ```
 
 4. **See all available options:**
@@ -315,9 +359,10 @@ To generate forecasts manually, use the `run_forecast.py` script.
   python run_forecast.py --date 20250117
   ```
 
-- **Generate forecast for a specific time:**
+- **Generate forecast for a specific initialization time** (6h forecasts only accept
+  `0000`, `0600`, `1200` or `1800`; 24h forecasts are initialized at `0000` only):
   ```bash
-  python run_forecast.py --time 1200
+  python run_forecast.py --accumulation 6h --time 1200
   ```
 
 - **Generate forecast without deleting intermediate files:**
@@ -325,24 +370,40 @@ To generate forecasts manually, use the `run_forecast.py` script.
   python run_forecast.py --delete_forecasts N
   ```
 
+- **Skip the Ensemble Logistic Regression (ELR) forecasts:**
+  ```bash
+  python run_forecast.py --disable_ELR
+  ```
+
 **What happens when you run a forecast:**
-1. The script downloads ECMWF weather data from `gbmc` server
+1. The script downloads the IFS (ECMWF) initialization data, trying each public mirror in
+   turn (University of Oxford, megacorr.dynu.net, then the ICPAC data portal). Each file
+   is downloaded to a temporary `*.part` file and only moved into place once it opens as
+   valid netCDF, with up to 3 attempts per mirror — so an interrupted download is retried
+   and never leaves a truncated file for the forecast step to read. An existing but
+   corrupt IFS file, or a `*.part` file left by a killed download, is deleted
+   automatically.
 2. The cGAN model processes the data to generate rainfall predictions
 3. The forecast data is processed and saved for visualization
 4. The data is copied to the web interface directory
+
+Forecasts that already have output are skipped, so re-running the same command is safe. A
+forecast whose output file is incomplete (e.g. the process was killed part-way) is
+detected and regenerated.
 
 ### Automatic Forecasting
 
 For operational use, you can run forecasts automatically on a schedule.
 
-1. **Start the automatic forecasting script:**
+1. **Start the automatic forecasting script** (for the dataset in `CGAN_DATASET`):
    ```bash
-   conda activate tf215gpu
    python start_forecasting.py
+   CGAN_DATASET=rfe python start_forecasting.py   # another dataset
    ```
 
 2. **What it does:**
-   - Checks every 15 minutes for missing forecasts
+   - Checks every 15 minutes for missing forecasts (both 6h and 24h for IMERG, 24h for
+     CHIRPS and RFE)
    - Automatically generates any missing forecasts from the last 2 days
    - Keeps only the processed data (histogram data) for viewing
    - Deletes raw forecast files to save disk space
@@ -350,7 +411,17 @@ For operational use, you can run forecasts automatically on a schedule.
 3. **Keep it running:**
    - The script runs continuously until you stop it
    - To stop: Press `Ctrl + C`
-   - To run in background: Use `screen` or `tmux` (advanced)
+   - To run in background: Use `screen` or `tmux` (advanced), or run the `imerg`, `rfe`
+     and `chirps` services from [Docker Compose](#running-the-full-stack-with-docker-compose),
+     which each run this script
+
+**One-shot alternative:** `auto_forecasts.py` does the same catch-up for a single
+dataset and accumulation, then exits — useful for cron or Cloud Run Jobs (see
+`deploy/README.md`):
+```bash
+python auto_forecasts.py --dataset imerg --accumulation 6h
+python auto_forecasts.py --dataset chirps --accumulation 24h --days_to_check 2
+```
 
 ### Using the API to Generate Forecasts
 
@@ -386,15 +457,16 @@ The application includes a REST API that allows you to generate forecasts progra
 
 #### Using the `/gen-forecast` Endpoint
 
-This is the main endpoint for generating forecasts. It accepts several optional parameters:
+This is the main endpoint for generating forecasts. It runs `run_forecast.py` for the
+dataset the server was started with (`CGAN_DATASET`). It accepts several optional parameters:
 
 **Parameters:**
 
 | Parameter | Type | Options | Default | Description |
 |-----------|------|---------|---------|-------------|
-| `accumulation` | string | `6h` or `24h` | None (both) | Forecast accumulation period |
+| `accumulation` | string | `6h` or `24h` | Dataset default (6h for IMERG, 24h for CHIRPS/RFE) | Forecast accumulation period |
 | `time` | string | `0000`, `0600`, `1200`, `1800` | `0000` | Forecast initialization time (UTC) |
-| `forecast_date` | string | `YYYYMMDD` format | Today's date | Date for which to generate forecast |
+| `forecast_date` | string | `YYYYMMDD` format | Today's date (at request time) | Date for which to generate forecast |
 | `delete_forecasts` | string | `Y` or `N` | `Y` | Delete raw forecast files after processing |
 
 #### How to Use the Interactive API Docs
@@ -413,7 +485,7 @@ This is the main endpoint for generating forecasts. It accepts several optional 
 4. **Click the "Try it out" button** (top right of the endpoint section)
 
 5. **Fill in the parameters** (or leave them blank for defaults):
-   - **accumulation:** Type `6h` or `24h` (or leave empty for both)
+   - **accumulation:** Type `6h` or `24h` (or leave empty for the dataset's default)
    - **time:** Select `0000`, `0600`, `1200`, or `1800`
    - **forecast_date:** Enter a date like `20250117` (or leave empty for today)
    - **delete_forecasts:** Type `Y` or `N`
@@ -503,24 +575,22 @@ When you call `/gen-forecast`, you'll receive a JSON response:
 }
 ```
 
-**Possible status values:**
-- `started` - Forecast generation has begun
-- `complete` - Forecast generation finished successfully
-- `pending` - Forecast is queued but not yet started
-- `failed` - Forecast generation encountered an error
+The endpoint currently always returns `started` — it does not track the job afterwards
+(the response schema also reserves `complete`, `pending` and `failed` for future use).
 
 **Important Notes:**
 
 ⚠️ **The endpoint returns immediately** after starting the forecast generation process. The actual forecast generation happens in the background and may take several minutes to complete.
 
-⚠️ **Check the terminal/logs** to see the progress of forecast generation.
+⚠️ **Check the terminal/logs** to see the progress of forecast generation
+(`docker compose logs -f web` when running under Docker Compose).
 
 ⚠️ **The forecast will be available** in the web interface once processing is complete (check `http://localhost:8000/showForecasts.html`).
 
 #### API Usage Examples for Different Scenarios
 
 **Example 1: Daily Automated Forecast**
-Generate both 6h and 24h forecasts for today at midnight:
+Generate today's forecast (dataset's default accumulation) initialized at midnight:
 ```bash
 curl -X GET "http://localhost:8000/gen-forecast?time=0000"
 ```
@@ -626,6 +696,8 @@ This provides a different view of the same API with a cleaner, more readable for
 ```bash
 cd ~/Documents/SEWAA-forecasts
 git pull origin main
+uv sync                                  # refresh Python packages (uv installs)
+docker compose up -d --build --remove-orphans   # or rebuild the containers (Docker Compose)
 ```
 
 ### If You Downloaded as ZIP:
@@ -662,15 +734,15 @@ git pull origin main
 
 ### Common Issues and Solutions
 
-#### 1. **"conda: command not found"**
-   - **Solution:** Conda is not installed or not in your PATH
-   - Reinstall Miniconda and restart your terminal
-   - Make sure to check the option to add Conda to PATH during installation
+#### 1. **"conda: command not found" / "uv: command not found"**
+   - **Solution:** The tool is not installed or not in your PATH
+   - Reinstall it ([Step 2](#step-2-set-up-python-environment)) and restart your terminal
+   - For Miniconda, make sure to check the option to add Conda to PATH during installation
 
 #### 2. **"ImportError: No module named 'tensorflow'"**
    - **Solution:** TensorFlow is not installed or the wrong environment is active
-   - Run: `conda activate tf215gpu`
-   - If still failing: `pip install tensorflow==2.15`
+   - Run: `source .venv/bin/activate` (uv) or `conda activate tf215gpu` (conda)
+   - If still failing: `uv sync`, or `pip install tensorflow==2.15.0`
 
 #### 3. **"Port 8000 is already in use"**
    - **Solution:** Another application is using port 8000
@@ -688,10 +760,13 @@ git pull origin main
      if that's the dataset you're checking)
    - If empty, generate forecasts using `python run_forecast.py`
 
-#### 6. **"Cannot download ECMWF data"**
-   - **Solution:** You need access credentials
-   - Contact ICPAC or Oxford team for `gbmc` access
-   - Or use existing sample data for testing
+#### 6. **"Cannot download IFS data"**
+   - The error `... is not available from any known source` means none of the IFS
+     mirrors has that file yet — new initializations appear a few hours after the run
+     time, so retry later or pick an earlier `--date`/`--time`
+   - Check the server can reach the mirrors (e.g. `curl -I https://rain.physics.ox.ac.uk`)
+   - Errors like `NetCDF: HDF error` came from reading half-downloaded files; current
+     versions validate downloads and clean up stale `*.part` files, so just re-run
 
 #### 7. **Web page loads but shows no data**
    - **Solution:** JavaScript files might not be loading
@@ -702,6 +777,11 @@ git pull origin main
    - **Solution:** Check Docker Desktop is running
    - Ensure you have enough disk space (10+ GB free)
    - Try: `docker system prune` to free up space
+
+#### 9. **Forecast job container keeps restarting / exits with code 137**
+   - **Solution:** The container ran out of memory during inference
+   - Make sure the host has at least `CGAN_MEM_LIMIT` (default `16g`) free, or raise it in `.env`
+   - Run fewer job services at once (e.g. `docker compose up -d web imerg nginx`)
 
 ---
 
@@ -738,21 +818,30 @@ Contributions are welcome! If you'd like to improve the code or documentation:
 
 ```
 SEWAA-forecasts/
-├── 6h_accumulations/          # 6-hour forecast data and models
-├── 24h_accumulations/         # 24-hour forecast data and models
+├── 6h_accumulations/          # 6-hour forecast code, models and data (IMERG)
+├── 24h_accumulations/         # 24-hour forecast code, models and data
+├── datasets/                  # Per-dataset (imerg, chirps, rfe) model weights and configs
 ├── interface/                 # Web interface files
 │   ├── static/               # JavaScript, CSS, images
 │   ├── data/                 # Forecast data for visualization
 │   └── *.html                # Web pages
 ├── shapes/                    # Geographic boundary files
 ├── ELR/                       # Ensemble Logistic Regression code
-├── ELR_predictions/          # ELR forecast outputs
-├── cGAN_data/                # Model training data
-├── run_forecast.py           # Main forecast generation script
-├── start_forecasting.py      # Automatic forecasting script
-├── main.py                   # FastAPI web server
-├── Dockerfile                # Docker configuration
-└── README.md                 # This file
+├── cGAN_data/                 # Model constants and normalisation data
+├── configs/                   # nginx proxy configuration
+├── deploy/                    # Cloud Run Jobs deployment (see deploy/README.md)
+├── dataset_config.py          # Dataset registry, selected via CGAN_DATASET
+├── run_forecast.py            # Main forecast generation script
+├── start_forecasting.py       # Continuous automatic forecasting loop
+├── auto_forecasts.py          # One-shot catch-up forecasting (cron / Cloud Run)
+├── main.py                    # FastAPI web server
+├── Dockerfile                 # Application image (web + forecast jobs)
+├── nginx.Dockerfile           # Data proxy image
+├── docker-compose.yml         # web, imerg, rfe, chirps and nginx services
+├── .env.example               # Configuration template for docker-compose.yml
+├── cloudbuild.yaml            # Cloud Build config for the Cloud Run Jobs
+├── pyproject.toml / uv.lock   # Python dependencies
+└── README.md                  # This file
 ```
 
 ---
@@ -763,9 +852,9 @@ This project is maintained by ICPAC-IGAD for operational rainfall forecasting in
 
 ---
 
-**Last Updated:** December 2025
+**Last Updated:** October 2026
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 
 ---
 

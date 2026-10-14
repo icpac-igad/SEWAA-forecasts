@@ -3,15 +3,18 @@
 
 Dataset selection via CGAN_DATASET environment variable (default: imerg).
 Supports IMERG (6h + 24h), CHIRPS (24h), RFE (24h). IFS input data is fetched
-over HTTP from the Oxford archive, falling back to megacorr.dynu.net.
+over HTTP from the Oxford archive, falling back to megacorr.dynu.net and then the
+ICPAC data portal (see IFS_SOURCES).
 
     CGAN_DATASET=imerg python run_forecast.py --accumulation 24h --date 20260920
     CGAN_DATASET=chirps python run_forecast.py --date 20260920
     CGAN_DATASET=rfe python run_forecast.py --date 20260920
 """
 import argparse
+import glob
 import os
 import sys
+import time
 import subprocess
 import pathlib
 import platform
@@ -118,6 +121,9 @@ def resolve_args(args):
 
 
 # ── IFS download ──────────────────────────────────────────────────────────────
+# A *.part file untouched for this long belongs to a download that was killed (curl writes
+# continuously, so a live download keeps refreshing its mtime).
+STALE_PART_SECONDS = 3600
 # Mirrors to try in order, highest precedence first. All datasets 
 # read from the same IFS archive, so a single HTTP fallback chain covers
 # all of them without any per-dataset download configuration.
@@ -149,6 +155,16 @@ def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
             return dst
         print(f"{dst} exists but is corrupt/incomplete; re-downloading.")
         os.remove(dst)
+
+    # Temp files are named per-PID, so a killed process's partial download is never
+    # resumed by a later run -- remove stale ones instead of letting them pile up.
+    for part in glob.glob(f"{glob.escape(dst)}.*.part"):
+        try:
+            if time.time() - os.path.getmtime(part) > STALE_PART_SECONDS:
+                print(f"Removing stale partial download {part}")
+                os.remove(part)
+        except OSError:
+            pass
 
     year = date_str[:4]
     oblivion = "nul" if platform.system() == "Windows" else "/dev/null"

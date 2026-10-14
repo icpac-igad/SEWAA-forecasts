@@ -4,7 +4,7 @@ Production runs each forecast **channel** (dataset + accumulation — imerg-6h, 
 rfe-24h, chirps-24h) as its own **Cloud Run Job**, triggered on a cron by **Cloud
 Scheduler**, plus one Cloud Run **Service** that serves the resulting data as static files.
 This swaps the local docker-compose topology's bind-mounted host directories
-(`jobs` / `jobs-rfe` / `jobs-chirps` + `nginx` in `../docker-compose.yml`) for a GCS bucket
+(`imerg` / `rfe` / `chirps` + `nginx` in `../docker-compose.yml`) for a GCS bucket
 mounted via Cloud Run's native Cloud Storage FUSE volume support — no code changes needed,
 `main.py`/`run_forecast.py` just write local files that happen to be backed by GCS.
 
@@ -17,7 +17,7 @@ waiting on a slow upstream IFS mirror) never delays or queues behind another (e.
 `start_forecasting.py` is an infinite polling loop (`schedule` + `while True`), and Cloud Run
 Services expect a container listening on `$PORT` — a permanently-running non-HTTP worker doesn't
 fit that model well, and paying for 24/7 idle CPU to run `time.sleep()` is wasteful. `docker-compose.yml`'s
-`jobs`/`jobs-rfe`/`jobs-chirps` services still run `start_forecasting.py` for that always-on
+`imerg`/`rfe`/`chirps` services still run `start_forecasting.py` for that always-on
 deployment; Cloud Run instead uses `auto_forecasts.py`, a one-shot equivalent scoped to a single
 dataset+accumulation channel — it checks the last `--days_to_check` days for missing output and
 generates only what's missing (via `run_forecast.py`'s own counts-file check), safe to call

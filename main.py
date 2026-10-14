@@ -124,7 +124,7 @@ async def get_documentation(request: Request) -> HTMLResponse:
 async def generate_forecasts(
     accumulation: Literal["6h", "24h"] | None = None,
     time: Literal["0000", "0600", "1200", "1800"] | None = "0000",
-    forecast_date: str | None = datetime.today().strftime("%Y%m%d"),
+    forecast_date: str | None = None,
     delete_forecasts: Literal["Y", "N"] | None = "Y",
 ) -> GenForecastPayload:
     """
@@ -139,12 +139,15 @@ async def generate_forecasts(
         - time (optional): forecast initialization time. Valid for 6h accumulation forecast. Any of 0000, 0600, 1200 and 1800. Defaults to 0000.
 
     """
-    params = ["python", "run_forecast.py", "--delete_forecasts", delete_forecasts]
+    # Resolved per request: a default in the signature would be frozen at server start.
+    if forecast_date is None:
+        forecast_date = datetime.today().strftime("%Y%m%d")
+    params = ["python", "run_forecast.py", "--delete_forecasts", delete_forecasts, "--date", forecast_date]
     if accumulation is not None:
         params.extend(["--accumulation", accumulation])
-    if forecast_date is not None:
-        params.extend(["--date", forecast_date])
     if time is not None:
         params.extend(["--time", time])
-    subprocess.run(params)
+    # Run in the background: a forecast takes minutes, and waiting on it here would tie up
+    # one of the (few) API workers for the whole run.
+    subprocess.Popen(params)
     return GenForecastPayload(status="started")

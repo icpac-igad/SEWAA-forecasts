@@ -14,7 +14,7 @@
 # the standard serverless replacement for an always-on polling container, and it avoids
 # paying for 24/7 idle CPU.
 #
-# For a docker-compose / always-on deployment, the jobs/jobs-rfe/jobs-chirps services in
+# For a docker-compose / always-on deployment, the imerg/rfe/chirps services in
 # docker-compose.yml still run start_forecasting.py's continuous polling loop instead —
 # this file is specifically the Cloud Run Jobs path.
 #
