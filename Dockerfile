@@ -6,7 +6,7 @@ ARG USER_NAME=cgan
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 ARG WORK_HOME=/opt/cgan
-ARG API_WORKERS=32
+ARG API_WORKERS=4
 
 # install system libraries
 RUN apt-get update -y && \
