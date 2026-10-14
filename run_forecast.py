@@ -160,9 +160,26 @@ def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
                            capture_output=True, text=True)
         if r.stdout.strip().endswith("200"):
             print(f"Downloading {fname} from {name} -> {ifs_dir}/")
-            subprocess.run(["curl", "-fL", "--retry", "20", "--retry-delay", "5",
-                            "-C", "-", url, "-o", dst])
-            return dst
+            # Download to a per-process temp file and only move it into place once it
+            # opens as valid netCDF. curl's exit code alone isn't enough (a dropped
+            # connection mid-transfer leaves a truncated file), and writing straight to
+            # dst lets the forecast step -- or another job sharing this folder -- read a
+            # half-written file ("NetCDF: HDF error").
+            tmp = f"{dst}.{os.getpid()}.part"
+            for attempt in range(1, 4):
+                c = subprocess.run(["curl", "-fL", "--retry", "20", "--retry-delay", "5",
+                                    "--retry-all-errors", "-C", "-", url, "-o", tmp])
+                if c.returncode == 0 and is_valid_netcdf(tmp):
+                    os.replace(tmp, dst)
+                    return dst
+                print(f"Download of {fname} from {name} failed or is incomplete "
+                      f"(curl exit {c.returncode}, attempt {attempt}/3).")
+                # A clean curl exit with an unreadable file can't be fixed by resuming.
+                if c.returncode == 0 and os.path.isfile(tmp):
+                    os.remove(tmp)
+            if os.path.isfile(tmp):
+                os.remove(tmp)
+            continue
         print(f"{fname} not available from {name} (HTTP {r.stdout.strip()}).")
 
     sources = ", ".join(name for name, _ in IFS_SOURCES)
