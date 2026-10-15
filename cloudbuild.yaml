@@ -183,10 +183,10 @@ images:
   - ${_NGINX_IMAGE}
 
 substitutions:
-  _REGION: europe-west1
+  _REGION: ${_REGION:-europe-west1}
   _IMAGE: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/cgan/cgan-v2:${SHORT_SHA}
   _NGINX_IMAGE: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/cgan/cgan-proxy-server:${SHORT_SHA}
-  _FORECAST_DATA_BUCKET: CHANGEME-forecast-data-bucket
+  _FORECAST_DATA_BUCKET: ${FORECAST_DATA_BUCKET:-forecast-data-bucket}
 
 options:
   logging: CLOUD_LOGGING_ONLY
