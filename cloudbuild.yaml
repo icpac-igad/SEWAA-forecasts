@@ -1,9 +1,9 @@
 # Cloud Build config: builds the unified cgan-forecasts image once, then deploys it as
-# four Cloud Run Jobs — one per forecast "channel" (dataset + accumulation): imerg-6h,
-# imerg-24h, rfe-24h, chirps-24h. All four run the exact same image; CGAN_DATASET is a
-# runtime env var (dataset_config.py), not a build arg, so a single build serves all four
-# jobs plus the data-portal nginx image (see nginx.Dockerfile, not built here — it has no
-# dataset-specific behavior and rarely changes).
+# Cloud Run Jobs — one per forecast "channel" (dataset + accumulation): imerg-6h,
+# imerg-24h, rfe-24h, chirps-24h, with imerg-6h further split into one job per IFS
+# initialisation time (cgan-jobs-imerg-6h-00z/-06z/-12z/-18z). All jobs run the exact same
+# image; CGAN_DATASET is a runtime env var (dataset_config.py), not a build arg, so a single
+# build serves all jobs. The data-portal nginx image (nginx.Dockerfile) is built alongside it.
 #
 # Each job runs `auto_forecasts.py --dataset <name> --accumulation <accum>` once and exits
 # (catch-up over the last `--days_to_check` days, idempotent via run_forecast.py's own
@@ -19,12 +19,14 @@
 # this file is specifically the Cloud Run Jobs path.
 #
 # Required substitutions (pass via --substitutions or a trigger's substitution config):
-#   _AR_DEPLOY_REGION              e.g. europe-west1 (matches the existing icpac-data-portal region)
-#   _FORECAST_DATA_BUCKET  GCS bucket the jobs write viz-ready data + accumulations into.
-#                        NOTE: confirm this against whoever owns the existing
-#                        icpac-data-portal Cloud Run service before first deploy — its
-#                        source isn't in this repo, so this plan can't confirm whether it
-#                        already reads from a specific bucket/prefix layout.
+#   _AR_DEPLOY_REGION    region for Artifact Registry and the jobs/service (default europe-west1)
+#   _AR_PROJECT_ID       project hosting the Artifact Registry repo (default: the build's project)
+#   _FORECAST_DATA_BUCKET  GCS bucket the jobs write viz-ready data + accumulations into. The
+#                        cgan-cms Cloud Run service mounts its interface/<dataset> prefixes
+#                        read-only, so both repos must use the same bucket.
+#
+# Images are tagged with $BUILD_ID, which (unlike $SHORT_SHA) is also set for
+# `gcloud builds submit`; triggers additionally label each build with the commit.
 #
 # CPU/RAM defaults below (4 vCPU / 8 GiB, 1h timeout) are a starting point sized for CPU-only
 # TensorFlow 2.15 inference (pyproject.toml, no CUDA in Dockerfile) over a 7-member 24h
@@ -47,32 +49,113 @@ steps:
     name: gcr.io/cloud-builders/docker
     args: ["push", "${_NGINX_IMAGE}"]
 
-  - id: deploy-jobs-imerg-6h
+  # IMERG 6h: one job per IFS initialisation time (00/06/12/18Z) via auto_forecasts.py
+  # --time, so the four init times generate in parallel and none queues behind another.
+  # Each run still executes forecast_date.py's whole 4-lead-time loop (30/36/42/48h) in one
+  # process at ensemble_members: 1000 (6h_accumulations/cGAN/dsrnngan/forecast.yaml, kept
+  # at 1000 by design), and gen.predict()'s known per-call memory growth (plain Python loop,
+  # no tf.function/batching) compounds across all 4x1000 calls before the process exits --
+  # it OOM'd in production at 8Gi. 16Gi is unverified for that load: watch peak memory in
+  # Cloud Monitoring and raise --memory (Cloud Run needs more vCPU above 16Gi) if a run is
+  # killed with exit 137. Each job only processes its own init time's IFS/GAN files, so they
+  # don't contend for the same files in the shared GCS folders.
+  - id: deploy-jobs-imerg-6h-00z
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
     args:
       - run
       - jobs
       - deploy
-      - cgan-jobs-imerg-6h
+      - cgan-jobs-imerg-6h-00z
       - --image=${_IMAGE}
       - --region=${_AR_DEPLOY_REGION}
       - --set-env-vars=CGAN_DATASET=imerg
-      # Higher than the other channels' 4 vCPU / 8Gi: this one runs forecast_date.py's whole
-      # 4-lead-time loop (30/36/42/48h) in a single process at ensemble_members: 1000
-      # (6h_accumulations/cGAN/dsrnngan/forecast.yaml, kept at 1000 by design), so
-      # gen.predict()'s known per-call memory growth (plain Python loop, no
-      # tf.function/batching) compounds across all 4x1000 calls before the process exits --
-      # this channel OOM'd in production at 8Gi. Cloud Run ties max memory to vCPU count, so
-      # --cpu is raised alongside --memory here, not just the memory figure.
-      - --cpu=8
-      - --memory=32Gi
+      - --cpu=4
+      - --memory=16Gi
       - --task-timeout=3600s
       - --max-retries=1
       - --tasks=1
       - --parallelism=1
       - --command=python
-      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h
+      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,0000
+      - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
+      - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
+      - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
+      - --add-volume-mount=volume=cgan-forecasts-6h-vol,mount-path=/opt/cgan/6h_accumulations/cGAN_forecasts
+      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/IFS_forecast_data
+      - --add-volume-mount=volume=ifs-6h-vol,mount-path=/opt/cgan/6h_accumulations/IFS_forecast_data
+
+  - id: deploy-jobs-imerg-6h-06z
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - cgan-jobs-imerg-6h-06z
+      - --image=${_IMAGE}
+      - --region=${_AR_DEPLOY_REGION}
+      - --set-env-vars=CGAN_DATASET=imerg
+      - --cpu=4
+      - --memory=16Gi
+      - --task-timeout=3600s
+      - --max-retries=1
+      - --tasks=1
+      - --parallelism=1
+      - --command=python
+      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,0600
+      - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
+      - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
+      - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
+      - --add-volume-mount=volume=cgan-forecasts-6h-vol,mount-path=/opt/cgan/6h_accumulations/cGAN_forecasts
+      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/IFS_forecast_data
+      - --add-volume-mount=volume=ifs-6h-vol,mount-path=/opt/cgan/6h_accumulations/IFS_forecast_data
+
+  - id: deploy-jobs-imerg-6h-12z
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - cgan-jobs-imerg-6h-12z
+      - --image=${_IMAGE}
+      - --region=${_AR_DEPLOY_REGION}
+      - --set-env-vars=CGAN_DATASET=imerg
+      - --cpu=4
+      - --memory=16Gi
+      - --task-timeout=3600s
+      - --max-retries=1
+      - --tasks=1
+      - --parallelism=1
+      - --command=python
+      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,1200
+      - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
+      - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
+      - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
+      - --add-volume-mount=volume=cgan-forecasts-6h-vol,mount-path=/opt/cgan/6h_accumulations/cGAN_forecasts
+      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/IFS_forecast_data
+      - --add-volume-mount=volume=ifs-6h-vol,mount-path=/opt/cgan/6h_accumulations/IFS_forecast_data
+
+  - id: deploy-jobs-imerg-6h-18z
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - cgan-jobs-imerg-6h-18z
+      - --image=${_IMAGE}
+      - --region=${_AR_DEPLOY_REGION}
+      - --set-env-vars=CGAN_DATASET=imerg
+      - --cpu=4
+      - --memory=16Gi
+      - --task-timeout=3600s
+      - --max-retries=1
+      - --tasks=1
+      - --parallelism=1
+      - --command=python
+      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,1800
       - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
@@ -158,6 +241,8 @@ steps:
       - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/chirps/24h/IFS_forecast_data
       - --add-volume-mount=volume=ifs-24h-vol,mount-path=/opt/cgan/24h_accumulations/IFS_forecast_data
 
+  # Data-only nginx: WEB_UPSTREAM is unset, so `/` returns 404 instead of proxying to a
+  # FastAPI `web` service that doesn't exist on Cloud Run (configs/40-web-proxy.sh).
   - id: deploy-data-portal
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
@@ -167,27 +252,35 @@ steps:
       - cgan-data-portal
       - --image=${_NGINX_IMAGE}
       - --region=${_AR_DEPLOY_REGION}
+      # nginx listens on 80 (configs/nginx.conf); Cloud Run otherwise expects 8080
+      - --port=80
+      # Cloud Storage volume mounts need the second generation execution environment
+      - --execution-environment=gen2
       - --cpu=1
       - --memory=512Mi
       - --min-instances=0
       - --allow-unauthenticated
-      - --add-volume=name=imerg-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg,ro
+      - --add-volume=name=imerg-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},readonly=true,mount-options=only-dir=interface/imerg;implicit-dirs
       - --add-volume-mount=volume=imerg-data,mount-path=/opt/interface/counts
-      - --add-volume=name=rfe-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/rfe,ro
+      - --add-volume=name=rfe-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},readonly=true,mount-options=only-dir=interface/rfe;implicit-dirs
       - --add-volume-mount=volume=rfe-data,mount-path=/opt/interface/rfe-counts
-      - --add-volume=name=chirps-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/chirps,ro
+      - --add-volume=name=chirps-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},readonly=true,mount-options=only-dir=interface/chirps;implicit-dirs
       - --add-volume-mount=volume=chirps-data,mount-path=/opt/interface/chirps-counts
 
 images:
   - ${_IMAGE}
   - ${_NGINX_IMAGE}
 
+# Values here are defaults; --substitutions / trigger substitutions override them.
 substitutions:
-  _AR_DEPLOY_REGION: ${_AR_DEPLOY_REGION:-europe-west1}
-  _AR_PROJECT_ID: ${_PROJECT_ID}
-  _IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/cgan/cgan-v2:${SHORT_SHA}
-  _NGINX_IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/cgan/cgan-proxy-server:${SHORT_SHA}
-  _FORECAST_DATA_BUCKET: ${_FORECAST_DATA_BUCKET:-forecast-data-bucket}
+  _AR_DEPLOY_REGION: europe-west1
+  _FORECAST_DATA_BUCKET: cgan-cloud-run
+  _AR_PROJECT_ID: ${PROJECT_ID}
+  _IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/cgan/cgan-v2:${BUILD_ID}
+  _NGINX_IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/cgan/cgan-proxy-server:${BUILD_ID}
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  # _IMAGE/_NGINX_IMAGE/_AR_PROJECT_ID reference other substitutions and built-ins
+  # (PROJECT_ID, BUILD_ID); `gcloud builds submit` only expands those with this set.
+  dynamicSubstitutions: true
