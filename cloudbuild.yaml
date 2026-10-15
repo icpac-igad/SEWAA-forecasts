@@ -19,7 +19,7 @@
 # this file is specifically the Cloud Run Jobs path.
 #
 # Required substitutions (pass via --substitutions or a trigger's substitution config):
-#   _REGION              e.g. europe-west1 (matches the existing icpac-data-portal region)
+#   _AR_DEPLOY_REGION              e.g. europe-west1 (matches the existing icpac-data-portal region)
 #   _FORECAST_DATA_BUCKET  GCS bucket the jobs write viz-ready data + accumulations into.
 #                        NOTE: confirm this against whoever owns the existing
 #                        icpac-data-portal Cloud Run service before first deploy — its
@@ -56,7 +56,7 @@ steps:
       - deploy
       - cgan-jobs-imerg-6h
       - --image=${_IMAGE}
-      - --region=${_REGION}
+      - --region=${_AR_DEPLOY_REGION}
       - --set-env-vars=CGAN_DATASET=imerg
       # Higher than the other channels' 4 vCPU / 8Gi: this one runs forecast_date.py's whole
       # 4-lead-time loop (30/36/42/48h) in a single process at ensemble_members: 1000
@@ -89,7 +89,7 @@ steps:
       - deploy
       - cgan-jobs-imerg-24h
       - --image=${_IMAGE}
-      - --region=${_REGION}
+      - --region=${_AR_DEPLOY_REGION}
       - --set-env-vars=CGAN_DATASET=imerg
       - --cpu=4
       - --memory=8Gi
@@ -115,7 +115,7 @@ steps:
       - deploy
       - cgan-jobs-rfe-24h
       - --image=${_IMAGE}
-      - --region=${_REGION}
+      - --region=${_AR_DEPLOY_REGION}
       - --set-env-vars=CGAN_DATASET=rfe
       - --cpu=4
       - --memory=8Gi
@@ -141,7 +141,7 @@ steps:
       - deploy
       - cgan-jobs-chirps-24h
       - --image=${_IMAGE}
-      - --region=${_REGION}
+      - --region=${_AR_DEPLOY_REGION}
       - --set-env-vars=CGAN_DATASET=chirps
       - --cpu=4
       - --memory=8Gi
@@ -166,7 +166,7 @@ steps:
       - deploy
       - cgan-data-portal
       - --image=${_NGINX_IMAGE}
-      - --region=${_REGION}
+      - --region=${_AR_DEPLOY_REGION}
       - --cpu=1
       - --memory=512Mi
       - --min-instances=0
@@ -183,10 +183,11 @@ images:
   - ${_NGINX_IMAGE}
 
 substitutions:
-  _REGION: ${_REGION:-europe-west1}
-  _IMAGE: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/cgan/cgan-v2:${SHORT_SHA}
-  _NGINX_IMAGE: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/cgan/cgan-proxy-server:${SHORT_SHA}
-  _FORECAST_DATA_BUCKET: ${FORECAST_DATA_BUCKET:-forecast-data-bucket}
+  _AR_DEPLOY_REGION: ${_AR_DEPLOY_REGION:-europe-west1}
+  _AR_PROJECT_ID: ${_PROJECT_ID}
+  _IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/cgan/cgan-v2:${SHORT_SHA}
+  _NGINX_IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/cgan/cgan-proxy-server:${SHORT_SHA}
+  _FORECAST_DATA_BUCKET: ${_FORECAST_DATA_BUCKET:-forecast-data-bucket}
 
 options:
   logging: CLOUD_LOGGING_ONLY
