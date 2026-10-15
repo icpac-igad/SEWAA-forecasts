@@ -203,8 +203,8 @@ substitutions:
   _AR_DEPLOY_REGION: ${LOCATION}
   _FORECAST_DATA_BUCKET: cgan-cloud-run
   _AR_PROJECT_ID: ${PROJECT_ID}
-  _IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/cgan-v2:${BUILD_ID}
-  _NGINX_IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/cgan-proxy-server:${BUILD_ID}
+  _IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/cgan-v3:${BUILD_ID}
+  _NGINX_IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/cgan-v3-data-portal:${BUILD_ID}
 
 options:
   logging: CLOUD_LOGGING_ONLY
