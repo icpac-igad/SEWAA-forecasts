@@ -24,12 +24,17 @@ import netCDF4 as nc
 import numpy as np
 from tensorflow.keras.utils import Progbar
 
-from data import HOURS, all_fcst_fields, accumulated_fields, nonnegative_fields, fcst_norm, logprec, denormalise, load_hires_constants
+from data import all_fcst_fields, accumulated_fields, nonnegative_fields, fcst_norm, logprec, denormalise, load_hires_constants
 import read_config
 from noise import NoiseGenerator
 from setupmodel import setup_model
 
 from datetime import datetime, timedelta
+
+# The IFS input file has 6-hourly time steps, and the IMERG models (logs_1/5/17) were
+# trained on inputs normalised with 6h steps. data.HOURS is 24 since the unified codebase
+# (it's the accumulation period for CHIRPS/RFE), so don't use it here.
+HOURS = 6
 
 # Get the valid time number from the command line
 valid_time_num = int(sys.argv[1])

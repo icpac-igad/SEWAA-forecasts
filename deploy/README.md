@@ -96,8 +96,10 @@ Each Cloud Run Job mounts only the `only-dir` prefixes it needs via GCS FUSE
 
 - **cgan-cms** (the public site, `../cgan-cms`) mounts `interface/{imerg,rfe,chirps}`
   read-only on its own Cloud Run service and serves them same-origin at `/data/`,
-  `/data/rfe/`, `/data/chirps/`. Its `deploy/cloud_run_service.json` must name the same
-  bucket as `_FORECAST_DATA_BUCKET` here. It no longer uses the old
+  `/data/rfe/`, `/data/chirps/`, at the same mount points as `cgan-data-portal` below
+  (`/opt/interface/{counts,rfe-counts,chirps-counts}`). Its `cloudbuild.yaml` uses the same
+  substitution names as this one (`_AR_DEPLOY_REGION`, `_AR_PROJECT_ID`, `_AR_REPOSITORY`,
+  `_FORECAST_DATA_BUCKET`): give both triggers the same values. It no longer uses the old
   `icpac-data-portal…/cgan-data/` URL.
 - **`cgan-data-portal`** (this repo's nginx image) serves the same three prefixes read-only at
   the same paths, with `Access-Control-Allow-Origin: *`, for any other consumer. It is
@@ -115,10 +117,12 @@ gcloud storage rsync ELR/climatological_exceedances gs://<bucket>/interface/imer
 ## Before first deploy
 
 Fill in / confirm:
-- `_AR_DEPLOY_REGION` (default `europe-west1`) and `_AR_PROJECT_ID` (default: the build's project)
-- `_FORECAST_DATA_BUCKET`: create the bucket (the prefixes above are created by the jobs on first
-  write) and use the same name in cgan-cms' `deploy/cloud_run_service.json`
-- The Artifact Registry repo `cgan` in `_AR_DEPLOY_REGION`
+- `_AR_DEPLOY_REGION` (default: the build's `LOCATION`, so run regional builds or triggers; a
+  `global` build has no usable region) and `_AR_PROJECT_ID` (default: the build's project)
+- `_FORECAST_DATA_BUCKET` (default `cgan-cloud-run`): create the bucket (the prefixes above are
+  created by the jobs on first write) and set the same value on cgan-cms' trigger
+- The Artifact Registry repo `_AR_REPOSITORY` (default `cloud-run-source-deploy`) in
+  `_AR_DEPLOY_REGION`
 - The jobs' runtime service account needs `roles/storage.objectAdmin` on the bucket;
   cgan-cms' and the data portal's need `roles/storage.objectViewer`
 - A service account for Cloud Scheduler with `roles/run.invoker` on each Cloud Run Job
