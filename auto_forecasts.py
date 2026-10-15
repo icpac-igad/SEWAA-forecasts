@@ -8,6 +8,11 @@ deploy/setup-cloud-scheduler.sh), one Cloud Run Job per channel, so a slow CHIRP
 run never queues behind IMERG the way start_forecasting.py's single-process,
 sequential polling loop would.
 
+Runs of the same channel never overlap: the whole run holds a per-channel lock
+(job_lock.py) and a run that finds it held exits 0 without doing anything. Cloud Run
+starts a new execution on every schedule tick even if the previous one is still busy,
+e.g. while IMERG 6h catches up several init times in one execution.
+
 For a docker-compose / always-on deployment, use start_forecasting.py instead --
 it polls continuously inside one long-running container per dataset.
 
@@ -23,6 +28,7 @@ from datetime import datetime, timedelta
 from pandas import date_range
 
 from dataset_config import DATASETS, get_active_dataset_name
+from job_lock import LockHeld, channel_lock
 
 # Valid initialisation times per accumulation window (mirrors run_forecast.py's
 # resolve_args validation).
@@ -224,13 +230,21 @@ if __name__ == "__main__":
         type=str,
     )
     args = parser.parse_args()
-    succeeded = auto_gen_forecasts(
-        dataset=args.dataset,
-        start_date=args.start_date,
-        final_date=args.final_date,
-        time=args.time,
-        accumulation=args.accumulation,
-        days_to_check=args.days_to_check,
-        delete_forecasts=args.delete_forecasts,
-    )
+    accumulation = args.accumulation or DATASETS[args.dataset]["default_accumulation"]
+    channel = f"{args.dataset}-{accumulation}"
+    try:
+        with channel_lock(channel):
+            succeeded = auto_gen_forecasts(
+                dataset=args.dataset,
+                start_date=args.start_date,
+                final_date=args.final_date,
+                time=args.time,
+                accumulation=accumulation,
+                days_to_check=args.days_to_check,
+                delete_forecasts=args.delete_forecasts,
+            )
+    except LockHeld as held:
+        # Not a failure: the run already in progress covers this channel.
+        print(f"[{channel}] another run is in progress ({held}); exiting.")
+        sys.exit(0)
     sys.exit(0 if succeeded else 1)

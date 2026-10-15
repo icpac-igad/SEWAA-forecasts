@@ -1,8 +1,6 @@
 # Cloud Build config: builds the unified cgan-forecasts image once, then deploys it as
 # Cloud Run Jobs — one per forecast "channel" (dataset + accumulation): imerg-6h,
-# imerg-24h, rfe-24h, chirps-24h, with imerg-6h further split into one job per IFS
-# initialisation time (cgan-jobs-imerg-6h-00z/-06z/-12z/-18z). All jobs run the exact same
-# image; CGAN_DATASET is a runtime env var (dataset_config.py), not a build arg, so a single
+# imerg-24h, rfe-24h, chirps-24h. All jobs run the exact same image; CGAN_DATASET is a runtime env var (dataset_config.py), not a build arg, so a single
 # build serves all jobs. The data-portal nginx image (nginx.Dockerfile) is built alongside it.
 #
 # Each job runs `auto_forecasts.py --dataset <name> --accumulation <accum>` once and exits
@@ -49,113 +47,41 @@ steps:
     name: gcr.io/cloud-builders/docker
     args: ["push", "${_NGINX_IMAGE}"]
 
-  # IMERG 6h: one job per IFS initialisation time (00/06/12/18Z) via auto_forecasts.py
-  # --time, so the four init times generate in parallel and none queues behind another.
-  # Each run still executes forecast_date.py's whole 4-lead-time loop (30/36/42/48h) in one
-  # process at ensemble_members: 1000 (6h_accumulations/cGAN/dsrnngan/forecast.yaml, kept
-  # at 1000 by design), and gen.predict()'s known per-call memory growth (plain Python loop,
-  # no tf.function/batching) compounds across all 4x1000 calls before the process exits --
-  # it OOM'd in production at 8Gi. 16Gi is unverified for that load: watch peak memory in
-  # Cloud Monitoring and raise --memory (Cloud Run needs more vCPU above 16Gi) if a run is
-  # killed with exit 137. Each job only processes its own init time's IFS/GAN files, so they
-  # don't contend for the same files in the shared GCS folders.
-  - id: deploy-jobs-imerg-6h-00z
+  # IMERG 6h: one job for all four IFS init times (00/06/12/18Z). They arrive ~6h apart, so
+  # a scheduled run normally finds one new init time and skips the rest (run_forecast.py's
+  # counts-file check); catch-up after an outage processes them newest date first, one
+  # after another. A single job keeps available_dates.json single-writer -- four parallel
+  # per-init-time jobs would rewrite it concurrently and drop each other's updates.
+  #
+  # Each init time is its own run_forecast.py process, so gen.predict()'s per-call memory
+  # growth (plain Python loop, no tf.function/batching; ensemble_members: 1000 in
+  # 6h_accumulations/cGAN/dsrnngan/forecast.yaml, kept at 1000 by design) resets between
+  # init times and only compounds across one init time's 4 lead times (30/36/42/48h). That
+  # OOM'd at 8Gi; 16Gi is unverified -- watch peak memory and raise --memory (Cloud Run
+  # needs more vCPU above 16Gi) if a run exits 137.
+  #
+  # --task-timeout allows a catch-up of several init times in one execution. Executions
+  # that start while one is still running exit immediately (job_lock.py), so a long run
+  # never overlaps the next scheduled one.
+  - id: deploy-jobs-imerg-6h
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
     args:
       - run
       - jobs
       - deploy
-      - cgan-jobs-imerg-6h-00z
+      - cgan-jobs-imerg-6h
       - --image=${_IMAGE}
       - --region=${_AR_DEPLOY_REGION}
-      - --set-env-vars=CGAN_DATASET=imerg
+      - --set-env-vars=CGAN_DATASET=imerg,CGAN_LOCK_BUCKET=${_FORECAST_DATA_BUCKET}
       - --cpu=4
       - --memory=16Gi
-      - --task-timeout=3600s
+      - --task-timeout=14400s
       - --max-retries=1
       - --tasks=1
       - --parallelism=1
       - --command=python
-      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,0000
-      - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
-      - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
-      - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
-      - --add-volume-mount=volume=cgan-forecasts-6h-vol,mount-path=/opt/cgan/6h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/IFS_forecast_data
-      - --add-volume-mount=volume=ifs-6h-vol,mount-path=/opt/cgan/6h_accumulations/IFS_forecast_data
-
-  - id: deploy-jobs-imerg-6h-06z
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    entrypoint: gcloud
-    args:
-      - run
-      - jobs
-      - deploy
-      - cgan-jobs-imerg-6h-06z
-      - --image=${_IMAGE}
-      - --region=${_AR_DEPLOY_REGION}
-      - --set-env-vars=CGAN_DATASET=imerg
-      - --cpu=4
-      - --memory=16Gi
-      - --task-timeout=3600s
-      - --max-retries=1
-      - --tasks=1
-      - --parallelism=1
-      - --command=python
-      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,0600
-      - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
-      - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
-      - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
-      - --add-volume-mount=volume=cgan-forecasts-6h-vol,mount-path=/opt/cgan/6h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/IFS_forecast_data
-      - --add-volume-mount=volume=ifs-6h-vol,mount-path=/opt/cgan/6h_accumulations/IFS_forecast_data
-
-  - id: deploy-jobs-imerg-6h-12z
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    entrypoint: gcloud
-    args:
-      - run
-      - jobs
-      - deploy
-      - cgan-jobs-imerg-6h-12z
-      - --image=${_IMAGE}
-      - --region=${_AR_DEPLOY_REGION}
-      - --set-env-vars=CGAN_DATASET=imerg
-      - --cpu=4
-      - --memory=16Gi
-      - --task-timeout=3600s
-      - --max-retries=1
-      - --tasks=1
-      - --parallelism=1
-      - --command=python
-      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,1200
-      - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
-      - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
-      - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
-      - --add-volume-mount=volume=cgan-forecasts-6h-vol,mount-path=/opt/cgan/6h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/IFS_forecast_data
-      - --add-volume-mount=volume=ifs-6h-vol,mount-path=/opt/cgan/6h_accumulations/IFS_forecast_data
-
-  - id: deploy-jobs-imerg-6h-18z
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    entrypoint: gcloud
-    args:
-      - run
-      - jobs
-      - deploy
-      - cgan-jobs-imerg-6h-18z
-      - --image=${_IMAGE}
-      - --region=${_AR_DEPLOY_REGION}
-      - --set-env-vars=CGAN_DATASET=imerg
-      - --cpu=4
-      - --memory=16Gi
-      - --task-timeout=3600s
-      - --max-retries=1
-      - --tasks=1
-      - --parallelism=1
-      - --command=python
-      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h,--time,1800
+      - --args=auto_forecasts.py,--dataset,imerg,--accumulation,6h
       - --add-volume=name=viz-data,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=interface/imerg
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
@@ -173,7 +99,7 @@ steps:
       - cgan-jobs-imerg-24h
       - --image=${_IMAGE}
       - --region=${_AR_DEPLOY_REGION}
-      - --set-env-vars=CGAN_DATASET=imerg
+      - --set-env-vars=CGAN_DATASET=imerg,CGAN_LOCK_BUCKET=${_FORECAST_DATA_BUCKET}
       - --cpu=4
       - --memory=8Gi
       - --task-timeout=3600s
@@ -199,7 +125,7 @@ steps:
       - cgan-jobs-rfe-24h
       - --image=${_IMAGE}
       - --region=${_AR_DEPLOY_REGION}
-      - --set-env-vars=CGAN_DATASET=rfe
+      - --set-env-vars=CGAN_DATASET=rfe,CGAN_LOCK_BUCKET=${_FORECAST_DATA_BUCKET}
       - --cpu=4
       - --memory=8Gi
       - --task-timeout=3600s
@@ -225,7 +151,7 @@ steps:
       - cgan-jobs-chirps-24h
       - --image=${_IMAGE}
       - --region=${_AR_DEPLOY_REGION}
-      - --set-env-vars=CGAN_DATASET=chirps
+      - --set-env-vars=CGAN_DATASET=chirps,CGAN_LOCK_BUCKET=${_FORECAST_DATA_BUCKET}
       - --cpu=4
       - --memory=8Gi
       - --task-timeout=3600s
@@ -273,7 +199,7 @@ images:
 
 # Values here are defaults; --substitutions / trigger substitutions override them.
 substitutions:
-  _AR_DEPLOY_REGION: europe-west1
+  _AR_DEPLOY_REGION: ${LOCATION}
   _FORECAST_DATA_BUCKET: cgan-cloud-run
   _AR_PROJECT_ID: ${PROJECT_ID}
   _IMAGE: ${_AR_DEPLOY_REGION}-docker.pkg.dev/${_AR_PROJECT_ID}/cgan/cgan-v2:${BUILD_ID}

@@ -423,6 +423,10 @@ python auto_forecasts.py --dataset imerg --accumulation 6h
 python auto_forecasts.py --dataset chirps --accumulation 24h --days_to_check 2
 ```
 
+Runs of the same channel never overlap: a run that starts while another is still busy
+exits straight away. The lock lives in the data bucket when `CGAN_LOCK_BUCKET` is set
+(Cloud Run), otherwise it's a local file lock (`job_lock.py`).
+
 ### Using the API to Generate Forecasts
 
 The application includes a REST API that allows you to generate forecasts programmatically. This is useful for automation, integration with other systems, or remote forecast generation.
@@ -834,6 +838,7 @@ SEWAA-forecasts/
 ├── run_forecast.py            # Main forecast generation script
 ├── start_forecasting.py       # Continuous automatic forecasting loop
 ├── auto_forecasts.py          # One-shot catch-up forecasting (cron / Cloud Run)
+├── job_lock.py                # Per-channel lock so auto_forecasts.py runs never overlap
 ├── main.py                    # FastAPI web server
 ├── Dockerfile                 # Application image (web + forecast jobs)
 ├── nginx.Dockerfile           # Data proxy image

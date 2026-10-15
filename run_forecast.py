@@ -124,6 +124,11 @@ def resolve_args(args):
 # A *.part file untouched for this long belongs to a download that was killed (curl writes
 # continuously, so a live download keeps refreshing its mtime).
 STALE_PART_SECONDS = 3600
+# curl has no overall timeout by default, so a connection that stays open but stops sending
+# data would hang the run indefinitely -- and with it every other init time queued behind
+# it in the same job. Abort a transfer slower than CURL_SPEED_LIMIT bytes/s for
+# CURL_SPEED_TIME seconds; --retry then resumes it (-C -) on a fresh connection.
+CURL_TIMEOUT_ARGS = ["--connect-timeout", "30", "--speed-limit", "1024", "--speed-time", "300"]
 # Mirrors to try in order, highest precedence first. All datasets 
 # read from the same IFS archive, so a single HTTP fallback chain covers
 # all of them without any per-dataset download configuration.
@@ -172,7 +177,8 @@ def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
     for name, url_template in IFS_SOURCES:
         url = url_template.format(accum=accumulation_time, year=year, fname=fname)
         print(f"Checking {name} for {fname}")
-        r = subprocess.run(["curl", "-Isw", "%{http_code}", url, "-o", oblivion],
+        r = subprocess.run(["curl", "-Isw", "%{http_code}", "--connect-timeout", "30", "--max-time", "60",
+                            url, "-o", oblivion],
                            capture_output=True, text=True)
         if r.stdout.strip().endswith("200"):
             print(f"Downloading {fname} from {name} -> {ifs_dir}/")
@@ -184,7 +190,7 @@ def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
             tmp = f"{dst}.{os.getpid()}.part"
             for attempt in range(1, 4):
                 c = subprocess.run(["curl", "-fL", "--retry", "20", "--retry-delay", "5",
-                                    "--retry-all-errors", "-C", "-", url, "-o", tmp])
+                                    "--retry-all-errors", *CURL_TIMEOUT_ARGS, "-C", "-", url, "-o", tmp])
                 if c.returncode == 0 and is_valid_netcdf(tmp):
                     os.replace(tmp, dst)
                     return dst

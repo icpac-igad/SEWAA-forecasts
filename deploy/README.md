@@ -11,9 +11,23 @@ mounted via Cloud Run's native Cloud Storage FUSE volume support — no code cha
 One job per channel, not one job per dataset, so a slow or failing channel (e.g. CHIRPS
 waiting on a slow upstream IFS mirror) never delays or queues behind another (e.g. IMERG's
 6h products) — each is an independent Cloud Run Job execution with its own schedule.
-IMERG 6h is split further, into one job per IFS initialisation time (`cgan-jobs-imerg-6h-00z`/
-`-06z`/`-12z`/`-18z`, each running `auto_forecasts.py ... --time <HHMM>`), so the four init
-times generate in parallel instead of one after another.
+
+IMERG 6h is one job for all four IFS init times (00/06/12/18Z). They arrive about 6h apart,
+so a run normally finds one new init time and skips the rest; after an outage it catches up
+newest date first, one init time after another. Keeping it to one job means a single process
+writes `interface/imerg/counts_6h/available_dates.json`. Parallel per-init-time jobs would
+rewrite that index concurrently and drop each other's updates.
+
+### No overlapping runs
+
+Cloud Scheduler starts a new execution every 30 minutes even if the previous one is still
+running, and Cloud Run doesn't prevent that. `auto_forecasts.py` therefore holds a
+per-channel lock (`../job_lock.py`) for the whole run: an object `locks/<channel>.lock` in the
+data bucket (`CGAN_LOCK_BUCKET`), created only if absent, so exactly one execution wins. A run
+that finds the lock held logs it and exits 0. The holder refreshes the lock every minute.
+A lock not refreshed for 10 minutes (the run was OOM-killed or timed out) is treated as stale
+and taken over by the next run. A clean exit or SIGTERM releases it immediately. Without
+`CGAN_LOCK_BUCKET` (docker-compose, local runs) the lock is a local `flock`.
 
 ## Why Jobs, not an always-on Service
 
@@ -36,24 +50,28 @@ Cloud Scheduler re-invokes each job every 30 minutes — see `setup-cloud-schedu
 
 - `../cloudbuild.yaml` — builds the unified image once (used by every job — `CGAN_DATASET`
   is a runtime env var, not a build arg) plus the nginx data-portal image, then deploys:
-  `cgan-jobs-imerg-6h-{00z,06z,12z,18z}`, `cgan-jobs-imerg-24h`, `cgan-jobs-rfe-24h`, `cgan-jobs-chirps-24h`
+  `cgan-jobs-imerg-6h`, `cgan-jobs-imerg-24h`, `cgan-jobs-rfe-24h`, `cgan-jobs-chirps-24h`
   (Cloud Run Jobs), and `cgan-data-portal` (Cloud Run Service).
 - `setup-cloud-scheduler.sh` — one-time (idempotent) setup of one Cloud Scheduler trigger per job.
-  Replacing the single `cgan-jobs-imerg-6h` job doesn't remove it or its
-  `cgan-jobs-imerg-6h-trigger` — delete both by hand, or the old job keeps running every 30 min.
+  It also deletes the per-init-time `cgan-jobs-imerg-6h-{00z,06z,12z,18z}` jobs and their
+  triggers from the earlier layout if they still exist. Re-run it after deploying this change.
 
 ## Resource sizing (starting defaults — tune from Cloud Monitoring after real usage)
 
 | Job | CPU | Memory | Timeout | Rationale |
 |---|---|---|---|---|
 | `cgan-jobs-imerg-24h`, `cgan-jobs-rfe-24h`, `cgan-jobs-chirps-24h` | 4 vCPU | 8 GiB | 3600s | CPU-only TensorFlow 2.15 inference (`pyproject.toml`, no CUDA in `Dockerfile`) over a 7-lead 24h ensemble (`run_forecast.py`) plus histogram post-processing — a real but modest batch workload. |
-| `cgan-jobs-imerg-6h-00z`, `-06z`, `-12z`, `-18z` | 4 vCPU | 16 GiB | 3600s | Same inference, one IFS init time per job, but each run still does all 4 lead times (30/36/42/48h) in one process (`forecast_date.py`'s loop) — `gen.predict()`'s per-call memory growth (plain Python loop, no `tf.function`/batching) compounds across all 4x`ensemble_members: 1000` (`6h_accumulations/cGAN/dsrnngan/forecast.yaml`, kept at 1000 by design, not reduced). OOM'd in production at 8 GiB; 16 GiB is unverified for this load — check peak memory after the first runs and raise it (with more vCPU, which Cloud Run ties to memory) if a run exits 137. |
+| `cgan-jobs-imerg-6h` | 4 vCPU | 16 GiB | 14400s | Same inference. Each init time is a separate `run_forecast.py` process, so memory resets between init times, but within one init time all 4 lead times (30/36/42/48h) run in one process (`forecast_date.py`'s loop) and `gen.predict()`'s per-call memory growth (plain Python loop, no `tf.function`/batching) compounds across 4x`ensemble_members: 1000` (`6h_accumulations/cGAN/dsrnngan/forecast.yaml`, kept at 1000 by design). OOM'd in production at 8 GiB; 16 GiB is unverified — check peak memory after the first runs and raise it (with more vCPU, which Cloud Run ties to memory) if a run exits 137. The 4h timeout lets one execution catch up several init times. |
 | `cgan-data-portal` | 1 vCPU | 512 MiB | — (Service) | Static file serving only (nginx on port 80, gen2 for GCS volumes). |
 
 `--max-retries=1 --tasks=1 --parallelism=1` on every job matches `auto_forecasts.py`'s
 single-process, sequential, idempotent-on-retry behavior — a retry just re-runs it, which
 skips whatever already completed and exits non-zero only if a date/time in the range still
 failed.
+
+IFS downloads abort a transfer that drops below 1 KB/s for 5 minutes and resume it on a
+fresh connection (`CURL_TIMEOUT_ARGS` in `../run_forecast.py`), so a stalled mirror can't
+hold up the init times queued behind it.
 
 ## Storage layout
 
