@@ -19,7 +19,10 @@ PERIOD:
     end:   20260903
 
 OUTPUT:
-    folder: ../fcst_run07_operational
-    ensemble_members: 50
+    # Per-lead GAN_<date>_00Z_v<lead>.nc into the mounted cGAN_forecasts folder (the bucket on
+    # Cloud Run): ELR reads lead 1 from here, and run_forecast.py deletes them once the
+    # histogram counts and ELR outputs exist.
+    folder: ../../cGAN_forecasts
+    ensemble_members: 1000
     save_crps_only: False
     histogram_folder: ../../../interface/data/counts_24h
