@@ -64,9 +64,10 @@ def _holder_id() -> str:
 
 
 class _GcsLock:
-    def __init__(self, bucket: str, name: str):
+    def __init__(self, bucket: str, name: str, stale_seconds: int = STALE_SECONDS):
         self.bucket = bucket
         self.name = name
+        self.stale_seconds = stale_seconds
         self.generation: str | None = None
         self._token: str | None = None
         self._token_expiry = 0.0
@@ -121,7 +122,7 @@ class _GcsLock:
             raise
         updated = datetime.fromisoformat(obj["updated"].replace("Z", "+00:00"))
         age = (datetime.now(timezone.utc) - updated).total_seconds()
-        if age < STALE_SECONDS:
+        if age < self.stale_seconds:
             holder = (obj.get("metadata") or {}).get("holder", "unknown")
             raise LockHeld(f"{self.name} held by {holder} (last heartbeat {int(age)}s ago)")
         print(f"[lock] {self.name} is stale (last heartbeat {int(age)}s ago); removing it")
@@ -169,8 +170,10 @@ class _GcsLock:
 
 
 class _FileLock:
-    def __init__(self, name: str):
-        self.path = os.path.join(tempfile.gettempdir(), name.replace("/", "_"))
+    def __init__(self, name: str, directory: str | None = None):
+        directory = directory or tempfile.gettempdir()
+        os.makedirs(directory, exist_ok=True)
+        self.path = os.path.join(directory, name.replace("/", "_"))
         self._fh = None
 
     def acquire(self) -> None:
@@ -193,16 +196,8 @@ class _FileLock:
 
 
 @contextlib.contextmanager
-def channel_lock(channel: str):
-    """Hold the lock for `channel` (e.g. "imerg-6h") for the duration of the block.
-
-    Raises LockHeld if another live run holds it.
-    """
-    name = f"locks/{channel}.lock"
-    bucket = os.environ.get("CGAN_LOCK_BUCKET")
-    lock = _GcsLock(bucket, name) if bucket else _FileLock(f"cgan-{channel}.lock")
-    lock.acquire()
-
+def _held(lock):
+    """Release `lock` when the block exits, including on SIGTERM."""
     # Cloud Run sends SIGTERM before killing a task (timeout, cancellation): release the
     # lock so the next scheduled run doesn't have to wait for it to go stale.
     previous = signal.getsignal(signal.SIGTERM)
@@ -218,3 +213,59 @@ def channel_lock(channel: str):
     finally:
         signal.signal(signal.SIGTERM, previous)
         lock.release()
+
+
+@contextlib.contextmanager
+def channel_lock(channel: str):
+    """Hold the lock for `channel` (e.g. "imerg-6h") for the duration of the block.
+
+    Raises LockHeld if another live run holds it.
+    """
+    name = f"locks/{channel}.lock"
+    bucket = os.environ.get("CGAN_LOCK_BUCKET")
+    lock = _GcsLock(bucket, name) if bucket else _FileLock(f"cgan-{channel}.lock")
+    lock.acquire()
+    with _held(lock):
+        yield
+
+
+@contextlib.contextmanager
+def wait_for_lock(name: str, timeout: float, poll_seconds: float = 15,
+                  stale_seconds: int = STALE_SECONDS, local_dir: str | None = None,
+                  until=None):
+    """Wait up to `timeout` seconds for the lock `name`, shared across jobs/channels.
+
+    Yields True while holding it, or False if it wasn't acquired: the wait timed out, the
+    `until()` callback reported the work done meanwhile (e.g. another job finished the
+    download), or the lock backend failed. Callers must stay correct without the lock --
+    it only avoids duplicated work. Without CGAN_LOCK_BUCKET the lock is an flock in
+    `local_dir`, which should be a directory every container sharing the work mounts.
+    """
+    bucket = os.environ.get("CGAN_LOCK_BUCKET")
+    deadline = time.time() + timeout
+    waiting = False
+    while True:
+        lock = (_GcsLock(bucket, f"locks/{name}.lock", stale_seconds=stale_seconds) if bucket
+                else _FileLock(f"{name}.lock", directory=local_dir))
+        try:
+            lock.acquire()
+        except LockHeld as err:
+            if until is not None and until():
+                yield False
+                return
+            if time.time() >= deadline:
+                print(f"[lock] gave up waiting for {name} after {int(timeout)}s: {err}")
+                yield False
+                return
+            if not waiting:
+                print(f"[lock] waiting up to {int(timeout)}s for {name}: {err}")
+                waiting = True
+            time.sleep(poll_seconds)
+            continue
+        except Exception as err:  # lock backend unreachable: proceed unlocked
+            print(f"[lock] could not take {name} ({err}); continuing without it", file=sys.stderr)
+            yield False
+            return
+        with _held(lock):
+            yield True
+        return

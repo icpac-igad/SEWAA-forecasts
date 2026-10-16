@@ -47,22 +47,6 @@ steps:
     name: gcr.io/cloud-builders/docker
     args: ["push", "${_NGINX_IMAGE}"]
 
-  # IMERG 6h: one job for all four IFS init times (00/06/12/18Z). They arrive ~6h apart, so
-  # a scheduled run normally finds one new init time and skips the rest (run_forecast.py's
-  # counts-file check); catch-up after an outage processes them newest date first, one
-  # after another. A single job keeps available_dates.json single-writer -- four parallel
-  # per-init-time jobs would rewrite it concurrently and drop each other's updates.
-  #
-  # Each init time is its own run_forecast.py process, so gen.predict()'s per-call memory
-  # growth (plain Python loop, no tf.function/batching; ensemble_members: 1000 in
-  # 6h_accumulations/cGAN/dsrnngan/forecast.yaml, kept at 1000 by design) resets between
-  # init times and only compounds across one init time's 4 lead times (30/36/42/48h). That
-  # OOM'd at 8Gi; 16Gi is unverified -- watch peak memory and raise --memory (Cloud Run
-  # needs more vCPU above 16Gi) if a run exits 137.
-  #
-  # --task-timeout allows a catch-up of several init times in one execution. Executions
-  # that start while one is still running exit immediately (job_lock.py), so a long run
-  # never overlaps the next scheduled one.
   - id: deploy-jobs-imerg-6h
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
@@ -102,7 +86,7 @@ steps:
       - --set-env-vars=CGAN_DATASET=imerg,CGAN_LOCK_BUCKET=${_FORECAST_DATA_BUCKET}
       - --cpu=4
       - --memory=8Gi
-      - --task-timeout=3600s
+      - --task-timeout=14400s
       - --max-retries=1
       - --tasks=1
       - --parallelism=1
@@ -112,7 +96,9 @@ steps:
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/24h/cGAN_forecasts
       - --add-volume-mount=volume=cgan-forecasts-vol,mount-path=/opt/cgan/24h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/24h/IFS_forecast_data
+      # IFS input is the same file for every 24h model: imerg/rfe/chirps share one prefix and
+      # download it once under a lock (run_forecast.py: download_ifs_data).
+      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/ifs/24h/IFS_forecast_data
       - --add-volume-mount=volume=ifs-24h-vol,mount-path=/opt/cgan/24h_accumulations/IFS_forecast_data
 
   - id: deploy-jobs-rfe-24h
@@ -128,7 +114,7 @@ steps:
       - --set-env-vars=CGAN_DATASET=rfe,CGAN_LOCK_BUCKET=${_FORECAST_DATA_BUCKET}
       - --cpu=4
       - --memory=8Gi
-      - --task-timeout=3600s
+      - --task-timeout=14400s
       - --max-retries=1
       - --tasks=1
       - --parallelism=1
@@ -138,7 +124,7 @@ steps:
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/rfe/24h/cGAN_forecasts
       - --add-volume-mount=volume=cgan-forecasts-vol,mount-path=/opt/cgan/24h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/rfe/24h/IFS_forecast_data
+      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/ifs/24h/IFS_forecast_data
       - --add-volume-mount=volume=ifs-24h-vol,mount-path=/opt/cgan/24h_accumulations/IFS_forecast_data
 
   - id: deploy-jobs-chirps-24h
@@ -154,7 +140,7 @@ steps:
       - --set-env-vars=CGAN_DATASET=chirps,CGAN_LOCK_BUCKET=${_FORECAST_DATA_BUCKET}
       - --cpu=4
       - --memory=8Gi
-      - --task-timeout=3600s
+      - --task-timeout=14400s
       - --max-retries=1
       - --tasks=1
       - --parallelism=1
@@ -164,7 +150,7 @@ steps:
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/chirps/24h/cGAN_forecasts
       - --add-volume-mount=volume=cgan-forecasts-vol,mount-path=/opt/cgan/24h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/chirps/24h/IFS_forecast_data
+      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/ifs/24h/IFS_forecast_data
       - --add-volume-mount=volume=ifs-24h-vol,mount-path=/opt/cgan/24h_accumulations/IFS_forecast_data
 
   # Data-only nginx: WEB_UPSTREAM is unset, so `/` returns 404 instead of proxying to a

@@ -26,7 +26,8 @@ services:
       - ${cGAN_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/cGAN_forecasts
       - ${IFS_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/6h_accumulations/IFS_forecast_data
       - ${cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
-      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      # One IFS 24h folder shared by imerg/rfe/chirps: the first job to need a file downloads it.
+      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/ifs/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
       - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
 
   imerg:
@@ -46,7 +47,7 @@ services:
     volumes:
       - ${RFE_VIZ_DATA_DIR:-${STORE:-./store}/interface/rfe}:${CTNR_WORK_HOME:-/opt/cgan}/interface/data
       - ${RFE_cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/rfe/24h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
-      - ${RFE_IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/rfe/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/ifs/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
       - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
     command: ["python", "start_forecasting.py"]
 
@@ -60,7 +61,7 @@ services:
     volumes:
       - ${CHIRPS_VIZ_DATA_DIR:-${STORE:-./store}/interface/chirps}:${CTNR_WORK_HOME:-/opt/cgan}/interface/data
       - ${CHIRPS_cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/chirps/24h/cGAN_forecasts}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/cGAN_forecasts
-      - ${CHIRPS_IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/chirps/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
+      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/ifs/24h/IFS_forecast_data}:${CTNR_WORK_HOME:-/opt/cgan}/24h_accumulations/IFS_forecast_data
       - ${SSH_AUTH_KEYS:-${HOME}/.ssh}:${CTNR_WORK_HOME:-/opt/cgan}/.ssh
     command: ["python", "start_forecasting.py"]
 
@@ -83,6 +84,6 @@ services:
       - ${cGAN_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_cGAN_forecasts
       - ${IFS_6h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/6h/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/6h_IFS_forecast_data
       - ${cGAN_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/cGAN_forecasts}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_cGAN_forecasts
-      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/imerg/24h/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_IFS_forecast_data
+      - ${IFS_24h_FORECASTS_DIR:-${STORE:-./store}/forecasts/ifs/24h/IFS_forecast_data}:${PROXY_WORK_HOME:-/opt/interface}/forecasts/24h_IFS_forecast_data
       - ${RFE_VIZ_DATA_DIR:-${STORE:-./store}/interface/rfe}:${PROXY_WORK_HOME:-/opt/interface}/rfe-counts
       - ${CHIRPS_VIZ_DATA_DIR:-${STORE:-./store}/interface/chirps}:${PROXY_WORK_HOME:-/opt/interface}/chirps-counts

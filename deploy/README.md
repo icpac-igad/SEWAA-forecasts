@@ -60,7 +60,7 @@ Cloud Scheduler re-invokes each job every 30 minutes — see `setup-cloud-schedu
 
 | Job | CPU | Memory | Timeout | Rationale |
 |---|---|---|---|---|
-| `cgan-jobs-imerg-24h`, `cgan-jobs-rfe-24h`, `cgan-jobs-chirps-24h` | 4 vCPU | 8 GiB | 3600s | CPU-only TensorFlow 2.15 inference (`pyproject.toml`, no CUDA in `Dockerfile`) over a 7-lead 24h ensemble (`run_forecast.py`) plus histogram post-processing — a real but modest batch workload. |
+| `cgan-jobs-imerg-24h`, `cgan-jobs-rfe-24h`, `cgan-jobs-chirps-24h` | 4 vCPU | 8 GiB | 14400s | CPU-only TensorFlow 2.15 inference, 1000 members x 7 lead days, one process per lead (`forecast_date.py` for IMERG, `forecast_date_MW.py --lead` for RFE/CHIRPS), so `gen.predict()`'s per-call memory growth is freed between leads. Each lead's ensemble goes to the mounted `cGAN_forecasts` bucket folder and is deleted once the histogram counts and ELR outputs exist. IMERG 24h exceeded 3600s at 1000 members (killed at the task timeout on 2026-10-15). RFE/CHIRPS skip leads whose counts already exist, so a run killed at the timeout resumes. |
 | `cgan-jobs-imerg-6h` | 4 vCPU | 16 GiB | 14400s | Same inference. Each init time is a separate `run_forecast.py` process, so memory resets between init times, but within one init time all 4 lead times (30/36/42/48h) run in one process (`forecast_date.py`'s loop) and `gen.predict()`'s per-call memory growth (plain Python loop, no `tf.function`/batching) compounds across 4x`ensemble_members: 1000` (`6h_accumulations/cGAN/dsrnngan/forecast.yaml`, kept at 1000 by design). OOM'd in production at 8 GiB; 16 GiB is unverified — check peak memory after the first runs and raise it (with more vCPU, which Cloud Run ties to memory) if a run exits 137. The 4h timeout lets one execution catch up several init times. |
 | `cgan-data-portal` | 1 vCPU | 512 MiB | — (Service) | Static file serving only (nginx on port 80, gen2 for GCS volumes). |
 
@@ -84,13 +84,59 @@ gs://<bucket>/interface/imerg/...
 gs://<bucket>/interface/rfe/...
 gs://<bucket>/interface/chirps/...
 gs://<bucket>/forecasts/imerg/6h/{cGAN_forecasts,IFS_forecast_data}/...
-gs://<bucket>/forecasts/imerg/24h/{cGAN_forecasts,IFS_forecast_data}/...
-gs://<bucket>/forecasts/rfe/24h/{cGAN_forecasts,IFS_forecast_data}/...
-gs://<bucket>/forecasts/chirps/24h/{cGAN_forecasts,IFS_forecast_data}/...
+gs://<bucket>/forecasts/imerg/24h/cGAN_forecasts/...
+gs://<bucket>/forecasts/rfe/24h/cGAN_forecasts/...
+gs://<bucket>/forecasts/chirps/24h/cGAN_forecasts/...
+gs://<bucket>/forecasts/ifs/24h/IFS_forecast_data/...   # shared by all three 24h jobs
+gs://<bucket>/locks/...                                 # job_lock.py
 ```
 
 Each Cloud Run Job mounts only the `only-dir` prefixes it needs via GCS FUSE
 (`--add-volume ... mount-options=only-dir=<prefix>`).
+
+### Shared 24h IFS input
+
+`cgan-jobs-imerg-24h`, `cgan-jobs-rfe-24h` and `cgan-jobs-chirps-24h` all read the same
+`IFS_<date>_00Z.nc`, so they mount one prefix, `forecasts/ifs/24h/IFS_forecast_data`, and
+the file is downloaded once. The three triggers fire at the same moment, so
+`run_forecast.py:download_ifs_data` takes a per-file lock (`locks/ifs-24h-<date>-00z.lock`,
+via `job_lock.wait_for_lock`). The first job downloads; the others poll until the file is
+valid and use it. A lock left by a killed download goes stale after 3 minutes. If the wait
+times out (30 minutes) or the lock can't be taken, a job downloads anyway. The temp file +
+rename means nobody reads a half-written file, so the worst case is a duplicate download.
+In docker-compose the lock is an `flock` in the shared folder's `.locks/` subdirectory.
+
+Nothing deletes IFS files. If the full archive isn't needed, add a bucket lifecycle rule on
+`forecasts/ifs/`; the per-dataset jobs no longer own the files individually.
+
+#### One-off migration from per-dataset IFS folders
+
+Before this change each 24h job kept its own copy under `forecasts/<dataset>/24h/IFS_forecast_data`.
+Copy them into the shared prefix **before** deploying (rsync skips files already copied):
+
+```bash
+BUCKET=cgan-cloud-run   # _FORECAST_DATA_BUCKET
+for ds in imerg rfe chirps; do
+  gcloud storage rsync -r \
+    gs://$BUCKET/forecasts/$ds/24h/IFS_forecast_data \
+    gs://$BUCKET/forecasts/ifs/24h/IFS_forecast_data
+done
+```
+
+Then deploy, and check that one run of each 24h job logs `already exists and is valid`
+(or `downloaded by another job`) for the same file. After that, remove the old copies:
+
+```bash
+for ds in imerg rfe chirps; do
+  gcloud storage rm -r gs://$BUCKET/forecasts/$ds/24h/IFS_forecast_data
+done
+```
+
+On a docker-compose host, do the same with the local `${STORE}` folders:
+`rsync -a ${STORE}/forecasts/{imerg,rfe,chirps}/24h/IFS_forecast_data/ ${STORE}/forecasts/ifs/24h/IFS_forecast_data/`
+(one source at a time), then delete the three old folders. If `RFE_IFS_24h_FORECASTS_DIR` or
+`CHIRPS_IFS_24h_FORECASTS_DIR` is set in `.env`, remove it: compose no longer reads them, and
+`IFS_24h_FORECASTS_DIR` now sets the shared folder.
 
 ### Consumers of `interface/`
 
