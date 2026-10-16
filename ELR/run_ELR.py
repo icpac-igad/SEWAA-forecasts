@@ -203,6 +203,23 @@ if __name__ == "__main__":
     accumulation = args.accumulation
 
     for country in countries:
+        # A country's output goes to subcounty/ when it has subcounty models (county
+        # predictions are merged into it below) and to county/ otherwise -- the same split
+        # ELR_available_dates.py publishes. Skip the country only if that file exists for
+        # every requested day; get_ELR_predictions() returns None for an existing file,
+        # which the caller can't unpack.
+        region_dir = "subcounty" if subcounty[country] else "county"
+        if all(
+            os.path.exists(
+                OUT_PATH + f"{accumulation}/{country}/{region_dir}/{model}_{date}_ELR_v{int(d)}.nc"
+            )
+            for d in day
+        ):
+            print(
+                f"All ELR predictions already made for {country} at {accumulation}, skipping"
+            )
+            continue
+
         county_loop = county[country]
         subcounty_loop = subcounty[country]
         counties_loop = []
@@ -218,18 +235,6 @@ if __name__ == "__main__":
                 .split("_")[0]
                 for c in counties_loop
             ]
-            for d in day:
-                all_days_exist = True
-                if not os.path.exists(
-                    OUT_PATH
-                    + f"{accumulation}/{country}/county/{model}_{date}_ELR_v{d}.nc"
-                ):
-                    all_days_exist = False
-            if all_days_exist:
-                print(
-                    f"All ELR predictions already made for {country} at {accumulation}, skipping"
-                )
-                continue
 
         if len(counties_loop) == 0 and county[country]:
             print("No county-level models found for:", country)
@@ -246,18 +251,6 @@ if __name__ == "__main__":
                 .split("_")[0]
                 for c in subcounties_loop
             ]
-            for d in day:
-                all_days_exist = True
-                if not os.path.exists(
-                    OUT_PATH
-                    + f"{accumulation}/{country}/county/{model}_{date}_ELR_v{d}.nc"
-                ):
-                    all_days_exist = False
-            if all_days_exist:
-                print(
-                    f"All ELR predictions already made for {country} at {accumulation}, skipping"
-                )
-                continue
 
         if len(subcounties_loop) == 0 and subcounty[country]:
             print("No subcounty-level models found for:", country)

@@ -361,8 +361,9 @@ for d in iter_dates(start_date, end_date):
                     # Fill with zeros (normalised-space mean) so the model runs on the
                     # remaining real IFS fields. A proper climatology file should be
                     # deployed for production quality.
-                    _sample = list(_ifs_vars)[0]
-                    _shape = _ifs[_sample].shape[1:]  # (lat, lon)
+                    # Shape from the grid itself: list(_ifs_vars)[0] was a random pick (set
+                    # order changes per process) and failed whenever it hit a 1-D coordinate.
+                    _shape = (_ifs["latitude"].size, _ifs["longitude"].size)
                     _zeros = np.zeros((*_shape, 2), dtype=np.float32)
                     field_arrays.append(_zeros)
                     print(f"WARNING: {field} not in IFS file, using zero-fill placeholder")

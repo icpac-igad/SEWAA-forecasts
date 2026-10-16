@@ -313,7 +313,7 @@ if __name__ == "__main__":
             # deleted before ELR ran). Regenerate just the lead ELR needs; the histogram
             # step below is skipped because the counts are already there.
             print(f"Histogram counts exist but ELR outputs for {date_str} are missing; "
-                  f"regenerating lead {ELR_LEAD_IDX} raw forecast for ELR.")
+                  f"rerunning ELR (regenerating the lead {ELR_LEAD_IDX} raw forecast if needed).")
         # ── Download IFS data ────────────────────────────────────────────
         download_ifs_data(date_str, hour, accumulation_time, ifs_dir)
 
