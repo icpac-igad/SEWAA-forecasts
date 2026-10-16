@@ -37,6 +37,15 @@ VALID_TIMES = {
     "24h": ["0000"],
 }
 
+# How long after initialisation an IFS run is published upstream (same waits as
+# start_forecasting.py). Asking for an init time sooner than this only gets HTTP 404s
+# from every mirror and fails the whole execution, so those (date, time) pairs are
+# skipped until a later scheduled run.
+IFS_AVAILABLE_AFTER = {
+    "6h": timedelta(hours=7, minutes=30),
+    "24h": timedelta(hours=9, minutes=30),
+}
+
 
 def gen_forecast_request(
     dataset: str,
@@ -75,7 +84,7 @@ def forecast_dates_generator(
 ) -> list[str]:
     days_to_check = days_to_check if isinstance(days_to_check, int) else 2
     if start_date is None:
-        start_dt = datetime.now() - timedelta(days=days_to_check)
+        start_dt = datetime.utcnow() - timedelta(days=days_to_check)
     else:
         try:
             start_dt = datetime.strptime(start_date, "%Y%m%d")
@@ -83,11 +92,11 @@ def forecast_dates_generator(
             print(
                 f"failed to parse start_date {start_date} to a valid date object with error {err}"
             )
-            start_dt = datetime.now() - timedelta(days=days_to_check)
+            start_dt = datetime.utcnow() - timedelta(days=days_to_check)
             print(f"start date defaulting to {days_to_check} days since today -> {start_dt}")
 
     if final_date is None:
-        final_dt = datetime.now()
+        final_dt = datetime.utcnow()
     else:
         try:
             final_dt = datetime.strptime(final_date, "%Y%m%d")
@@ -95,14 +104,14 @@ def forecast_dates_generator(
             print(
                 f"failed to parse final_date {final_date} to a valid date object with error {err}"
             )
-            final_dt = datetime.now()
+            final_dt = datetime.utcnow()
             print(f"final date defaulting to today -> {final_dt}")
     return list(
         sorted(
             [
                 dt.strftime("%Y%m%d")
                 for dt in date_range(
-                    start=start_dt, end=final_dt + timedelta(days=1), freq="D"
+                    start=start_dt.date(), end=final_dt.date(), freq="D"
                 )
             ],
             reverse=True,
@@ -151,8 +160,13 @@ def auto_gen_forecasts(
     print(f"[{dataset}] starting forecasts generation for {' => '.join(forecast_dates)}")
 
     all_ok = True
+    latest_available = datetime.utcnow() - IFS_AVAILABLE_AFTER[accumulation]
     for forecast_date in forecast_dates:
         for t in times:
+            if datetime.strptime(forecast_date + t, "%Y%m%d%H%M") > latest_available:
+                print(f"[{dataset}] {forecast_date} {accumulation} {t}: IFS not published "
+                      f"yet (available ~{IFS_AVAILABLE_AFTER[accumulation]} after init); skipping")
+                continue
             ok = gen_forecast_request(
                 dataset=dataset,
                 forecast_date=forecast_date,

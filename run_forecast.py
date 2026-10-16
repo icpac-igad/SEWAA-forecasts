@@ -18,6 +18,7 @@ import time
 import subprocess
 import pathlib
 import platform
+import socket
 import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -145,8 +146,20 @@ IFS_SOURCES = [
 ]
 
 
+# The 24h IMERG, RFE and CHIRPS jobs share one IFS_forecast_data folder (one GCS prefix /
+# host directory, see cloudbuild.yaml and docker-compose.yml) and are triggered at the same
+# moment, so the first job to need a file downloads it under a lock while the others wait
+# for it to appear. The lock only avoids duplicate downloads: the temp-file + rename below
+# already keeps a reader from ever seeing a partial file, so on timeout we download anyway.
+IFS_LOCK_WAIT_SECONDS = 1800
+IFS_LOCK_POLL_SECONDS = 15
+# The holder heartbeats every 60s (job_lock.HEARTBEAT_SECONDS); a download killed mid-way
+# frees its lock after this long instead of job_lock's default 10 minutes.
+IFS_LOCK_STALE_SECONDS = 180
+
+
 def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
-    """Fetch IFS forecast data, trying each mirror in IFS_SOURCES in turn.
+    """Fetch IFS forecast data into the shared ifs_dir, once across all jobs.
 
     Exits the program if the file is unavailable from every known source.
     """
@@ -154,10 +167,30 @@ def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
     fname = f"IFS_{date_str}_{hour:02d}Z.nc"
     dst = os.path.join(ifs_dir, fname)
 
-    if os.path.isfile(dst):
-        if is_valid_netcdf(dst):
-            print(f"{dst} already exists and is valid.")
+    if os.path.isfile(dst) and is_valid_netcdf(dst):
+        print(f"{dst} already exists and is valid.")
+        return dst
+
+    try:
+        from job_lock import wait_for_lock
+    except ImportError:  # fcntl is POSIX-only; download unlocked elsewhere
+        return _fetch_ifs_data(date_str, accumulation_time, ifs_dir, fname, dst)
+
+    with wait_for_lock(f"ifs-{accumulation_time}h-{date_str}-{hour:02d}z",
+                       timeout=IFS_LOCK_WAIT_SECONDS, poll_seconds=IFS_LOCK_POLL_SECONDS,
+                       stale_seconds=IFS_LOCK_STALE_SECONDS,
+                       local_dir=os.path.join(ifs_dir, ".locks"),
+                       until=lambda: os.path.isfile(dst) and is_valid_netcdf(dst)):
+        # Another job may have finished the download while this one waited for the lock.
+        if os.path.isfile(dst) and is_valid_netcdf(dst):
+            print(f"{dst} downloaded by another job; using it.")
             return dst
+        return _fetch_ifs_data(date_str, accumulation_time, ifs_dir, fname, dst)
+
+
+def _fetch_ifs_data(date_str, accumulation_time, ifs_dir, fname, dst):
+    """Download fname into dst, trying each mirror in IFS_SOURCES in turn."""
+    if os.path.isfile(dst):
         print(f"{dst} exists but is corrupt/incomplete; re-downloading.")
         os.remove(dst)
 
@@ -187,7 +220,8 @@ def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
             # connection mid-transfer leaves a truncated file), and writing straight to
             # dst lets the forecast step -- or another job sharing this folder -- read a
             # half-written file ("NetCDF: HDF error").
-            tmp = f"{dst}.{os.getpid()}.part"
+            # Host + PID: jobs in different containers share this folder and can share a PID.
+            tmp = f"{dst}.{socket.gethostname()}-{os.getpid()}.part"
             for attempt in range(1, 4):
                 c = subprocess.run(["curl", "-fL", "--retry", "20", "--retry-delay", "5",
                                     "--retry-all-errors", *CURL_TIMEOUT_ARGS, "-C", "-", url, "-o", tmp])
@@ -218,6 +252,23 @@ def check_counts_files(counts_path, date_str, hour, valid_hours):
     )
 
 
+# ── ELR checking ─────────────────────────────────────────────────────────────
+
+# ELR reads only the lead-1 raw ensemble (run_ELR.py: day = np.arange(1, 2)).
+ELR_LEAD_IDX = 1
+# Region level per country that ELR_available_dates.py publishes to the interface.
+ELR_COUNTRY_REGIONTYPE = {"Kenya": "subcounty", "Ethiopia": "subcounty", "Rwanda": "county"}
+
+
+def check_elr_files(date_str):
+    elr_dir = os.path.join(ROOT, "interface", "data", "ELR_predictions", "24h_accumulations")
+    return all(
+        os.path.isfile(os.path.join(elr_dir, country, regiontype,
+                                    f"GAN_{date_str}_ELR_v{ELR_LEAD_IDX}.nc"))
+        for country, regiontype in ELR_COUNTRY_REGIONTYPE.items()
+    )
+
+
 # ── CUDA helper ──────────────────────────────────────────────────────────────
 
 def cuda_ld_path():
@@ -243,13 +294,26 @@ if __name__ == "__main__":
     counts_dir = os.path.join(ROOT, "interface", "data", f"counts_{accumulation_time}h")
     valid_hours = VALID_HOURS_6H if accumulation_time == 6 else VALID_HOURS_24H
 
-    # CHIRPS/RFE run forecast_date_MW.py, which does forecast + counts in one pass.
+    # CHIRPS/RFE run forecast_date_MW.py, which writes a lead's forecast + counts in one pass.
     # IMERG runs forecast_date.py per lead time followed by a separate histogram step.
+    # Both run one process per lead, so gen.predict()'s memory growth is freed between leads.
     uses_combined_forecast_script = DATASET_NAME in ("chirps", "rfe")
 
-    if check_counts_files(counts_dir, date_str, hour, valid_hours) and delete_forecasts:
-        print("Histogram counts already exist; nothing to do.")
+    # ELR runs for every 24h dataset, on the lead-1 raw ensemble (GAN_<date>_00Z_v1.nc).
+    elr_needed = run_ELR and hour == 0 and accumulation_time == 24
+    counts_done = check_counts_files(counts_dir, date_str, hour, valid_hours)
+    elr_done = check_elr_files(date_str) if elr_needed else True
+
+    if counts_done and delete_forecasts and elr_done:
+        print("Histogram counts" + (" and ELR outputs" if elr_needed else "")
+              + " already exist; nothing to do.")
     else:
+        if counts_done and not elr_done:
+            # Counts survived but ELR didn't (e.g. ELR crashed, or the raw ensemble was
+            # deleted before ELR ran). Regenerate just the lead ELR needs; the histogram
+            # step below is skipped because the counts are already there.
+            print(f"Histogram counts exist but ELR outputs for {date_str} are missing; "
+                  f"regenerating lead {ELR_LEAD_IDX} raw forecast for ELR.")
         # ── Download IFS data ────────────────────────────────────────────
         download_ifs_data(date_str, hour, accumulation_time, ifs_dir)
 
@@ -274,13 +338,32 @@ if __name__ == "__main__":
                                   f"{accumulation_time}h", "forecast_operational.yaml")
             if not os.path.isfile(config):
                 sys.exit(f"ERROR: missing forecast config for {DATASET_NAME}: {config}")
-            print(f"Running {DATASET_NAME} 24h forecast + counts for {date_str}")
-            r = subprocess.run(
-                ["python", "forecast_date_MW.py", config, date_str],
-                cwd=dsr, env=env
-            )
-            if r.returncode != 0:
-                sys.exit(f"ERROR: forecast_date_MW.py failed (exit {r.returncode}).")
+            # A lead runs if its counts are missing, or if it's the lead ELR still needs and
+            # its raw ensemble is gone. Leads already done are skipped, so a run killed at
+            # the task timeout resumes where it stopped.
+            forecast_ok = True
+            for lead_idx in range(7):
+                fpath = os.path.join(forecast_dir, f"GAN_{date_str}_{hour:02d}Z_v{lead_idx}.nc")
+                cpath = os.path.join(counts_dir, year,
+                                     f"counts_{date_str}_{hour:02d}_{valid_hours[lead_idx]}h.nc")
+                need_counts = not os.path.isfile(cpath)
+                need_raw = (lead_idx == ELR_LEAD_IDX and not elr_done
+                            and not has_forecast_output(fpath))
+                if not (need_counts or need_raw):
+                    continue
+                if os.path.isfile(fpath):
+                    os.remove(fpath)   # partial file from a killed run
+                print(f"Running {DATASET_NAME} 24h forecast + counts for {date_str} lead {lead_idx}")
+                r = subprocess.run(
+                    ["python", "forecast_date_MW.py", config, date_str, "--lead", str(lead_idx)],
+                    cwd=dsr, env=env
+                )
+                if r.returncode != 0 or not has_forecast_output(fpath) or not os.path.isfile(cpath):
+                    print(f"ERROR: forecast_date_MW.py lead {lead_idx} did not produce a "
+                          f"complete forecast + counts (exit {r.returncode}).")
+                    forecast_ok = False
+            if not forecast_ok:
+                sys.exit(f"ERROR: {DATASET_NAME} 24h forecast for {date_str} incomplete.")
         else:
             # IMERG: separate forecast per lead time + histogram step
             forecast_ok = True
@@ -301,7 +384,8 @@ if __name__ == "__main__":
                         print(f"ERROR: forecast_date.py did not produce a complete "
                               f"forecast (exit {r.returncode}).")
             else:
-                for lead_idx in range(7):
+                lead_idxs = [ELR_LEAD_IDX] if counts_done else range(7)
+                for lead_idx in lead_idxs:
                     fpath = os.path.join(forecast_dir, f"GAN_{date_str}_{hour:02d}Z_v{lead_idx}.nc")
                     if not has_forecast_output(fpath):
                         if os.path.isfile(fpath):
@@ -332,16 +416,26 @@ if __name__ == "__main__":
                 print(f"Computing {accumulation_time}h histograms for {date_str}.")
                 subprocess.run(["python", hist_script, date_str, str(hour)], cwd=run_dir)
 
-    # ── ELR (IMERG 24h only) ─────────────────────────────────────────────
-    if run_ELR and hour == 0 and accumulation_time == 24 and DATASET_NAME == "imerg":
+    # ── ELR (24h, all datasets) ──────────────────────────────────────────
+    if elr_needed and not elr_done:
         elr_dir = os.path.join(ROOT, "ELR")
-        if os.path.isfile(os.path.join(elr_dir, "run_ELR.py")):
+        elr_input = os.path.join(ROOT, "24h_accumulations", "cGAN_forecasts",
+                                 f"GAN_{date_str}_00Z_v{ELR_LEAD_IDX}.nc")
+        if not os.path.isfile(elr_input):
+            # The forecast step above should have (re)generated it; don't let run_ELR.py
+            # crash with FileNotFoundError if it somehow didn't.
+            print(f"ERROR: skipping ELR, raw forecast {elr_input} not present.")
+        elif os.path.isfile(os.path.join(elr_dir, "run_ELR.py")):
             print("Running ELR 24h forecasts.")
-            subprocess.run(
+            r = subprocess.run(
                 ["python", "run_ELR.py", "--date", date_str, "--model", "GAN",
                  "--accumulation", "24h_accumulations"],
                 cwd=elr_dir
             )
+            elr_done = check_elr_files(date_str)
+            if not elr_done:
+                print(f"ERROR: run_ELR.py did not produce all ELR outputs for {date_str} "
+                      f"(exit {r.returncode}).")
 
     # ── Refresh interface dates ──────────────────────────────────────────
     run_dir = os.path.join(ROOT, f"{accumulation_time}h_accumulations")
@@ -350,14 +444,18 @@ if __name__ == "__main__":
         print(f"Listing {accumulation_time}h counts for the interface.")
         subprocess.run(["python", "find_available_dates.py"], cwd=run_dir)
 
-    if run_ELR and hour == 0 and DATASET_NAME == "imerg":
+    if elr_needed:
         elr_dates = os.path.join(ROOT, "ELR", "ELR_available_dates.py")
         if os.path.isfile(elr_dates):
             print("Listing ELR available dates.")
             subprocess.run(["python", "ELR_available_dates.py"], cwd=os.path.join(ROOT, "ELR"))
 
     # ── Delete raw forecasts if requested ────────────────────────────────
-    if delete_forecasts:
+    # Raw ensembles are kept until ELR has consumed them, so a failed ELR run can be
+    # retried without regenerating the forecast.
+    if delete_forecasts and not elr_done:
+        print(f"Keeping raw forecasts for {date_str}: ELR outputs are incomplete.")
+    elif delete_forecasts:
         forecast_dir = os.path.join(ROOT, f"{accumulation_time}h_accumulations", "cGAN_forecasts")
         if accumulation_time == 6:
             raw = os.path.join(forecast_dir, f"GAN_{date_str}_{hour:02d}Z.nc")

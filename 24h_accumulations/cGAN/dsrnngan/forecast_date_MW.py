@@ -56,6 +56,16 @@ parser.add_argument(
     help="Optional YYYYMMDD; overrides the config PERIOD to this single date "
          "(for the operational per-date daily runner)."
 )
+parser.add_argument(
+    "--lead",
+    type=int,
+    choices=range(7),
+    default=None,
+    help="Operational only: forecast just this lead day (0 = D+1 ... 6 = D+7) and write "
+         "it to GAN_<date>_00Z_v<lead>.nc, the same per-lead file IMERG's forecast_date.py "
+         "writes. run_forecast.py runs one process per lead so gen.predict()'s per-call "
+         "memory growth is released between leads. Omit to run all 7 leads in one file."
+)
 args = parser.parse_args()
 
 with open(args.yaml_file, "r") as f:
@@ -83,10 +93,12 @@ save_crps_only = fcst_params["OUTPUT"]["save_crps_only"]
 # INPUT.fcst_folder is the folder holding the IFS_<date>_00Z.nc files.
 input_format = fcst_params["INPUT"].get("format", "training")
 assert input_format in ("training", "operational"), f"INPUT.format={input_format!r}"
+if args.lead is not None and input_format != "operational":
+    parser.error("--lead is only supported with INPUT.format: operational")
 
 # OUTPUT.histogram_folder: if set, also write the per-pixel ensemble histogram counts the
 # web interface consumes (counts_<date>_00_<lead>h.nc), computed in-memory from the same
-# 50-member ensemble -- so one run produces both the forecast and the interface data.
+# ensemble -- so one run produces both the forecast and the interface data.
 # Absent -> no histogram (default), keeping the eval/held-out behaviour unchanged.
 histogram_folder = fcst_params["OUTPUT"].get("histogram_folder", None)
 # Log-scale rainfall bins (mm/h), identical to forecast2histogram_7d_lowRAM.py so the
@@ -289,7 +301,11 @@ for d in iter_dates(start_date, end_date):
 
     # Create output netCDF file
     pathlib.Path(output_folder).mkdir(parents=True, exist_ok=True)
-    if not save_crps_only:
+    if args.lead is not None:
+        # Per-lead operational file, named and laid out like IMERG's so run_forecast.py's
+        # completeness check, ELR (run_ELR.py) and the raw-forecast cleanup all apply as-is.
+        nc_out_path = os.path.join(output_folder, f"GAN_{d.year}{d.month:02d}{d.day:02d}_00Z_v{args.lead}.nc")
+    elif not save_crps_only:
         nc_out_path = os.path.join(output_folder, f"GAN_fcst_crps_{d.year}{d.month:02d}{d.day:02d}_00Z.nc")
     elif save_crps_only:
         nc_out_path = os.path.join(output_folder, f"GAN_crps_{d.year}{d.month:02d}{d.day:02d}_00Z.nc")
@@ -307,7 +323,8 @@ for d in iter_dates(start_date, end_date):
         # 7 lead days like the operational product (in_time_idx = [1,5,9,13,17,21,25]).
         # valid_time_num=0 is the validated D+1; leads 1-6 (D+2..D+7) are out-of-distribution.
         _in_time_idx = [1, 5, 9, 13, 17, 21, 25]
-        valid_times_forecast = valid_times[_in_time_idx]
+        _leads = [args.lead] if args.lead is not None else list(range(len(_in_time_idx)))
+        valid_times_forecast = valid_times[[_in_time_idx[i] for i in _leads]]
     else:
         _ftimes = nc.num2date(start_times, nc.Dataset(file_name)["time"].units)
         _want = d.strftime("%Y%m%d")
@@ -319,12 +336,15 @@ for d in iter_dates(start_date, end_date):
         netcdf_dict["time_data"][0] = start_times[fcst_idx]
         valid_time_idx = ([5],) #for 1x24h forecast with lead time 30h
         valid_times_forecast = valid_times[fcst_idx, valid_time_idx]
+        _leads = [0]
     print(np.shape(valid_times_forecast))
     netcdf_dict["valid_time_data"][0,:] = valid_times_forecast
 
     # For each valid time
     skip_this_date = False   # set if a corrupt input makes this date unusable
-    for valid_time_num in range(len(valid_times_forecast)):
+    # valid_time_num is the lead day (selects IFS inputs, climatology and the counts label);
+    # out_idx is its position on this output file's valid_time axis.
+    for out_idx, valid_time_num in enumerate(_leads):
 
         # the contents of the next loop are v. similar to load_fcst from data.py,
         # but not quite the same, since that has different assumptions on how the
@@ -409,7 +429,7 @@ for d in iter_dates(start_date, end_date):
             gan_prediction = gen.predict(gan_inputs, verbose=False)  # 1 x lat x lon x 1
             pred = denormalise(gan_prediction[0, :, :, 0])
             if not save_crps_only:
-                netcdf_dict["precipitation"][0, ii, valid_time_num, :, :] = pred
+                netcdf_dict["precipitation"][0, ii, out_idx, :, :] = pred
             
             ens_cgan_preds.append(pred)
             progbar.add(1)
@@ -447,7 +467,7 @@ for d in iter_dates(start_date, end_date):
             _tm[:] = start_times[fcst_idx] if input_format != "operational" else start_times[0]
             _vt = _cg.createVariable("valid_time", "f4", ("valid_time",))
             _vt.units = "hours since 1900-01-01 00:00:00.0"; _vt.description = "Forecast prediction time"
-            _vt[:] = np.array(valid_times_forecast).ravel()[valid_time_num]  # per-lead valid time
+            _vt[:] = np.array(valid_times_forecast).ravel()[out_idx]  # per-lead valid time
             _bn = _cg.createVariable("bins", "f4", ("bins",)); _bn.units = "mm/h"; _bn[:] = BIN_SPEC[1:-1]
             _ct = _cg.createVariable("counts", "i2", ("bins", "latitude", "longitude"), zlib=True, complevel=9)
             _ct.description = "Histogram bin counts"; _ct.num_members = int(_ens.shape[0])
@@ -470,7 +490,7 @@ for d in iter_dates(start_date, end_date):
                 ens_cgan_preds_stacked,
                 axis=0
             )
-            netcdf_dict["crps"][0, valid_time_num, :, :] = crps
+            netcdf_dict["crps"][0, out_idx, :, :] = crps
         else:
             print(f"no truth for {d:%Y%m%d} D+1 -> forecast/histogram only, CRPS skipped", flush=True)
 
