@@ -30,7 +30,16 @@ location / {
 EOF
 else
   echo "$0: WEB_UPSTREAM not set; serving data only"
+  # `/` answers with an index of the data paths so the bare service URL doesn't look broken
+  # (an uptime check or a person opening it); anything else unknown is still a 404.
+  # Only data paths are listed: this branch is the Cloud Run portal, which mounts
+  # interface/* but not forecasts/, so /forecasts/ would 404 there.
   cat > "$SNIPPET_DIR/web-proxy.conf" <<'EOF'
+location = / {
+    default_type application/json;
+    add_header Access-Control-Allow-Origin * always;
+    return 200 '{"service":"cgan-data-portal","data":{"imerg":"/data/","rfe":"/data/rfe/","chirps":"/data/chirps/"}}\n';
+}
 location / {
     return 404;
 }
