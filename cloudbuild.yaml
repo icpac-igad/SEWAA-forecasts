@@ -70,7 +70,7 @@ steps:
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/cGAN_forecasts
       - --add-volume-mount=volume=cgan-forecasts-6h-vol,mount-path=/opt/cgan/6h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/imerg/6h/IFS_forecast_data
+      - --add-volume=name=ifs-6h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/IFS_6h_forecast_data
       - --add-volume-mount=volume=ifs-6h-vol,mount-path=/opt/cgan/6h_accumulations/IFS_forecast_data
 
   - id: deploy-jobs-imerg-24h
@@ -98,7 +98,7 @@ steps:
       - --add-volume-mount=volume=cgan-forecasts-vol,mount-path=/opt/cgan/24h_accumulations/cGAN_forecasts
       # IFS input is the same file for every 24h model: imerg/rfe/chirps share one prefix and
       # download it once under a lock (run_forecast.py: download_ifs_data).
-      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/ifs/24h/IFS_forecast_data
+      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/IFS_24h_forecast_data
       - --add-volume-mount=volume=ifs-24h-vol,mount-path=/opt/cgan/24h_accumulations/IFS_forecast_data
 
   - id: deploy-jobs-rfe-24h
@@ -124,7 +124,7 @@ steps:
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/rfe/24h/cGAN_forecasts
       - --add-volume-mount=volume=cgan-forecasts-vol,mount-path=/opt/cgan/24h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/ifs/24h/IFS_forecast_data
+      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/IFS_24h_forecast_data
       - --add-volume-mount=volume=ifs-24h-vol,mount-path=/opt/cgan/24h_accumulations/IFS_forecast_data
 
   - id: deploy-jobs-chirps-24h
@@ -150,7 +150,7 @@ steps:
       - --add-volume-mount=volume=viz-data,mount-path=/opt/cgan/interface/data
       - --add-volume=name=cgan-forecasts-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/chirps/24h/cGAN_forecasts
       - --add-volume-mount=volume=cgan-forecasts-vol,mount-path=/opt/cgan/24h_accumulations/cGAN_forecasts
-      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/ifs/24h/IFS_forecast_data
+      - --add-volume=name=ifs-24h-vol,type=cloud-storage,bucket=${_FORECAST_DATA_BUCKET},mount-options=only-dir=forecasts/IFS_24h_forecast_data
       - --add-volume-mount=volume=ifs-24h-vol,mount-path=/opt/cgan/24h_accumulations/IFS_forecast_data
 
   # Data-only nginx: WEB_UPSTREAM is unset, so `/` returns 404 instead of proxying to a
