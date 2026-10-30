@@ -69,11 +69,11 @@ def gen_forecast_request(
         "--time",
         time,
     ]
-    print(f"[{dataset}] running: {' '.join(params)}")
+    print(f"[{dataset.upper()}] running: {' '.join(params)}")
     result = subprocess.run(params, env=env)
     ok = result.returncode == 0
     status = "done" if ok else f"FAILED (exit {result.returncode})"
-    print(f"[{dataset}] {forecast_date} {accumulation} {time}: {status}")
+    print(f"[{dataset.upper()}] {forecast_date} {accumulation} {time}: {status}")
     return ok
 
 
@@ -81,6 +81,7 @@ def forecast_dates_generator(
     start_date: str | None = None,
     final_date: str | None = None,
     days_to_check: int | None = 2,
+    dataset: str = "",
 ) -> list[str]:
     days_to_check = days_to_check if isinstance(days_to_check, int) else 2
     if start_date is None:
@@ -90,10 +91,10 @@ def forecast_dates_generator(
             start_dt = datetime.strptime(start_date, "%Y%m%d")
         except Exception as err:
             print(
-                f"failed to parse start_date {start_date} to a valid date object with error {err}"
+                f"[{dataset.upper()}] failed to parse start_date {start_date} to a valid date object with error {err}"
             )
             start_dt = datetime.utcnow() - timedelta(days=days_to_check)
-            print(f"start date defaulting to {days_to_check} days since today -> {start_dt}")
+            print(f"[{dataset.upper()}] start date defaulting to {days_to_check} days since today -> {start_dt}")
 
     if final_date is None:
         final_dt = datetime.utcnow()
@@ -102,10 +103,10 @@ def forecast_dates_generator(
             final_dt = datetime.strptime(final_date, "%Y%m%d")
         except Exception as err:
             print(
-                f"failed to parse final_date {final_date} to a valid date object with error {err}"
+                f"[{dataset.upper()}] failed to parse final_date {final_date} to a valid date object with error {err}"
             )
             final_dt = datetime.utcnow()
-            print(f"final date defaulting to today -> {final_dt}")
+            print(f"[{dataset.upper()}] final date defaulting to today -> {final_dt}")
     return list(
         sorted(
             [
@@ -139,32 +140,33 @@ def auto_gen_forecasts(
     non-zero on False so Cloud Run Jobs' retry/alerting sees the failure.
     """
     if dataset not in DATASETS:
-        sys.exit(f"ERROR: unknown dataset {dataset!r}; pick one of {sorted(DATASETS)}")
+        sys.exit(f"[{dataset.upper()}] ERROR: unknown dataset {dataset!r}; pick one of {sorted(DATASETS)}")
     cfg = DATASETS[dataset]
 
     accumulation = accumulation or cfg["default_accumulation"]
     if accumulation not in cfg["accumulations"]:
-        sys.exit(f"ERROR: {dataset} does not support {accumulation!r} accumulations "
+        sys.exit(f"[{dataset.upper()}] ERROR: {dataset} does not support {accumulation!r} accumulations "
                   f"(supports {cfg['accumulations']})")
 
     times = [time] if time else VALID_TIMES[accumulation]
     delete_forecasts = delete_forecasts or "Y"
 
     print(
-        f"[{dataset}] received request to autogenerate {accumulation} forecasts from "
+        f"[{dataset.upper()}] received request to autogenerate {accumulation} forecasts from "
         f"{start_date} to {final_date} at times {times}"
     )
     forecast_dates = forecast_dates_generator(
-        start_date=start_date, final_date=final_date, days_to_check=days_to_check
+        start_date=start_date, final_date=final_date, days_to_check=days_to_check,
+        dataset=dataset,
     )
-    print(f"[{dataset}] starting forecasts generation for {' => '.join(forecast_dates)}")
+    print(f"[{dataset.upper()}] starting forecasts generation for {' => '.join(forecast_dates)}")
 
     all_ok = True
     latest_available = datetime.utcnow() - IFS_AVAILABLE_AFTER[accumulation]
     for forecast_date in forecast_dates:
         for t in times:
             if datetime.strptime(forecast_date + t, "%Y%m%d%H%M") > latest_available:
-                print(f"[{dataset}] {forecast_date} {accumulation} {t}: IFS not published "
+                print(f"[{dataset.upper()}] {forecast_date} {accumulation} {t}: IFS not published "
                       f"yet (available ~{IFS_AVAILABLE_AFTER[accumulation]} after init); skipping")
                 continue
             ok = gen_forecast_request(
@@ -259,6 +261,6 @@ if __name__ == "__main__":
             )
     except LockHeld as held:
         # Not a failure: the run already in progress covers this channel.
-        print(f"[{channel}] another run is in progress ({held}); exiting.")
+        print(f"[{args.dataset.upper()}] another {accumulation} run is in progress ({held}); exiting.")
         sys.exit(0)
     sys.exit(0 if succeeded else 1)
