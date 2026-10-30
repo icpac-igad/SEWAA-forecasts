@@ -304,6 +304,15 @@ Ensemble logistic regression
             </div>
 
             <div class="control-group">
+                <label for="datasetSelect">Reference Dataset</label>
+                <select id="datasetSelect" onchange="datasetSelect()">
+                    <option value="IMERG">IMERG</option>
+                    <option value="RFE">RFE</option>
+                    <option value="CHIRPS">CHIRPS</option>
+                </select>
+            </div>
+
+            <div class="control-group">
                 <label for="initYearSelect">Initialization Date</label>
                 <div class="init-date-grid">
                     <select id="initYearSelect" onchange="ELRSelect()" title="Year">

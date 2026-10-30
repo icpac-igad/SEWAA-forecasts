@@ -84,16 +84,18 @@ async function modelSelect() {
   drawPlots();
 }
 
-// Update the Reference Dataset dropdown options based on accumulation period
+// Update the Reference Dataset dropdown for the accumulation period. RFE and CHIRPS only
+// have 24h forecasts but stay listed under 6h too, so they can always be found; picking
+// one switches to 24h (see datasetSelect), and switching to 6h falls back to IMERG.
 function updateDatasetOptions() {
   let sel = document.getElementById("datasetSelect");
   if (modelName == "6h accumulation") {
-    sel.innerHTML = '<option value="IMERG">IMERG</option>';
     datasetName = "IMERG";
+    sel.innerHTML = '<option value="IMERG">IMERG</option><option value="RFE">RFE (24h only)</option><option value="CHIRPS">CHIRPS (24h only)</option>';
   } else {
     sel.innerHTML = '<option value="IMERG">IMERG</option><option value="RFE">RFE</option><option value="CHIRPS">CHIRPS</option>';
-    sel.value = datasetName;
   }
+  sel.value = datasetName;
 }
 
 // Called by the Forecast Model dropdown
@@ -112,6 +114,12 @@ async function forecastModelSelect() {
 // Called by the Reference Dataset dropdown
 async function datasetSelect() {
   datasetName = document.getElementById("datasetSelect").value;
+  if (datasetName != "IMERG" && modelName != "24h accumulation") {
+    // RFE/CHIRPS are 24h-only: switch accumulation, which reloads everything.
+    document.getElementById("modelSelect").value = "24h accumulation";
+    await modelSelect();
+    return;
+  }
   updateModelDescription();
 
   await loadDates();
@@ -367,6 +375,13 @@ function removeHistograms() {
   drawPlots();
 }
 
+// Name shown at the start of every map and histogram title, e.g. "cGAN-IMERG 24h accumulation"
+// (plotForecastsMin.js uses it as "<name> forecast: <region>"), so a saved image says which
+// model and reference dataset produced it.
+function forecastLabel() {
+  return `cGAN-${datasetName} ${modelName}`;
+}
+
 // Loads and plots the currently selected forecast
 async function loadForecast() {
   let year = document.getElementById("initYearSelect").value;
@@ -406,7 +421,7 @@ async function loadForecast() {
         "h.nc";
 
       // Load data into the forecastDataObject
-      await GANForecast[i].loadGANForecast(fileName, modelName, accumulationHours);
+      await GANForecast[i].loadGANForecast(fileName, forecastLabel(), accumulationHours);
     }
   } else {
     // Load a single valid time
@@ -427,7 +442,7 @@ async function loadForecast() {
       "h.nc";
 
     // Load data into the forecastDataObject
-    await GANForecast[0].loadGANForecast(fileName, modelName, accumulationHours);
+    await GANForecast[0].loadGANForecast(fileName, forecastLabel(), accumulationHours);
   }
 }
 

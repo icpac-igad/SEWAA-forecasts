@@ -5,6 +5,29 @@ let dateLoadNumber = Math.floor(Math.random() * 10000);
 let availableDates;				// An object containing the dates we can use
 
 let ELRForecast = new ELRData();		// Create a global ELRData object
+let datasetName = "IMERG";			// Reference dataset: IMERG, RFE or CHIRPS
+
+// Data URL prefix for the selected dataset, the same scheme as testScript.js getDataPrefix():
+// IMERG at Data_Source_URL (default /data/), the others under rfe/ and chirps/. With
+// Dataset_Source_URL set, every dataset has its own folder there (e.g. /store/interface/rfe/).
+let Data_Source_Base = window.Data_Source_URL || "/data/";
+let Dataset_Source_Base = window.Dataset_Source_URL || "";
+function getDataPrefix() {
+	let key = datasetName.toLowerCase();	// "imerg", "rfe", "chirps"
+	if (Dataset_Source_Base) {
+		return Dataset_Source_Base + key + "/";
+	}
+	if (key === "imerg") {
+		return Data_Source_Base;
+	}
+	return Data_Source_Base + key + "/";
+}
+
+// Called by the Reference Dataset menu
+async function datasetSelect() {
+	datasetName = document.getElementById("datasetSelect").value;
+	await ELRSelect();
+}
 
 // Select a menu item requiring data to be loaded
 async function ELRSelect() {
@@ -164,9 +187,9 @@ async function loadDates() {
 	let fileName;
 	// XXX Desparate hack
 	if (regionName == "Rwanda") {
-		fileName = "/data/ELR_predictions/24h_accumulations/"+regionName+"/county/available_dates.json?"+dateLoadNumber;
+		fileName = getDataPrefix()+"ELR_predictions/24h_accumulations/"+regionName+"/county/available_dates.json?"+dateLoadNumber;
 	} else {
-		fileName = "/data/ELR_predictions/24h_accumulations/"+regionName+"/subcounty/available_dates.json?"+dateLoadNumber;
+		fileName = getDataPrefix()+"ELR_predictions/24h_accumulations/"+regionName+"/subcounty/available_dates.json?"+dateLoadNumber;
 	}
 	
 	// dateLoadNumber ensures that the available_dates.json file is not cached
@@ -176,10 +199,31 @@ async function loadDates() {
 	}
 	const response = await fetch(fileName);
 	
+	// No ELR forecasts published yet for this dataset/country (no dates file, or one listing
+	// no dates): say so and clear the stale maps of the previous selection, rather than
+	// failing further down on missing data.
+	if (!response.ok) {
+		noELRForecasts(`${fileName.split("?")[0]}: HTTP ${response.status}`);
+	}
+	
 	// Parse the JSON arrayBuffer of the file and return the resulting object
 	availableDates = await response.json();
+	if (Object.keys(availableDates).length == 0) {
+		noELRForecasts(`${fileName.split("?")[0]} lists no dates`);
+	}
 
 	updateDateMenus();
+}
+
+// Tell the user there is nothing to show for the selected dataset/country, clear the maps
+// and stop loading.
+function noELRForecasts(reason) {
+	for (const id of ["ClimateCanvas", "ELRCanvas"]) {
+		const canvas = document.getElementById(id);
+		canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+	}
+	showLoadingStatus(1, `No ${datasetName} ELR forecasts available for ${regionName} (${reason}).`);
+	throw new Error(`No ELR forecasts: ${reason}`);
 }
 
 // Update an HTML select menu with dates that are available.
@@ -282,12 +326,15 @@ async function loadELRForecast() {
 	let fileName;
 	// XXX Desparate hack
 	if (region == "Rwanda") {
-		fileName = "/data/ELR_predictions/24h_accumulations/"+region+"/county/GAN_"
+		fileName = getDataPrefix()+"ELR_predictions/24h_accumulations/"+region+"/county/GAN_"
 					+year+month.padStart(2,'0')+day.padStart(2,'0')+"_ELR_v1.nc";
 	} else {
-		fileName = "/data/ELR_predictions/24h_accumulations/"+region+"/subcounty/GAN_"
+		fileName = getDataPrefix()+"ELR_predictions/24h_accumulations/"+region+"/subcounty/GAN_"
 					+year+month.padStart(2,'0')+day.padStart(2,'0')+"_ELR_v1.nc";
 	}
+	// Map titles start with this, e.g. "IFS+cGAN-RFE+ELR forecast for ..."
+	ELRForecast.modelLabel = "IFS+cGAN-" + datasetName;
+
 	// Load data into the ELRDataObject
 	await ELRForecast.loadELRForecast(fileName,year,month,day);
 	
@@ -395,15 +442,6 @@ async function init() {
 	// Specify the function to call to inform the user what is going on
 	setStatusUpdateFunction(showLoadingStatus);
 	
-	// Set appropriate menus
-	await ELRSelect();
-	
-	// Load a list of the available forecasts
-	await loadDates();
-	
-	// Load the currently selected forecast
-	await loadELRForecast();
-	
 	// Detect if the enter or return key is pressed in the document
 	document.addEventListener("keydown", function(event) {
 		if (event.key === "Enter") {
@@ -411,8 +449,23 @@ async function init() {
 		}
 	}); 
 	
-	// Draw the ELR forecast
-	await drawPlot();
+	// Missing data for the default selection must not stop the page from working, so the
+	// user can still switch to a dataset or country that has data.
+	try {
+		// Set appropriate menus
+		await ELRSelect();
+		
+		// Load a list of the available forecasts
+		await loadDates();
+		
+		// Load the currently selected forecast
+		await loadELRForecast();
+		
+		// Draw the ELR forecast
+		await drawPlot();
+	} catch (e) {
+		console.error(e);
+	}
 }
 
 init();

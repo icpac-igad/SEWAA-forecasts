@@ -29,6 +29,13 @@ Region:
     <option value="Rwanda">Rwanda</option>
 </select>
 
+Reference dataset:
+<select id="datasetSelect" onchange="datasetSelect()">
+	<option value="IMERG">IMERG</option>
+    <option value="RFE">RFE</option>
+    <option value="CHIRPS">CHIRPS</option>
+</select>
+
 Initialisation:
 <select id="initYearSelect" onchange="ELRSelect()">
 	<option value="">--</option>
@@ -83,6 +90,11 @@ Probability bin edges:
 Your browser does not support the HTML canvas tag.</canvas>
 <canvas id="ELRCanvas" width="605" height="770"></canvas>
 
+<script>
+	// Served by `python -m http.server` from the repo root: ELR data comes straight from the
+	// data store, one tree per dataset at /store/interface/<imerg|rfe|chirps>/ELR_predictions.
+	window.Dataset_Source_URL = "/store/interface/";
+</script>
 <script src="../js/ensembleLogisticRegressionMin.js"></script>
 <script src="../js/showEnsembleLogisticRegression.js"></script>
 </body>
