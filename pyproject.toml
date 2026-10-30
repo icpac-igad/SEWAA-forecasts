@@ -29,6 +29,7 @@ dependencies = [
     "scikit-learn>=1.7.2",
     "seaborn>=0.13.2",
     "tensorflow==2.15.0",
+    "tensorflow-macos==2.15.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "tqdm>=4.67.1",
     "xarray>=2025.9.0",
     "xesmf>=0.8.10",
