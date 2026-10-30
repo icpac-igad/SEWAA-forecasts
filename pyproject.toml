@@ -26,7 +26,12 @@ dependencies = [
     "regionmask>=0.13.0",
     "ruff>=0.13.2",
     "schedule>=1.2.2",
-    "scikit-learn>=1.7.2",
+    # scikit-learn and scipy are pinned to the versions ELR/models/**/*.pkl were saved with:
+    # the pickles (sklearn pipelines holding scipy BSplines) only load reliably there; newer
+    # versions fail (e.g. SplineTransformer.handle_missing, BSpline._asarray).
+    # Change them only together with re-saving the ELR models.
+    "scikit-learn==1.5.2",
+    "scipy==1.14.1",
     "seaborn>=0.13.2",
     "tensorflow==2.15.0",
     "tensorflow-macos==2.15.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
