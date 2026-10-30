@@ -29,15 +29,28 @@ static_dir = Path("interface/static")
 if not static_dir.exists():
     static_dir.mkdir(parents=True)
 
-data_dir = Path("interface/data")
-if not data_dir.exists():
-    data_dir.mkdir(parents=True)
+# Viz-ready data lives in the data store, ${STORE:-./store}/interface/<dataset> (see
+# docker-compose.yml), which is shared with other consumers (e.g. cgan-cms) and so must not
+# be restructured to suit this app. Under docker-compose the IMERG tree is mounted at
+# interface/data instead and no store exists in the container, so fall back to that.
+store_interface_dir = Path(os.path.expandvars(os.environ.get("STORE", "store"))) / "interface"
+
+data_dir = store_interface_dir / "imerg"
+if not data_dir.is_dir():
+    data_dir = Path("interface/data")
+    if not data_dir.exists():
+        data_dir.mkdir(parents=True)
 
 
 elr_climate_dir = Path("ELR/climatological_exceedances")
 
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+# Mirror the nginx data portal (configs/nginx.conf): IMERG at /data/, the others under it.
+# Registered before /data so they take precedence.
+for dataset in ("rfe", "chirps"):
+    if (store_interface_dir / dataset).is_dir():
+        app.mount(f"/data/{dataset}", StaticFiles(directory=store_interface_dir / dataset), name=f"data_{dataset}")
 app.mount("/data", StaticFiles(directory=data_dir), name="data")
 app.mount("/staticELR_climate", StaticFiles(directory=elr_climate_dir), name="elr_climate")
 
