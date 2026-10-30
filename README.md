@@ -1,868 +1,497 @@
-# SEWAA-Forecasts
+# SEWAA Forecasts
 
-Welcome! This project provides operational rainfall forecasts for the ICPAC (IGAD Climate Prediction and Applications Centre) region in East Africa. The system uses advanced machine learning (cGAN - conditional Generative Adversarial Network) to generate accurate rainfall predictions.
+> **Research software.** The forecast models in this project are **experimental and under
+> active research**. Their forecasts have not been fully validated and should not be used
+> on their own to make decisions. For official forecasts, use your national meteorological
+> service.
 
-## Table of Contents
-- [SEWAA-Forecasts](#sewaa-forecasts)
-  - [Table of Contents](#table-of-contents)
-  - [What is This Project?](#what-is-this-project)
-    - [Supported Datasets](#supported-datasets)
-    - [Requirements](#requirements)
-  - [Installation Guide](#installation-guide)
-    - [Step 1: Download the Project](#step-1-download-the-project)
-      - [Option A: Using Git (Recommended if you have Git installed)](#option-a-using-git-recommended-if-you-have-git-installed)
-      - [Option B: Download as ZIP (For beginners)](#option-b-download-as-zip-for-beginners)
-    - [Step 2: Set Up Python Environment](#step-2-set-up-python-environment)
-      - [Option A: Using uv (Recommended — the same tool the Docker image uses)](#option-a-using-uv-recommended--the-same-tool-the-docker-image-uses)
-      - [Option B: Using Conda](#option-b-using-conda)
-      - [Verify the installation](#verify-the-installation)
-    - [Step 3: IFS Forecast Data](#step-3-ifs-forecast-data)
-  - [Running the Application](#running-the-application)
-    - [Method 1: Using Docker (Recommended for Beginners)](#method-1-using-docker-recommended-for-beginners)
-      - [Prerequisites:](#prerequisites)
-      - [Steps:](#steps)
-      - [Running the Full Stack with Docker Compose](#running-the-full-stack-with-docker-compose)
-    - [Method 2: Using Python Directly](#method-2-using-python-directly)
-  - [How to Use the Forecasts](#how-to-use-the-forecasts)
-    - [Making a Single Forecast](#making-a-single-forecast)
-    - [Automatic Forecasting](#automatic-forecasting)
-    - [Using the API to Generate Forecasts](#using-the-api-to-generate-forecasts)
-      - [Accessing the API Documentation](#accessing-the-api-documentation)
-      - [Available API Endpoints](#available-api-endpoints)
-      - [Using the `/gen-forecast` Endpoint](#using-the-gen-forecast-endpoint)
-      - [How to Use the Interactive API Docs](#how-to-use-the-interactive-api-docs)
-      - [Understanding the Response](#understanding-the-response)
-      - [API Usage Examples for Different Scenarios](#api-usage-examples-for-different-scenarios)
-      - [Setting Up Automated API Calls](#setting-up-automated-api-calls)
-      - [Alternative API Documentation](#alternative-api-documentation)
-    - [Viewing Forecasts in the Web Interface](#viewing-forecasts-in-the-web-interface)
-  - [Updating the Installation](#updating-the-installation)
-    - [If You Use Git:](#if-you-use-git)
-    - [If You Downloaded as ZIP:](#if-you-downloaded-as-zip)
-  - [Troubleshooting](#troubleshooting)
-    - [Common Issues and Solutions](#common-issues-and-solutions)
-      - [1. **"conda: command not found" / "uv: command not found"**](#1-conda-command-not-found--uv-command-not-found)
-      - [2. **"ImportError: No module named 'tensorflow'"**](#2-importerror-no-module-named-tensorflow)
-      - [3. **"Port 8000 is already in use"**](#3-port-8000-is-already-in-use)
-      - [4. **"Permission denied" errors**](#4-permission-denied-errors)
-      - [5. **Forecasts not appearing in the web interface**](#5-forecasts-not-appearing-in-the-web-interface)
-      - [6. **"Cannot download IFS data"**](#6-cannot-download-ifs-data)
-      - [7. **Web page loads but shows no data**](#7-web-page-loads-but-shows-no-data)
-      - [8. **Docker build fails**](#8-docker-build-fails)
-      - [9. **Forecast job container keeps restarting / exits with code 137**](#9-forecast-job-container-keeps-restarting--exits-with-code-137)
-  - [Getting Help](#getting-help)
-    - [Resources](#resources)
-    - [Contact](#contact)
-    - [Contributing](#contributing)
-  - [Project Structure](#project-structure)
-  - [License](#license)
+This project produces **experimental rainfall forecasts for East Africa**, covering the
+ICPAC region: Burundi, Djibouti, Eritrea, Ethiopia, Kenya, Rwanda, Somalia, South Sudan,
+Sudan, Tanzania and Uganda. It is developed by ICPAC and the University of Oxford as part
+of the SEWAA project.
+
+It takes the global weather forecast from ECMWF (called **IFS**) and refines it for East
+Africa using a research machine-learning model (a **cGAN**). The result is a set of maps
+of how likely rain is across the region for the next few days, which you can explore in
+your web browser.
+
+## Contents
+
+- [Words used in this guide](#words-used-in-this-guide)
+- [Easy setup with Docker (recommended for beginners)](#easy-setup-with-docker)
+- [Advanced setup with Python](#advanced-setup-with-python)
+  - [Install](#install)
+  - [Make forecasts](#make-forecasts)
+  - [View the forecasts](#view-the-forecasts)
+- [Using the forecast page](#using-the-forecast-page)
+- [Where your data is saved](#where-your-data-is-saved)
+- [Asking the web server to make a forecast](#asking-the-web-server-to-make-a-forecast)
+- [Updating to a newer version](#updating-to-a-newer-version)
+- [Troubleshooting](#troubleshooting)
+- [What's in this folder](#whats-in-this-folder)
+- [More information](#more-information)
 
 ---
 
-## What is This Project?
+## Words used in this guide
 
-This application generates and visualizes rainfall forecasts for East African countries including:
-- Burundi
-- Djibouti
-- Eritrea
-- Ethiopia
-- Kenya
-- Rwanda
-- Somalia
-- South Sudan
-- Sudan
-- Tanzania
-- Uganda
+| Word | Meaning |
+|------|---------|
+| **Dataset** | Which rainfall observations the model learned from: **IMERG** (satellite), **CHIRPS** or **RFE**. Each gives a slightly different forecast. |
+| **Accumulation** | How much rain is added up in each map: **6h** (per 6 hours) or **24h** (per day). IMERG has both; CHIRPS and RFE are 24h only. |
+| **Initialisation time** | When the weather forecast started (in UTC). 24h forecasts start at `0000`; 6h forecasts can start at `0000`, `0600`, `1200` or `1800`. |
+| **Store** | The one folder where all the forecast data is saved. By default this is the `store` folder in this project. |
 
-**Key Features:**
-- **6-hour and 24-hour rainfall accumulation forecasts**
-- **Interactive web interface** to view and explore forecasts
-- **Multiple visualization options** including probability maps and rainfall values
-- **Automated forecast generation** that runs on a schedule
-- **Historical forecast data** for analysis and comparison
+Which setup should I use?
 
-### Supported Datasets
-
-The same code base produces forecasts from cGAN models trained against three different
-rainfall datasets. Which one a script or container works on is chosen with the
-`CGAN_DATASET` environment variable (see `dataset_config.py`):
-
-| `CGAN_DATASET` | Dataset | Accumulations |
-|----------------|---------|---------------|
-| `imerg` (default) | IMERG | 6h and 24h |
-| `chirps` | CHIRPS | 24h |
-| `rfe` | RFE | 24h |
-
-### Requirements
-
-Before you begin, make sure you have:
-
-1. **A computer** running Windows, macOS, or Linux
-2. **Internet connection** for downloading data and dependencies
-3. **At least 10 GB of free disk space** (plus up to 16 GB of RAM for operational runs,
-   which generate 1000-member ensembles)
-4. **Basic familiarity with using the terminal/command line** (don't worry, we'll guide you through each step!)
-
-**Optional but helpful:**
-- Docker Desktop (for the easiest installation method)
-- Git (for easier updates)
+- **New to this, or just want to see forecasts?** Use [Docker](#easy-setup-with-docker).
+  You only install one program, run a few commands, and forecasts are made for you
+  automatically.
+- **Developing the code, or need to choose exactly which forecasts are made?** Use the
+  [Python setup](#advanced-setup-with-python).
 
 ---
 
-## Installation Guide
+## Easy setup with Docker
 
-### Step 1: Download the Project
+Docker runs the whole system for you in the background: it makes new forecasts
+automatically and serves the website. You don't need to install Python or anything else.
 
-You have two options:
+### What you need
 
-#### Option A: Using Git (Recommended if you have Git installed)
+- A computer with **at least 16 GB of memory (RAM)** and about **20 GB of free disk space**
+- An internet connection. The forecast input data is downloaded automatically, and no
+  account or password is needed.
+
+### Steps
+
+1. **Install Docker Desktop** from https://www.docker.com/products/docker-desktop and start it.
+   In Docker Desktop, open **Settings → Resources** and give it as much memory as you can
+   spare (16 GB or more).
+
+2. **Download this project.** Open https://github.com/icpac-igad/SEWAA-forecasts, click the
+   green **Code** button, then **Download ZIP**, and unzip it. (If you use Git:
+   `git clone https://github.com/icpac-igad/SEWAA-forecasts.git`.)
+
+3. **Open a terminal in the project folder** (macOS: *Terminal*; Windows: *PowerShell*;
+   then type `cd ` followed by the folder's path).
+
+4. **Start the website and IMERG forecasts:**
+   ```bash
+   docker compose up -d --build web imerg nginx
+   ```
+   The first time, this takes 15–30 minutes to set things up. After that it starts in
+   seconds.
+
+5. **Open http://localhost** in your browser and click through to the forecasts.
+
+The system now checks for new weather data every 15 minutes and makes any forecasts that
+are missing from the last 2 days. Making forecasts is slow, so the first ones can take a
+while to appear. You can watch progress with:
 
 ```bash
-# Navigate to where you want to store the project
-cd ~/Documents
-
-# Clone the repository
-git clone https://github.com/icpac-igad/SEWAA-forecasts.git
-
-# Enter the project directory
-cd SEWAA-forecasts
+docker compose logs -f imerg
 ```
 
-#### Option B: Download as ZIP (For beginners)
+### Everyday commands
 
-1. Go to: https://github.com/icpac-igad/SEWAA-forecasts
-2. Click the green **"<> Code"** button
-3. Click **"Download ZIP"**
-4. Extract the ZIP file to a location you'll remember (e.g., `Documents` folder)
-5. Open your terminal and navigate to the extracted folder:
+```bash
+docker compose up -d web imerg nginx        # start (after a restart, for example)
+docker compose down                          # stop everything
+docker compose logs -f imerg                 # watch IMERG forecasts being made
+```
+
+### Adding RFE and CHIRPS forecasts
+
+Each dataset has its own forecasting service: `imerg`, `rfe` and `chirps`. Every one of
+them needs a lot of memory, so start with IMERG and add the others only if your computer
+can handle it:
+
+```bash
+docker compose up -d rfe chirps              # add RFE and CHIRPS
+docker compose up -d --build                 # or: start everything at once
+```
+
+### Optional settings
+
+To change settings, such as where data is saved, copy the settings file and edit it:
+
+```bash
+cp .env.example .env
+```
+
+The most useful settings are:
+
+- **`STORE`:** where forecasts are saved (e.g. a larger disk). See
+  [Where your data is saved](#where-your-data-is-saved).
+- **`CGAN_MEM_LIMIT`:** the memory limit for each service (default `16g`).
+
+For running on Google Cloud (Cloud Run Jobs), see [deploy/README.md](deploy/README.md).
+
+---
+
+## Advanced setup with Python
+
+Run the project directly on your computer. Use this to develop the code, to make specific
+forecasts by hand, or to run without Docker.
+
+### Install
+
+You need a computer with Linux, macOS or Windows, 16 GB of RAM and about 10 GB of free
+disk space, plus a terminal.
+
+1. **Download the code:**
    ```bash
-   cd ~/Documents/SEWAA-forecasts-main
+   git clone https://github.com/icpac-igad/SEWAA-forecasts.git
+   cd SEWAA-forecasts
    ```
+   Every command below is run **from inside this project folder**.
 
-### Step 2: Set Up Python Environment
-
-> Skip this step if you only plan to run the project with Docker — the image installs
-> everything for you.
-
-The project needs **Python 3.11 or 3.12**. Its dependencies are listed in
-`pyproject.toml` and pinned in `uv.lock`.
-
-#### Option A: Using uv (Recommended — the same tool the Docker image uses)
-
-1. **Install uv** (see https://docs.astral.sh/uv/getting-started/installation/):
+2. **Install uv**, a tool that installs the right Python version and all the packages the
+   project needs (see https://docs.astral.sh/uv/getting-started/installation/ for Windows):
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
+   Close and reopen the terminal afterwards.
 
-2. **Create the environment and install all packages** (this may take 15-30 minutes):
+3. **Install the project** (15–30 minutes the first time):
    ```bash
    uv sync
    ```
 
-3. **Activate the environment:**
+4. **Activate the environment.** Do this every time you open a new terminal:
    ```bash
-   source .venv/bin/activate        # macOS/Linux
+   source .venv/bin/activate        # macOS / Linux
    .venv\Scripts\activate           # Windows
    ```
+   Your prompt now starts with `(.venv)`.
 
-#### Option B: Using Conda
-
-1. **Install Miniconda** from https://docs.conda.io/en/latest/miniconda.html and verify
-   it with `conda --version`.
-
-2. **Create and activate a new environment named `tf215gpu`:**
+5. **Check it works:**
    ```bash
-   conda config --add channels conda-forge
-   conda config --set channel_priority strict
-   conda create -n tf215gpu python=3.11
-   conda activate tf215gpu
-   ```
-   - You should see `(tf215gpu)` appear at the beginning of your terminal prompt
-
-3. **Install all required packages** (this may take 15-30 minutes):
-   ```bash
-   pip install tensorflow==2.15.0 cartopy cfgrib climlab dask ecmwf-api-client "fastapi[standard]" flake8 iris jinja2 jupyter markdown2 matplotlib netcdf4 numba pre-commit properscoring regionmask ruff schedule scikit-learn seaborn tqdm xarray xesmf
-   conda install conda-forge::curl
+   python -c "import tensorflow as tf; print('OK', tf.__version__)"
    ```
 
-#### Verify the installation
+> Prefer conda? Create an environment with Python 3.11 (`conda create -n cgan python=3.11`),
+> activate it, and run `pip install -e .` in the project folder.
+
+### Make forecasts
+
+**Catch up on recent days (recommended):**
 
 ```bash
-python -c "import tensorflow as tf; print(tf.config.list_physical_devices('CPU'))"
+python auto_forecasts.py --dataset imerg --accumulation 24h
 ```
-You should see a list of CPU devices. If you see an error, something went wrong with the installation.
 
-### Step 3: IFS Forecast Data
+This makes every forecast missing from the last 2 days, then stops. Forecasts that already
+exist are skipped, so running it again is safe. More examples:
 
-The cGAN models are driven by ECMWF IFS forecasts. **No credentials are needed:**
-`run_forecast.py` downloads the IFS initialization files it needs over HTTP from public
-mirrors, trying each in turn (University of Oxford, megacorr.dynu.net, then the ICPAC data
-portal). The machine only needs outbound internet access to those sites.
+```bash
+python auto_forecasts.py --dataset rfe --accumulation 24h       # RFE
+python auto_forecasts.py --dataset chirps --accumulation 24h    # CHIRPS
+python auto_forecasts.py --dataset imerg --accumulation 6h      # IMERG, every 6 hours
+
+python auto_forecasts.py --dataset imerg --accumulation 24h --days_to_check 7    # last 7 days
+python auto_forecasts.py --dataset imerg --accumulation 24h \
+    --start_date 20261020 --final_date 20261025                                  # a date range
+```
+
+**One single forecast:**
+
+```bash
+python run_forecast.py --accumulation 24h --date 20261029
+CGAN_DATASET=rfe python run_forecast.py --date 20261029           # another dataset
+```
+
+| Option | What it does |
+|--------|--------------|
+| `--date YYYYMMDD` | The day the forecast starts (default: yesterday) |
+| `--accumulation 6h` or `24h` | 6-hourly or daily rain |
+| `--time 1200` | Start time, for 6h forecasts (`0000`, `0600`, `1200`, `1800`) |
+| `--delete_forecasts Y` | Delete the large raw files afterwards and keep only what the maps need |
+| `--disable_ELR` | Skip the extra regional (ELR) forecasts for Kenya, Ethiopia and Rwanda |
+
+See `python run_forecast.py --help` for all options.
+
+**Keep forecasting automatically** (this is what the Docker services run):
+
+```bash
+python start_forecasting.py                      # IMERG (6h and 24h)
+CGAN_DATASET=rfe python start_forecasting.py     # RFE
+```
+
+It checks every 15 minutes and makes any missing forecasts, until you stop it with `Ctrl + C`.
+
+**What happens during a forecast.** Each output line starts with the dataset name, e.g.
+`[IMERG]` or `[RFE]`. A forecast:
+
+1. Downloads the input weather forecast (IFS), if it isn't saved yet, trying three mirror
+   websites in turn. New forecasts are published about 8–10 hours after their start time,
+   so very recent dates are skipped until then.
+2. Runs the model to produce 1000 possible versions of the forecast (an "ensemble"). This
+   is the slow part, and it needs a lot of memory.
+3. Turns the result into map data for the website, and updates the list of available dates.
+
+A forecast that was interrupted (for example, the computer ran out of memory) is detected
+and made again on the next run.
+
+### View the forecasts
+
+There are two ways to view forecasts. Both read from your
+[store](#where-your-data-is-saved) and show IMERG, RFE and CHIRPS.
+
+**Option 1: the full website (`fastapi dev`).** This is the same website used in
+production:
+
+```bash
+fastapi dev
+```
+
+Open **http://localhost:8000** and click through to the forecasts (or go straight to
+http://localhost:8000/showForecasts.html).
+
+- `fastapi dev` restarts itself when you change the code. For a server that stays up, use
+  `fastapi run --port 8000` instead.
+- If your store isn't the default `./store` folder, give the server the same setting:
+  `STORE=/mnt/data/cgan fastapi dev`.
+
+**Option 2: a simple file viewer (`python -m http.server`).** This needs nothing beyond
+Python, so it's handy for a quick look:
+
+```bash
+python -m http.server 8000
+```
+
+Open **http://localhost:8000** and click **View forecasts**. The same page also links to the
+raw data folders.
+
+- This viewer always reads the `store` folder inside the project. If your data is
+  somewhere else, link it once: `ln -s /mnt/data/cgan store` (macOS/Linux).
+- Both options use port 8000, so run only one at a time, or give one another port
+  (e.g. `python -m http.server 8080`).
 
 ---
 
-## Running the Application
+## Using the forecast page
 
-### Method 1: Using Docker (Recommended for Beginners)
+Open the forecast page:
 
-Docker packages everything you need in a container, making it easier to run.
+| Setup | Address |
+|-------|---------|
+| Docker | http://localhost/showForecasts.html |
+| `fastapi dev` | http://localhost:8000/showForecasts.html |
+| `python -m http.server` | http://localhost:8000, then **View forecasts** |
 
-#### Prerequisites:
-- Install Docker Desktop from: https://www.docker.com/products/docker-desktop
+> Remember that these are **experimental** forecasts (see the note at the top of this page).
 
-#### Steps:
+### Your first map in four steps
 
-1. **Navigate to the project directory:**
-   ```bash
-   cd ~/Documents/SEWAA-forecasts
-   ```
+1. **Pick the forecast.** Set **Accumulation Period** to *24-hour* (rain per day; the easiest
+   to start with) and **Reference Dataset** to *IMERG*, *RFE* or *CHIRPS*.
+2. **Pick the date.** Under **Initialization Date & Time**, choose the day the forecast
+   starts. **Valid Time** picks which day (or 6-hour period) of that forecast to show.
+3. **Pick the area.** Choose your country under **Region**, or keep *East Africa*. For some
+   countries an **Admin 1** menu appears so you can zoom to a province or county.
+4. **Read the map.** By default, the colours show the **chance of rain above an amount**
+   (the *Value Threshold*). Tick **Show plot explanation** below the maps for a
+   plain-language description of what you're looking at.
 
-2. **Build the Docker image** (first time only, takes 15-30 minutes):
-   ```bash
-   docker build -t sewaa-forecasts .
-   ```
+**Tip:** click anywhere on the map to see a chart (a *histogram*) of all the rainfall
+amounts the model thinks are possible at that spot. Use the arrow keys to move the point
+around, and **Remove histograms** to hide the charts.
 
-3. **Run the application:**
-   ```bash
-   docker run -p 8000:8000 -e CGAN_DATASET=imerg -v $(pwd)/interface/data:/opt/cgan/interface/data sewaa-forecasts
-   ```
+### Which plot type should I use?
 
-4. **Access the web interface:**
-   - Open your web browser
-   - Go to: http://localhost:8000
-   - You should see the SEWAA Forecasts homepage!
+| Plot Type | Answers the question | Good for |
+|-----------|----------------------|----------|
+| **Probability to exceed value** (default) | "How likely is more than *X* mm of rain?" Set *X* in **Value Threshold**. | Most users; e.g. the chance of heavy rain above 20 mm/day |
+| **Values below probability** | "How much rain could fall?" Set the **Probability Threshold**: *50%* gives a typical amount, *95%* a high amount that only 5% of the forecasts go above. | Planning for a likely or worst-case amount |
+| **Ensemble mean** | The average of all forecast versions | Technical users. It can mislead for rainfall; *Values below probability* at 50% is usually better. |
+| **Ensemble standard deviation** | How much the forecast versions disagree | Technical users. *Values below probability* at 95% is usually a clearer guide. |
 
-**Explanation of the Docker command:**
-- `-p 8000:8000` - Makes the app accessible on port 8000
-- `-e CGAN_DATASET=imerg` - Selects the dataset (`imerg`, `chirps` or `rfe`)
-- `-v $(pwd)/interface/data:/opt/cgan/interface/data` - Shares the data folder so forecasts persist
-- `sewaa-forecasts` - The name of the Docker image we built
+### All the controls
 
-The web server starts 4 workers by default; add `-e API_WORKERS=<n>` to change that.
+| Control | What it does |
+|---------|--------------|
+| **Accumulation Period** | Rain per 6 hours or per day. RFE and CHIRPS are daily only; picking one switches to 24-hour. |
+| **Forecast Model** | The input weather forecast. This project makes forecasts from **ECMWF IFS**, so leave it on that. |
+| **Reference Dataset** | Which rainfall observations the model learned from (IMERG, RFE or CHIRPS) |
+| **Region** / **Admin 1** | The area shown on the map |
+| **Initialization Date & Time** | When the forecast started (UTC). Only dates that have forecasts are listed. |
+| **Valid Time** | Which part of the forecast to show, or all of them side by side |
+| **Style** | Colour scheme, including those used by ICPAC, the Kenya Meteorological Department (KMD), the Ethiopian Meteorological Institute (EMI) and ECMWF |
+| **Plot Type** | What the colours mean (see the table above) |
+| **Value Threshold** / **Units** | The rainfall amount used by *Probability to exceed value*, in mm/h, mm/6h or mm/day |
+| **Probability Threshold** | The percentage used by *Values below probability* |
+| **Display Format** | Show chances as percentages or as words ("Very low", "Low", "Medium", "High") |
 
-#### Running the Full Stack with Docker Compose
+### For technical users
 
-For an operational (always-on) deployment, `docker-compose.yml` runs the web API, one
-forecasting job per dataset, and the nginx data proxy together:
+- Each forecast is an ensemble of **1000 members**. The page doesn't load them directly.
+  It reads per-pixel **histogram counts** (`counts_<YYYYMMDD>_<HH>_<lead>h.nc`) and the list
+  of available dates (`available_dates.json`) from the store's `interface/<dataset>/counts_6h`
+  and `counts_24h` folders.
+- The website serves these under `/data/` (IMERG) and `/data/rfe/`, `/data/chirps/`. The
+  simple file viewer reads `/store/interface/<dataset>/` directly.
+- The page's code is in `interface/static/js/` (website) and `interface/view_forecasts/`
+  (file viewer); the two copies of `testScript.js` are kept identical.
 
-| Service  | Default container name | What it does |
-|----------|------------------------|--------------|
-| `web`    | `cgan-web`             | FastAPI web server (`CGAN_DATASET`, default `imerg`) |
-| `imerg`  | `cgan-imerg-jobs`      | Runs `start_forecasting.py` for IMERG (6h + 24h) |
-| `rfe`    | `cgan-rfe-jobs`        | Runs `start_forecasting.py` for RFE (24h) |
-| `chirps` | `cgan-chirps-jobs`     | Runs `start_forecasting.py` for CHIRPS (24h) |
-| `nginx`  | `cgan-proxy-server`    | Serves the forecast and counts data on ports 80/443 |
-
-1. **Configure the environment** (optional — every setting has a default):
-   ```bash
-   cp .env.example .env
-   ```
-   Set `STORE` to a folder outside the repo (e.g. `/mnt/data/cgan`) so forecast data
-   survives re-checkouts. Container names can be overridden with `WEB_CNTR_NAME`,
-   `JOBS_CNTR_NAME` (imerg), `RFE_JOBS_CNTR_NAME`, `CHIRPS_JOBS_CNTR_NAME` and
-   `NGINX_CNTR_NAME`.
-
-2. **Build and start everything:**
-   ```bash
-   docker compose up -d --build
-   ```
-
-3. **Start or follow only some services:**
-   ```bash
-   docker compose up -d web imerg nginx    # IMERG only
-   docker compose logs -f rfe              # follow the RFE job logs
-   ```
-
-**Resource settings:**
-- `WEB_API_WORKERS` — number of FastAPI workers in the `web` container (default: `4`;
-  the image's built-in default `API_WORKERS` is also `4`).
-- `CGAN_MEM_LIMIT` / `CGAN_MEM_RESERVATION` — memory cap and soft reservation applied
-  to `web` and every job service (default: `16g` / `4g`). The host running the jobs
-  needs this much free memory, since inference runs `ensemble_members: 1000`.
-
-> **Upgrading from an older compose file:** the job services were renamed
-> (`jobs` → `imerg`, `jobs-rfe` → `rfe`, `jobs-chirps` → `chirps`) and the IMERG job
-> container is now `cgan-imerg-jobs` (was `cgan-jobs`). Remove the old containers with
-> `docker compose up -d --remove-orphans`, and update any scripts that reference the old
-> names (e.g. `docker logs cgan-jobs`).
-
-### Method 2: Using Python Directly
-
-If you prefer not to use Docker, you can run the application directly with Python.
-
-1. **Navigate to the project directory:**
-   ```bash
-   cd ~/Documents/SEWAA-forecasts
-   ```
-
-2. **Activate the environment you created in [Step 2](#step-2-set-up-python-environment):**
-   ```bash
-   source .venv/bin/activate     # uv
-   conda activate tf215gpu       # or conda
-   ```
-
-3. **Start the web server:**
-   ```bash
-   fastapi run --port 8000
-   ```
-
-   **Alternative (if fastapi command not found):**
-   ```bash
-   uvicorn main:app --host 0.0.0.0 --port 8000
-   ```
-
-4. **Access the web interface:**
-   - Open your browser and go to: http://localhost:8000
-
-5. **To stop the server:**
-   - Press `Ctrl + C` in the terminal
+If the page says **"No ... forecasts available"**, no forecast has been made yet for that
+dataset, accumulation and date. See [Troubleshooting](#troubleshooting).
 
 ---
 
-## How to Use the Forecasts
+## Where your data is saved
 
-### Making a Single Forecast
+Everything (downloaded input, forecasts and the website's map data) goes into **one
+folder, the store**. By default that's `store/` inside the project.
 
-To generate forecasts manually, use the `run_forecast.py` script.
+To use another location, such as a bigger disk:
 
-1. **Activate your environment** (`source .venv/bin/activate` or `conda activate tf215gpu`)
+- **With Docker:** set `STORE=/path/to/folder` in `.env`.
+- **With Python:** run `export STORE=/path/to/folder` (macOS/Linux) in the terminal before
+  your commands.
 
-2. **Navigate to the project directory:**
-   ```bash
-   cd ~/Documents/SEWAA-forecasts
-   ```
+Inside the store:
 
-3. **Run a basic forecast** (yesterday's UTC date, initialized at 00:00, using the
-   dataset's default accumulation — 6h for IMERG, 24h for CHIRPS and RFE):
-   ```bash
-   python run_forecast.py
-   ```
-   Use `CGAN_DATASET` to pick the dataset (default `imerg`):
-   ```bash
-   CGAN_DATASET=chirps python run_forecast.py
-   ```
-
-4. **See all available options:**
-   ```bash
-   python run_forecast.py --help
-   ```
-
-**Advanced Usage Examples:**
-
-- **Generate 24-hour accumulation forecast:**
-  ```bash
-  python run_forecast.py --accumulation 24h
-  ```
-
-- **Generate forecast for a specific date:**
-  ```bash
-  python run_forecast.py --date 20250117
-  ```
-
-- **Generate forecast for a specific initialization time** (6h forecasts only accept
-  `0000`, `0600`, `1200` or `1800`; 24h forecasts are initialized at `0000` only):
-  ```bash
-  python run_forecast.py --accumulation 6h --time 1200
-  ```
-
-- **Generate forecast without deleting intermediate files:**
-  ```bash
-  python run_forecast.py --delete_forecasts N
-  ```
-
-- **Skip the Ensemble Logistic Regression (ELR) forecasts:**
-  ```bash
-  python run_forecast.py --disable_ELR
-  ```
-
-**What happens when you run a forecast:**
-1. The script downloads the IFS (ECMWF) initialization data, trying each public mirror in
-   turn (University of Oxford, megacorr.dynu.net, then the ICPAC data portal). Each file
-   is downloaded to a temporary `*.part` file and only moved into place once it opens as
-   valid netCDF, with up to 3 attempts per mirror — so an interrupted download is retried
-   and never leaves a truncated file for the forecast step to read. An existing but
-   corrupt IFS file, or a `*.part` file left by a killed download, is deleted
-   automatically.
-2. The cGAN model processes the data to generate rainfall predictions
-3. The forecast data is processed and saved for visualization
-4. The data is copied to the web interface directory
-
-Forecasts that already have output are skipped, so re-running the same command is safe. A
-forecast whose output file is incomplete (e.g. the process was killed part-way) is
-detected and regenerated.
-
-### Automatic Forecasting
-
-For operational use, you can run forecasts automatically on a schedule.
-
-1. **Start the automatic forecasting script** (for the dataset in `CGAN_DATASET`):
-   ```bash
-   python start_forecasting.py
-   CGAN_DATASET=rfe python start_forecasting.py   # another dataset
-   ```
-
-2. **What it does:**
-   - Checks every 15 minutes for missing forecasts (both 6h and 24h for IMERG, 24h for
-     CHIRPS and RFE)
-   - Automatically generates any missing forecasts from the last 2 days
-   - Keeps only the processed data (histogram data) for viewing
-   - Deletes raw forecast files to save disk space
-
-3. **Keep it running:**
-   - The script runs continuously until you stop it
-   - To stop: Press `Ctrl + C`
-   - To run in background: Use `screen` or `tmux` (advanced), or run the `imerg`, `rfe`
-     and `chirps` services from [Docker Compose](#running-the-full-stack-with-docker-compose),
-     which each run this script
-
-**One-shot alternative:** `auto_forecasts.py` does the same catch-up for a single
-dataset and accumulation, then exits — useful for cron or Cloud Run Jobs (see
-`deploy/README.md`):
-```bash
-python auto_forecasts.py --dataset imerg --accumulation 6h
-python auto_forecasts.py --dataset chirps --accumulation 24h --days_to_check 2
+```
+store/
+├── forecasts/
+│   ├── IFS_6h_forecast_data/       # downloaded input (shared by all datasets)
+│   ├── IFS_24h_forecast_data/
+│   ├── imerg/6h/cGAN_forecasts/    # raw model output, per dataset
+│   ├── imerg/24h/cGAN_forecasts/
+│   ├── rfe/24h/cGAN_forecasts/
+│   └── chirps/24h/cGAN_forecasts/
+└── interface/
+    ├── imerg/                      # what the website shows, per dataset
+    ├── rfe/
+    └── chirps/
 ```
 
-Runs of the same channel never overlap: a run that starts while another is still busy
-exits straight away. The lock lives in the data bucket when `CGAN_LOCK_BUCKET` is set
-(Cloud Run), otherwise it's a local file lock (`job_lock.py`).
-
-### Using the API to Generate Forecasts
-
-The application includes a REST API that allows you to generate forecasts programmatically. This is useful for automation, integration with other systems, or remote forecast generation.
-
-#### Accessing the API Documentation
-
-1. **Start the web server** (see [Running the Application](#running-the-application))
-
-2. **Open the interactive API documentation** in your browser:
-   ```
-   http://localhost:8000/docs
-   ```
-   or
-   ```
-   http://127.0.0.1:8000/docs
-   ```
-
-3. **You'll see the Swagger UI interface** with all available API endpoints
-
-#### Available API Endpoints
-
-**1. Health Check Endpoint**
-- **URL:** `/app-status`
-- **Method:** GET
-- **Purpose:** Check if the application is running
-- **Response:** Returns the application status (online, offline, or maintenance)
-
-**2. Generate Forecast Endpoint**
-- **URL:** `/gen-forecast`
-- **Method:** GET
-- **Purpose:** Generate cGAN forecasts with custom parameters
-
-#### Using the `/gen-forecast` Endpoint
-
-This is the main endpoint for generating forecasts. It runs `run_forecast.py` for the
-dataset the server was started with (`CGAN_DATASET`). It accepts several optional parameters:
-
-**Parameters:**
-
-| Parameter | Type | Options | Default | Description |
-|-----------|------|---------|---------|-------------|
-| `accumulation` | string | `6h` or `24h` | Dataset default (6h for IMERG, 24h for CHIRPS/RFE) | Forecast accumulation period |
-| `time` | string | `0000`, `0600`, `1200`, `1800` | `0000` | Forecast initialization time (UTC) |
-| `forecast_date` | string | `YYYYMMDD` format | Today's date (at request time) | Date for which to generate forecast |
-| `delete_forecasts` | string | `Y` or `N` | `Y` | Delete raw forecast files after processing |
-
-#### How to Use the Interactive API Docs
-
-**Method 1: Using the Swagger UI (Beginner-Friendly)**
-
-1. **Navigate to the API docs:**
-   ```
-   http://localhost:8000/docs
-   ```
-
-2. **Find the `/gen-forecast` endpoint** in the list
-
-3. **Click on the endpoint** to expand it
-
-4. **Click the "Try it out" button** (top right of the endpoint section)
-
-5. **Fill in the parameters** (or leave them blank for defaults):
-   - **accumulation:** Type `6h` or `24h` (or leave empty for the dataset's default)
-   - **time:** Select `0000`, `0600`, `1200`, or `1800`
-   - **forecast_date:** Enter a date like `20250117` (or leave empty for today)
-   - **delete_forecasts:** Type `Y` or `N`
-
-6. **Click the "Execute" button**
-
-7. **View the response** in the "Responses" section below
-   - You'll see the status of your forecast generation request
-   - Typical response: `{"status": "started"}`
-
-**Method 2: Using curl (Command Line)**
-
-You can also call the API from the command line using `curl`:
-
-**Basic forecast (default parameters):**
-```bash
-curl -X GET "http://localhost:8000/gen-forecast"
-```
-
-**6-hour accumulation forecast for today at 00:00 UTC:**
-```bash
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&time=0000"
-```
-
-**24-hour accumulation forecast for a specific date:**
-```bash
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=24h&forecast_date=20250117"
-```
-
-**Generate forecast for specific date and time, keep intermediate files:**
-```bash
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&time=1200&forecast_date=20250117&delete_forecasts=N"
-```
-
-**Method 3: Using Python requests Library**
-
-For integration with Python scripts:
-
-```python
-import requests
-
-# Basic forecast
-response = requests.get("http://localhost:8000/gen-forecast")
-print(response.json())
-
-# Advanced forecast with parameters
-params = {
-    "accumulation": "24h",
-    "time": "0000",
-    "forecast_date": "20250117",
-    "delete_forecasts": "Y"
-}
-response = requests.get("http://localhost:8000/gen-forecast", params=params)
-print(response.json())
-```
-
-**Method 4: Using JavaScript/Fetch**
-
-For web applications:
-
-```javascript
-// Basic forecast
-fetch('http://localhost:8000/gen-forecast')
-  .then(response => response.json())
-  .then(data => console.log(data));
-
-// Advanced forecast with parameters
-const params = new URLSearchParams({
-  accumulation: '6h',
-  time: '1200',
-  forecast_date: '20250117',
-  delete_forecasts: 'Y'
-});
-
-fetch(`http://localhost:8000/gen-forecast?${params}`)
-  .then(response => response.json())
-  .then(data => console.log(data));
-```
-
-#### Understanding the Response
-
-When you call `/gen-forecast`, you'll receive a JSON response:
-
-```json
-{
-  "status": "started"
-}
-```
-
-The endpoint currently always returns `started` — it does not track the job afterwards
-(the response schema also reserves `complete`, `pending` and `failed` for future use).
-
-**Important Notes:**
-
-⚠️ **The endpoint returns immediately** after starting the forecast generation process. The actual forecast generation happens in the background and may take several minutes to complete.
-
-⚠️ **Check the terminal/logs** to see the progress of forecast generation
-(`docker compose logs -f web` when running under Docker Compose).
-
-⚠️ **The forecast will be available** in the web interface once processing is complete (check `http://localhost:8000/showForecasts.html`).
-
-#### API Usage Examples for Different Scenarios
-
-**Example 1: Daily Automated Forecast**
-Generate today's forecast (dataset's default accumulation) initialized at midnight:
-```bash
-curl -X GET "http://localhost:8000/gen-forecast?time=0000"
-```
-
-**Example 2: Backfill Missing Forecast**
-Generate a forecast for a specific past date:
-```bash
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&forecast_date=20250115&time=1200"
-```
-
-**Example 3: Development/Testing**
-Generate forecast and keep all intermediate files for debugging:
-```bash
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&delete_forecasts=N"
-```
-
-**Example 4: Multiple Time Steps**
-Generate forecasts for all time steps of the day (run separately):
-```bash
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&time=0000"
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&time=0600"
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&time=1200"
-curl -X GET "http://localhost:8000/gen-forecast?accumulation=6h&time=1800"
-```
-
-#### Setting Up Automated API Calls
-
-**Using cron (Linux/Mac):**
-
-Edit your crontab:
-```bash
-crontab -e
-```
-
-Add a line to run forecasts daily at 2 AM:
-```bash
-0 2 * * * curl -X GET "http://localhost:8000/gen-forecast" >> /var/log/sewaa-forecast.log 2>&1
-```
-
-**Using Windows Task Scheduler:**
-
-1. Open Task Scheduler
-2. Create a new task
-3. Set the trigger (e.g., daily at 2:00 AM)
-4. Set the action to run a PowerShell script:
-   ```powershell
-   Invoke-RestMethod -Uri "http://localhost:8000/gen-forecast" -Method Get
-   ```
-
-#### Alternative API Documentation
-
-You can also access the ReDoc-style documentation at:
-```
-http://localhost:8000/redoc
-```
-
-This provides a different view of the same API with a cleaner, more readable format.
-
-### Viewing Forecasts in the Web Interface
-
-1. **Make sure the web server is running** (see [Running the Application](#running-the-application))
-
-2. **Open your browser and navigate to:**
-   ```
-   http://localhost:8000
-   ```
-
-3. **Navigate through the interface:**
-
-   **Homepage:**
-   - Overview of available forecast types
-   - Quick links to different visualization pages
-
-   **Show Forecasts Page:**
-   - **Model Selection:** Choose between 6h or 24h accumulation
-   - **Region:** Select a specific country or view all East Africa
-   - **Initialization Date & Time:** Choose when the forecast was made
-   - **Valid Time:** Select which forecast time period to view
-   - **Plot Type:** View probability maps or rainfall values
-   - **Interactive Features:**
-     - Click on the map to see local rainfall distribution
-     - Use arrow keys to navigate by 0.1 degrees
-     - Adjust rainfall thresholds and probability levels
-
-   **Ensemble Logistic Regression:**
-   - Statistical analysis of forecast reliability
-   - Compare different forecast models
-
-   **Cost-Loss Ratios:**
-   - Economic decision-making tools
-   - Evaluate forecast value for different scenarios
-
-   **Categories of Reliability:**
-   - Forecast quality metrics
-   - Reliability diagrams and statistics
+Docker and the Python setup use the same layout, so you can switch between them without
+moving data.
 
 ---
 
-## Updating the Installation
+## Asking the web server to make a forecast
 
-### If You Use Git:
+While the full website is running, you can start a forecast from your browser:
+
+1. Open http://localhost:8000/docs (with Docker: http://localhost/docs)
+2. Click **/gen-forecast**, then **Try it out**
+3. Fill in the date and options (or leave them empty for today), then click **Execute**
+
+Or from the terminal:
 
 ```bash
-cd ~/Documents/SEWAA-forecasts
-git pull origin main
-uv sync                                  # refresh Python packages (uv installs)
-docker compose up -d --build --remove-orphans   # or rebuild the containers (Docker Compose)
+curl "http://localhost:8000/gen-forecast?accumulation=24h&forecast_date=20261029"
 ```
 
-### If You Downloaded as ZIP:
+| Parameter | Values | Default |
+|-----------|--------|---------|
+| `accumulation` | `6h`, `24h` | the dataset's default |
+| `forecast_date` | `YYYYMMDD` | today |
+| `time` | `0000`, `0600`, `1200`, `1800` | `0000` |
+| `delete_forecasts` | `Y`, `N` | `Y` |
 
-1. **Download the latest version** from: https://github.com/icpac-igad/SEWAA-forecasts
-   - Click **"<> Code"** → **"Download ZIP"**
+The reply `{"status": "started"}` means the forecast has started. It finishes in the
+background a few minutes later; watch the server's terminal (or `docker compose logs -f web`)
+for progress. The server makes forecasts for the dataset it was started with
+(`CGAN_DATASET`, default `imerg`).
 
-2. **Extract the new version** to a new location
+---
 
-3. **Copy your data** from the old installation to the new one:
+## Updating to a newer version
 
-   If you run via `docker-compose.yml` with `STORE` pointed at a folder **outside** the
-   repo checkout (recommended — see `.env.example`), your data already lives outside
-   both the OLD and NEW checkouts, so nothing needs copying: just point the new
-   checkout's `STORE` at the same location.
+```bash
+git pull
+uv sync                                          # if you run the project directly
+docker compose up -d --build --remove-orphans    # if you use Docker
+```
 
-   Only copy data if your old installation used the legacy repo-relative defaults
-   (no `STORE` set, data under the checkout itself):
-
-   **On macOS/Linux:**
-   ```bash
-   # Replace OLD and NEW with your actual folder names
-   cp -r SEWAA-forecasts-OLD/store SEWAA-forecasts-NEW/store
-   ```
-
-   **On Windows:**
-   - Use File Explorer to copy the `store` folder (contains `interface/` and
-     `forecasts/`, each split by dataset: `imerg`, `rfe`, `chirps`) from the old
-     checkout into the new one.
+Your forecasts are in the store, so they're kept. If you downloaded a ZIP instead, download
+the new one and copy your old `store` folder into it (or set `STORE` to the same place).
 
 ---
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+**Docker: the forecast service keeps restarting**
+It is running out of memory. Give Docker Desktop more memory (**Settings → Resources**), and
+run only one forecast service (`docker compose up -d web imerg nginx`).
 
-#### 1. **"conda: command not found" / "uv: command not found"**
-   - **Solution:** The tool is not installed or not in your PATH
-   - Reinstall it ([Step 2](#step-2-set-up-python-environment)) and restart your terminal
-   - For Miniconda, make sure to check the option to add Conda to PATH during installation
+**"command not found" for `uv`, `python` or `fastapi`**
+Close and reopen the terminal, go to the project folder, and activate the environment
+again (`source .venv/bin/activate`).
 
-#### 2. **"ImportError: No module named 'tensorflow'"**
-   - **Solution:** TensorFlow is not installed or the wrong environment is active
-   - Run: `source .venv/bin/activate` (uv) or `conda activate tf215gpu` (conda)
-   - If still failing: `uv sync`, or `pip install tensorflow==2.15.0`
+**`No module named 'tensorflow'` (or any other module)**
+The environment isn't active. Run `source .venv/bin/activate`, and `uv sync` if it still fails.
 
-#### 3. **"Port 8000 is already in use"**
-   - **Solution:** Another application is using port 8000
-   - Try a different port: `fastapi run --port 8001`
-   - Or find and stop the process using port 8000
+**"is not available from any known source"**
+The input weather forecast for that date isn't published yet (it takes about 8–10 hours),
+or the computer can't reach the internet. Try an earlier date, or try again later.
 
-#### 4. **"Permission denied" errors**
-   - **Solution:** You don't have write permissions
-   - On macOS/Linux: Use `sudo` (but be careful!)
-   - Or change the installation directory to one you own
+**The forecast stops with "Killed" or exit code 137**
+The computer ran out of memory. Close other programs, make one forecast at a time, or use
+a machine with more RAM.
 
-#### 5. **Forecasts not appearing in the web interface**
-   - **Solution:** Check if data files exist
-   - Run: `ls -la ${STORE:-./store}/interface/imerg` (swap `imerg` for `rfe` or `chirps`
-     if that's the dataset you're checking)
-   - If empty, generate forecasts using `python run_forecast.py`
+**The website shows no forecasts**
+- Check that forecasts exist: `ls store/interface/imerg/counts_24h` (or `rfe`, `chirps`).
+  If it's empty, make some forecasts ([Docker](#easy-setup-with-docker) or [Python](#make-forecasts)).
+- Check the website is reading the right store (see the `STORE` notes in
+  [View the forecasts](#view-the-forecasts)).
+- Try a different date, accumulation or dataset on the forecast page.
+- Reload the page with `Ctrl + Shift + R` to bypass old cached files.
 
-#### 6. **"Cannot download IFS data"**
-   - The error `... is not available from any known source` means none of the IFS
-     mirrors has that file yet — new initializations appear a few hours after the run
-     time, so retry later or pick an earlier `--date`/`--time`
-   - Check the server can reach the mirrors (e.g. `curl -I https://rain.physics.ox.ac.uk`)
-   - Errors like `NetCDF: HDF error` came from reading half-downloaded files; current
-     versions validate downloads and clean up stale `*.part` files, so just re-run
+**"Address already in use" / port 8000 is busy**
+Another server is already running on that port. Stop it with `Ctrl + C` in its terminal, or
+use another port: `fastapi dev --port 8001` or `python -m http.server 8001`.
 
-#### 7. **Web page loads but shows no data**
-   - **Solution:** JavaScript files might not be loading
-   - Check browser console for errors (F12 → Console tab)
-   - Make sure `/static` directory exists and contains JS files
+**Another run is in progress; exiting**
+`auto_forecasts.py` won't run twice at the same time for the same dataset and accumulation.
+Wait for the first run to finish.
 
-#### 8. **Docker build fails**
-   - **Solution:** Check Docker Desktop is running
-   - Ensure you have enough disk space (10+ GB free)
-   - Try: `docker system prune` to free up space
-
-#### 9. **Forecast job container keeps restarting / exits with code 137**
-   - **Solution:** The container ran out of memory during inference
-   - Make sure the host has at least `CGAN_MEM_LIMIT` (default `16g`) free, or raise it in `.env`
-   - Run fewer job services at once (e.g. `docker compose up -d web imerg nginx`)
+Still stuck? Open an issue at https://github.com/icpac-igad/SEWAA-forecasts/issues and
+include the error message.
 
 ---
 
-## Getting Help
-
-### Resources
-
-- **GitHub Issues:** https://github.com/icpac-igad/SEWAA-forecasts/issues
-  - Search for similar problems
-  - Create a new issue if you find a bug
-
-- **Documentation:**
-  - cGAN paper: https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120
-  - ECMWF IFS: https://confluence.ecmwf.int/display/FUG
-  - IMERG data: https://gpm.nasa.gov/data/imerg
-
-### Contact
-
-- **ICPAC Team:** For operational forecasting and data access
-- **Oxford Team:** For technical development and research questions
-
-### Contributing
-
-Contributions are welcome! If you'd like to improve the code or documentation:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
----
-
-## Project Structure
+## What's in this folder
 
 ```
 SEWAA-forecasts/
-├── 6h_accumulations/          # 6-hour forecast code, models and data (IMERG)
-├── 24h_accumulations/         # 24-hour forecast code, models and data
-├── datasets/                  # Per-dataset (imerg, chirps, rfe) model weights and configs
-├── interface/                 # Web interface files
-│   ├── static/               # JavaScript, CSS, images
-│   ├── data/                 # Forecast data for visualization
-│   └── *.html                # Web pages
-├── shapes/                    # Geographic boundary files
-├── ELR/                       # Ensemble Logistic Regression code
-├── cGAN_data/                 # Model constants and normalisation data
-├── configs/                   # nginx proxy configuration
-├── deploy/                    # Cloud Run Jobs deployment (see deploy/README.md)
-├── dataset_config.py          # Dataset registry, selected via CGAN_DATASET
-├── run_forecast.py            # Main forecast generation script
-├── start_forecasting.py       # Continuous automatic forecasting loop
-├── auto_forecasts.py          # One-shot catch-up forecasting (cron / Cloud Run)
-├── job_lock.py                # Per-channel lock so auto_forecasts.py runs never overlap
-├── main.py                    # FastAPI web server
-├── Dockerfile                 # Application image (web + forecast jobs)
-├── nginx.Dockerfile           # Data proxy image
-├── docker-compose.yml         # web, imerg, rfe, chirps and nginx services
-├── .env.example               # Configuration template for docker-compose.yml
-├── cloudbuild.yaml            # Cloud Build config for the Cloud Run Jobs
-├── pyproject.toml / uv.lock   # Python dependencies
-└── README.md                  # This file
+├── auto_forecasts.py        # Make missing forecasts for a range of days, then stop
+├── run_forecast.py          # Make one forecast
+├── start_forecasting.py     # Keep making forecasts automatically
+├── main.py                  # The website (FastAPI)
+├── index.html               # Home page for `python -m http.server`
+├── dataset_config.py        # Settings for each dataset (IMERG, CHIRPS, RFE)
+├── job_lock.py              # Stops two identical runs at once
+├── 6h_accumulations/        # 6-hour model and scripts
+├── 24h_accumulations/       # 24-hour model and scripts
+├── datasets/                # Per-dataset model settings and files
+├── ELR/                     # Regional forecasts for Kenya, Ethiopia and Rwanda
+├── interface/               # Website pages, scripts and map boundaries
+├── shapes/                  # Country and county boundaries
+├── store/                   # Your data (see "Where your data is saved")
+├── configs/                 # Web server (nginx) settings for Docker
+├── deploy/                  # Google Cloud deployment
+├── Dockerfile, nginx.Dockerfile, docker-compose.yml, .env.example   # Docker setup
+├── cloudbuild.yaml          # Google Cloud build
+└── pyproject.toml, uv.lock  # Python packages
 ```
 
 ---
 
-## License
+## More information
 
-This project is maintained by ICPAC-IGAD for operational rainfall forecasting in East Africa.
+- The cGAN method: Harris et al. (2022), *A generative deep learning approach to stochastic
+  downscaling of precipitation forecasts*, https://doi.org/10.1029/2022MS003120
+- ECMWF IFS forecasts: https://www.ecmwf.int/
+- Rainfall datasets: [IMERG](https://gpm.nasa.gov/data/imerg),
+  [CHIRPS](https://www.chc.ucsb.edu/data/chirps),
+  [RFE](https://www.cpc.ncep.noaa.gov/products/international/data.shtml)
+- ICPAC forecasts website: https://cgan.icpac.net/
 
----
-
-**Last Updated:** October 2026
-
-**Version:** 1.2.0
-
----
-
-**Happy Forecasting! 🌧️📊**
-
-If you encounter any problems not covered in this README, please don't hesitate to reach out or create an issue on GitHub. We're here to help!
+Maintained by ICPAC-IGAD. The models are experimental research models; see the note at the
+top of this page.
