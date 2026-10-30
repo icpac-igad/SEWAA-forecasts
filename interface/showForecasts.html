@@ -7,9 +7,9 @@ East African rainfall forecasts.
 {% block styles %}
 <style>
     .forecasts-container {
-        max-width: 1800px;
+        max-width: 95vw;
         margin: 0 auto;
-        padding: 2rem 1.5rem 0 1.5rem;
+        padding: 2rem 2vw 0 2vw;
     }
 
     .page-header {
@@ -33,16 +33,70 @@ East African rainfall forecasts.
 
     .model-info-section {
         background-color: #e3f2fd;
-        padding: 1rem 1.5rem;
+        padding: 1.25rem 1.5rem;
         border-radius: 8px;
         margin-bottom: 1.5rem;
         border-left: 4px solid #3498db;
     }
 
-    .model-info-section p {
+    .model-config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .model-config-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .model-config-item label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .model-config-item select {
+        padding: 0.5rem 0.75rem;
+        border: 2px solid #c8dae8;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .model-config-item select:hover {
+        border-color: #A2CD3D;
+    }
+
+    .model-config-item select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .model-config-item .config-static {
+        padding: 0.5rem 0.75rem;
+        background-color: white;
+        border: 2px solid #c8dae8;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    .model-description {
         margin: 0;
         color: #555;
         line-height: 1.6;
+        font-size: 0.9rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #c8dae8;
     }
 
     .model-info-section a {
@@ -64,7 +118,7 @@ East African rainfall forecasts.
         background-color: white;
         padding: 1.5rem;
         border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .controls-section h4 {
@@ -110,7 +164,6 @@ East African rainfall forecasts.
         cursor: text;
     }
 
-    /* Increase spacing between dropdown options in Valid Time select */
     #validTimeSelect {
         min-width: 200px;
     }
@@ -139,7 +192,6 @@ East African rainfall forecasts.
         gap: 0.5rem;
     }
 
-    /* Override padding for init-date-grid selects to fit 4 columns */
     .init-date-grid select {
         padding: 0.6rem 0.2rem;
         font-size: 0.85rem;
@@ -161,25 +213,129 @@ East African rainfall forecasts.
         font-weight: 500;
     }
 
-    .status-section {
-        background-color: #fff3cd;
-        padding: 0.75rem 1.5rem;
-        border-radius: 6px;
-        margin-bottom: 1.5rem;
-        border-left: 4px solid #ffc107;
+    .toolbar-section {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding: 0.75rem 1.25rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid #e9ecef;
     }
 
-    .status-section p {
-        margin: 0;
+    .toolbar-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .toolbar-toggle input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #3498db;
+    }
+
+    .toggle-label {
+        font-weight: 500;
+        color: #2c3e50;
+        font-size: 0.9rem;
+    }
+
+    .btn-remove-hist {
+        display: none;
+        padding: 0.4rem 0.85rem;
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.85rem;
+        transition: background-color 0.2s;
+    }
+
+    .btn-remove-hist:hover {
+        background-color: #c0392b;
+    }
+
+    .status-badge {
+        margin-left: auto;
+        padding: 0.35rem 0.85rem;
+        background-color: #fff3cd;
         color: #856404;
         font-weight: 500;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        border: 1px solid #ffc107;
+    }
+
+    .explanation-panel {
+        display: none;
+        background-color: #f8fafc;
+        border: 1px solid #d1dce6;
+        border-left: 4px solid #3498db;
+        border-radius: 8px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1rem;
+        line-height: 1.7;
+        font-size: 0.9rem;
+        color: #2d3748;
+    }
+
+    .explanation-panel .explanation-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        color: #000000;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #d1dce6;
+    }
+
+    .explanation-panel p {
+        margin: 0 0 0.75rem 0;
+    }
+
+    .explanation-panel p:last-child {
+        margin-bottom: 0;
+    }
+
+    .explanation-panel .explanation-warning {
+        color: #c0392b;
+        font-weight: 600;
+    }
+
+    .explanation-panel .explanation-tip {
+        background-color: #e3f2fd;
+        padding: 0.6rem 1rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+
+    .explanation-panel .explanation-action {
+        display: inline-block;
+        background-color: #e8f5e9;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #000000;
+        margin-top: 0.5rem;
+        cursor: default;
     }
 
     .visualization-section {
         background-color: white;
         padding: 1.5rem 1.5rem 0 1.5rem;
         border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
     }
 
     .maps-grid {
@@ -191,61 +347,42 @@ East African rainfall forecasts.
 
     .map-item {
         text-align: center;
-        max-width: 900px;
-        margin: 0 auto;
-        width: 100%;
     }
 
-    /* Hide canvases 5, 6, and 7 by default (for 6h model) */
     .map-item.hidden-canvas {
         display: none !important;
     }
 
     .map-item canvas {
-        width: 100%;
-        height: auto;
         border-radius: 4px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         cursor: crosshair;
     }
 
-    /* Plot pair styling for map + histogram side by side */
     .plot-pair {
         display: flex;
         flex-wrap: nowrap;
         justify-content: center;
         align-items: flex-start;
-        gap: 0.5rem;
+        gap: 0;
     }
 
     .plot-pair canvas {
-        width: 100%;
         height: auto;
     }
 
-    /* When histogram is shown, map and histogram sit side by side */
     .plot-pair.has-histogram {
         max-width: 100%;
     }
 
     .plot-pair.has-histogram canvas {
-        width: 50%;
         height: auto;
     }
 
-    /* Keep single-column layout when histograms are shown */
-    .maps-grid.has-histograms {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-
-    /* Large screens (desktops, 1200px and up) - Default styles already defined above */
-
-    /* Medium screens (tablets, 768px to 1199px) */
     @media (max-width: 1199px) {
         .forecasts-container {
             max-width: 100%;
-            padding: 1.5rem 1rem 0 1rem;
+            padding: 1.5rem 2vw 0 2vw;
         }
 
         .page-header h3 {
@@ -259,16 +396,11 @@ East African rainfall forecasts.
         .maps-grid {
             gap: 1.25rem;
         }
-
-        .map-item {
-            max-width: 100%;
-        }
     }
 
-    /* Small screens (mobile devices, 767px and below) */
     @media (max-width: 767px) {
         .forecasts-container {
-            padding: 1rem 0.5rem 0 0.5rem;
+            padding: 1rem 2vw 0 2vw;
         }
 
         .page-header {
@@ -289,10 +421,8 @@ East African rainfall forecasts.
             font-size: 0.9rem;
         }
 
-        .model-info-section select {
-            display: block;
-            width: 100%;
-            margin: 0.5rem 0;
+        .model-config-grid {
+            grid-template-columns: 1fr 1fr;
         }
 
         .controls-section {
@@ -339,9 +469,15 @@ East African rainfall forecasts.
             font-size: 0.9rem;
         }
 
-        .status-section {
+        .toolbar-section {
+            gap: 0.75rem;
             padding: 0.6rem 1rem;
-            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            margin-left: 0;
+            width: 100%;
+            text-align: center;
         }
 
         .visualization-section {
@@ -352,20 +488,18 @@ East African rainfall forecasts.
             gap: 1rem;
         }
 
-        .map-item {
-            max-width: 100%;
-        }
-
-
         .map-item canvas {
             border-radius: 3px;
         }
+
+        .plot-pair.has-histogram {
+            flex-wrap: wrap;
+        }
     }
 
-    /* Extra small screens (very small mobile devices, 480px and below) */
     @media (max-width: 480px) {
         .forecasts-container {
-            padding: 0.75rem 0.25rem 0 0.25rem;
+            padding: 0.75rem 2vw 0 2vw;
         }
 
         .page-header h3 {
@@ -380,6 +514,10 @@ East African rainfall forecasts.
         .model-info-section {
             padding: 0.6rem 0.75rem;
             font-size: 0.85rem;
+        }
+
+        .model-config-grid {
+            grid-template-columns: 1fr;
         }
 
         .controls-section {
@@ -406,10 +544,6 @@ East African rainfall forecasts.
         .visualization-section {
             padding: 0.75rem 0.25rem 0 0.25rem;
         }
-
-        .map-item {
-            max-width: 100%;
-        }
     }
 </style>
 {% endblock %}
@@ -418,24 +552,44 @@ East African rainfall forecasts.
 <div class="forecasts-container">
     <div class="page-header">
         <h3>East African Rainfall Forecasts</h3>
-        <p class="instruction" style="font-style: italic;">Click for local distribution. Use arrow keys to change location by 0.1 degrees.</p>
+        <p class="instruction" style="font-style: italic;">Click for local distribution. Use arrow keys to change
+            location by 0.1 degrees.</p>
     </div>
 
     <div class="model-info-section">
-        <p>
-            <strong>Model: </strong>
-            <select id="modelSelect" onchange="modelSelect()" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; margin: 0 0.5rem;">
-                <option value="6h accumulation">6h accumulation</option>
-                <option value="24h accumulation">24h accumulation</option>
-            </select>
-            <span id="modelInfo">
-                : The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a>
-                <a href="https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS" target="_blank">IFS</a>
-                output is post-processed using
-                <a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">cGAN</a>
-                trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank">IMERG</a>
-                v6 to produce forecasts of 6h rainfall intervals. Model version 1.
-            </span>
+        <div class="model-config-grid">
+            <div class="model-config-item">
+                <label for="modelSelect">Accumulation Period</label>
+                <select id="modelSelect" onchange="modelSelect()">
+                    <option value="6h accumulation">6-hour</option>
+                    <option value="24h accumulation">24-hour</option>
+                </select>
+            </div>
+            <div class="model-config-item">
+                <label for="forecastModelSelect">Forecast Model</label>
+                <select id="forecastModelSelect" onchange="forecastModelSelect()">
+                    <option value="ECMWF IFS">ECMWF IFS</option>
+                    <option value="GEFS">GEFS</option>
+                </select>
+            </div>
+            <div class="model-config-item" id="datasetGroup">
+                <label for="datasetSelect">Reference Dataset</label>
+                <select id="datasetSelect" onchange="datasetSelect()">
+                    <option value="IMERG">IMERG</option>
+                    <option value="RFE">RFE</option>
+                    <option value="CHIRPS">CHIRPS</option>
+                </select>
+            </div>
+            <div class="model-config-item">
+                <label>Post-processing Method</label>
+                <span class="config-static">cGAN (2018&ndash;2021 Training)</span>
+            </div>
+        </div>
+        <p id="modelDescription" class="model-description">
+            The <a href="https://www.ecmwf.int/" target="_blank">ECMWF IFS</a> forecast is post-processed using a
+            <a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">cGAN</a>
+            trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank">IMERG</a> observations (2018&ndash;2021)
+            to generate improved 6-hour accumulated rainfall forecasts.
         </p>
     </div>
 
@@ -461,19 +615,31 @@ East African rainfall forecasts.
                     </select>
                 </div>
 
+                <div class="control-group" id="admin1Group" style="display:none;">
+                    <label for="admin1Select">Admin&nbsp;1</label>
+                    <select id="admin1Select" onchange="admin1Select()">
+                        <option value="">— whole country —</option>
+                    </select>
+                </div>
+
                 <div class="control-group">
                     <label>Initialization Date & Time</label>
                     <div class="init-date-grid">
-                        <select id="initYearSelect" onchange="initTimeSelect()" title="Forecast initialisation year"></select>
-                        <select id="initMonthSelect" onchange="initTimeSelect()" title="Forecast initialisation month"></select>
-                        <select id="initDaySelect" onchange="initTimeSelect()" title="Forecast initialisation day"></select>
-                        <select id="initTimeSelect" onchange="initTimeSelect()" title="Forecast initialisation time"></select>
+                        <select id="initYearSelect" onchange="initTimeSelect()"
+                            title="Forecast initialisation year"></select>
+                        <select id="initMonthSelect" onchange="initTimeSelect()"
+                            title="Forecast initialisation month"></select>
+                        <select id="initDaySelect" onchange="initTimeSelect()"
+                            title="Forecast initialisation day"></select>
+                        <select id="initTimeSelect" onchange="initTimeSelect()"
+                            title="Forecast initialisation time"></select>
                     </div>
                 </div>
 
                 <div class="control-group">
                     <label for="validTimeSelect">Valid Time</label>
-                    <select id="validTimeSelect" onchange="validTimeSelect()" title="Start of the time we are forecasting"></select>
+                    <select id="validTimeSelect" onchange="validTimeSelect()"
+                        title="Start of the time we are forecasting"></select>
                 </div>
 
                 <div class="control-group">
@@ -526,7 +692,8 @@ East African rainfall forecasts.
                     <label for="thresholdProbabilitySelect">Probability Threshold</label>
                     <div class="inline-control">
                         <input type="text" id="thresholdProbabilitySelect" size="3"
-                            title="Change this number and look at the plot description" onblur="pProbabilityThresholdInput()">
+                            title="Change this number and look at the plot description"
+                            onblur="pProbabilityThresholdInput()">
                         <span>%</span>
                     </div>
                 </div>
@@ -543,36 +710,19 @@ East African rainfall forecasts.
         </div>
     </div>
 
-    <div class="controls-section" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
-            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="showExplanation" onclick="showExplanation()" style="width: 18px; height: 18px; cursor: pointer;">
-                <span style="font-weight: 500; color: #2c3e50;">Show plot explanation</span>
-            </label>
-            <button id="removeHistBttn" onclick="removeHistograms()" style="display:none; padding: 0.5rem 1rem; background-color: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Remove histograms</button>
-        </div>
+    <div class="toolbar-section">
+        <label class="toolbar-toggle">
+            <input type="checkbox" id="showExplanation" onclick="showExplanation()">
+            <span class="toggle-label">Show plot explanation</span>
+        </label>
+        <button id="removeHistBttn" class="btn-remove-hist" onclick="removeHistograms()">
+            Remove histograms
+        </button>
+        <span id="statusText" class="status-badge">Status</span>
     </div>
 
-    <div class="status-section">
-        <p id="statusText">Status</p>
+    <div id="mapExplanationText" class="explanation-panel">
     </div>
-
-    <div id="mapExplanationText" 
-     style="
-        display: none;
-        padding: 1rem 1.25rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        border-left: 5px solid #3498db;
-        line-height: 1.6;
-        font-size: 0.9rem;
-        color: #212529;
-        font-family: Arial, Helvetica, sans-serif;
-        max-width: 100%;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-     ">
-        Some text to explain the current plots.
-    <br><br></div>
 
     <div class="visualization-section">
         <div id="plotsContainer" class="maps-grid">
@@ -605,6 +755,7 @@ East African rainfall forecasts.
 {% endblock %}
 
 {% block scripts %}
+<!-- Data/static prefixes default to /data/ (IMERG; /data/rfe/, /data/chirps/) and /static/ (see main.py) -->
 <script src="/static/js/plotForecastsMin.js"></script>
 <script src="/static/js/testScript.js"></script>
 {% endblock %}

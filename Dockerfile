@@ -34,7 +34,9 @@ COPY --chown=${USER_ID}:root . ${WORK_HOME}/
 # made the 24h job run the 6h model.
 
 ARG CGAN_DATASET=imerg
-ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS} CGAN_DATASET=${CGAN_DATASET}
+# Data folders are volume-mounted over the in-repo paths (docker-compose.yml, cloudbuild.yaml),
+# so run_forecast.py uses those paths rather than ${STORE}.
+ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS} CGAN_DATASET=${CGAN_DATASET} CGAN_DATA_MOUNTED=1
 
 RUN uv sync --all-extras
 

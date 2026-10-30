@@ -60,7 +60,7 @@ def time_standardised_to_since_1900(times, time_delta=None):
 def get_model_output(date, model="GAN", day=1):
 
     if model == "GAN":
-        fcst_root_dir = f"{FCST_PATH}/24h_accumulations/cGAN_forecasts/"
+        fcst_root_dir = os.environ.get("CGAN_FORECASTS_DIR", f"{FCST_PATH}/24h_accumulations/cGAN_forecasts") + "/"
     elif model == "IFS":
         fcst_root_dir = f"{FCST_PATH}/24h_accumulations/{model}_forecast_data/"
 

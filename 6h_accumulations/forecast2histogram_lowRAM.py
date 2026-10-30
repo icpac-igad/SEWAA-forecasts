@@ -1,15 +1,16 @@
 # Script to compute the histogram data from 1000 member ensembles
 
+import os
 import sys
 import numpy as np
 import netCDF4 as nc
 from pathlib import Path
 
 # Where the forecasts are downloaded to
-data_dir = "cGAN_forecasts"
+data_dir = os.environ.get("CGAN_FORECASTS_DIR", "cGAN_forecasts")
 
 # Where the counts are saved to
-output_dir = "../interface/data/counts_6h"
+output_dir = os.path.join(os.environ.get("CGAN_INTERFACE_DATA_DIR", "../interface/data"), "counts_6h")
 
 # Smaller chunk size means slower but less RAM usage
 # Larger chunk size means faster but more RAM usage

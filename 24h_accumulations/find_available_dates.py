@@ -12,7 +12,7 @@ import numpy as np
 import json
 
 # The directory with the counts data in
-counts_dir = "../interface/data/counts_24h"
+counts_dir = os.path.join(os.environ.get("CGAN_INTERFACE_DATA_DIR", "../interface/data"), "counts_24h")
 
 # Find the years to include
 counts_years = []

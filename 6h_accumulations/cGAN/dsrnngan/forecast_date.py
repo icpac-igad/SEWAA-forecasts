@@ -58,7 +58,8 @@ with open(fcstyaml_path, "r") as f:
 set_seed = fcst_params["MODEL"]["set_seed"]
 model_folder = fcst_params["MODEL"]["folder"]
 checkpoint = fcst_params["MODEL"]["checkpoint"]
-input_folder = fcst_params["INPUT"]["folder"]
+# run_forecast.py passes the data store folders via env; the yaml paths are the in-repo defaults.
+input_folder = os.environ.get("CGAN_IFS_DIR", fcst_params["INPUT"]["folder"])
 
 #input_file = fcst_params["INPUT"]["file"]
 # Instead of reading input_file from forecast.yaml, get it from the command line
@@ -66,7 +67,7 @@ input_file = f"IFS_{time_str}_{hour:02d}Z.nc"
 
 start_hour = fcst_params["INPUT"]["start_hour"]
 end_hour = fcst_params["INPUT"]["end_hour"]
-output_folder = fcst_params["OUTPUT"]["folder"]
+output_folder = os.environ.get("CGAN_FORECASTS_DIR", fcst_params["OUTPUT"]["folder"])
 ensemble_members = fcst_params["OUTPUT"]["ensemble_members"]
 
 assert start_hour % HOURS == 0, f"start_hour must be divisible by {HOURS}"

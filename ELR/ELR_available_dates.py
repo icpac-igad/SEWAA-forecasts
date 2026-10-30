@@ -12,7 +12,8 @@ import json
 
 
 # The directory with the ELR predictions in
-elr_dir = "../interface/data/ELR_predictions/24h_accumulations/"
+elr_dir = os.path.join(os.environ.get("CGAN_INTERFACE_DATA_DIR", "../interface/data"),
+                       "ELR_predictions", "24h_accumulations", "")
 country_regiontype = {"Kenya":"subcounty","Ethiopia":"subcounty","Rwanda":"county"}
 
 # Define the sort criteria

@@ -1,6 +1,9 @@
+import os
+
+# CGAN_INTERFACE_DATA_DIR / CGAN_FORECASTS_DIR are passed by run_forecast.py (data store).
 paths = dict(
 FCST_PATH = '../',
-OUT_PATH = '../interface/data/ELR_predictions/',
+OUT_PATH = os.path.join(os.environ.get('CGAN_INTERFACE_DATA_DIR', '../interface/data'), 'ELR_predictions', ''),
 MODEL_PATH =  './models/',
 Kenya_shapes = '../shapes/Kenya_shapes/subcounties/ke_subcounty.shp',
 Kenya_shapes_county = '../shapes/Kenya_shapes/Kenya_region.shp',

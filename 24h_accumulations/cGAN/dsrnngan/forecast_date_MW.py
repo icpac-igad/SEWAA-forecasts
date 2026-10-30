@@ -82,7 +82,8 @@ fcst_input_folder = fcst_params["INPUT"]["fcst_folder"]
 truth_input_folder = fcst_params["INPUT"]["truth_folder"]
 constants_folder = fcst_params["INPUT"]["constants_folder"]
 normalisation_folder = fcst_params["INPUT"]["normalisation_folder"]
-output_folder = fcst_params["OUTPUT"]["folder"]
+# run_forecast.py passes the data store folders via env; the yaml paths are the in-repo defaults.
+output_folder = os.environ.get("CGAN_FORECASTS_DIR", fcst_params["OUTPUT"]["folder"])
 ensemble_members = fcst_params["OUTPUT"]["ensemble_members"]
 save_crps_only = fcst_params["OUTPUT"]["save_crps_only"]
 
@@ -93,6 +94,8 @@ save_crps_only = fcst_params["OUTPUT"]["save_crps_only"]
 # INPUT.fcst_folder is the folder holding the IFS_<date>_00Z.nc files.
 input_format = fcst_params["INPUT"].get("format", "training")
 assert input_format in ("training", "operational"), f"INPUT.format={input_format!r}"
+if input_format == "operational":
+    fcst_input_folder = os.environ.get("CGAN_IFS_DIR", fcst_input_folder)
 if args.lead is not None and input_format != "operational":
     parser.error("--lead is only supported with INPUT.format: operational")
 
@@ -101,6 +104,8 @@ if args.lead is not None and input_format != "operational":
 # ensemble -- so one run produces both the forecast and the interface data.
 # Absent -> no histogram (default), keeping the eval/held-out behaviour unchanged.
 histogram_folder = fcst_params["OUTPUT"].get("histogram_folder", None)
+if histogram_folder and os.environ.get("CGAN_INTERFACE_DATA_DIR"):
+    histogram_folder = os.path.join(os.environ["CGAN_INTERFACE_DATA_DIR"], "counts_24h")
 # Log-scale rainfall bins (mm/h), identical to forecast2histogram_7d_lowRAM.py so the
 # interface reads these counts the same way as the operational IMERG ones.
 BIN_SPEC = np.array([0., 0.04166667, 0.08333333, 0.20833333, 0.41666667, 0.625, 0.83333333,

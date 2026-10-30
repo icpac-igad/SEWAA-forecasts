@@ -3,6 +3,14 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>East African rainfall</title>
+<style>
+.plot-pair { display: flex; flex-wrap: nowrap; justify-content: center; align-items: flex-start; }
+.plot-pair canvas { max-width: 100%; height: auto; cursor: crosshair; }
+.hidden-canvas { display: none !important; }
+.explanation-heading { font-weight: bold; margin: 0.5em 0; }
+.explanation-warning { color: #c0392b; font-weight: bold; }
+.explanation-tip, .explanation-action { background-color: #eef4fa; padding: 0.4em 0.8em; margin: 0.5em 0; }
+</style>
 </head>
 <body>
 
@@ -13,19 +21,35 @@ East African rainfall forecasts.
 <p>Click for local distribution. Use arrow keys to change location by 0.1 degrees.</p>
 
 <p>
-Model:
+Accumulation:
 <select id="modelSelect" onchange="modelSelect()">
-	<option value="6h accumulation">6h accumulation</option>
-    <option value="24h accumulation">24h accumulation</option>
+	<option value="6h accumulation">6-hour</option>
+    <option value="24h accumulation">24-hour</option>
 </select>
-<span id="modelInfo">
-: The <a href="https://www.ecmwf.int/" target="_blank">ECMWF</a> 
-<a href="https://confluence.ecmwf.int/display/FUG/Section+2+The+ECMWF+Integrated+Forecasting+System+-+IFS" target="_blank">
-IFS</a> output is post-processed using
-<a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">
-cGAN</a> trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank"> IMERG</a>
-v6 to produce forecasts of 6h rainfall intervals. Model version 1.
+
+Forecast model:
+<select id="forecastModelSelect" onchange="forecastModelSelect()">
+	<option value="ECMWF IFS">ECMWF IFS</option>
+    <option value="GEFS">GEFS</option>
+</select>
+
+<span id="datasetGroup">
+Reference dataset:
+<select id="datasetSelect" onchange="datasetSelect()">
+	<option value="IMERG">IMERG</option>
+    <option value="RFE">RFE</option>
+    <option value="CHIRPS">CHIRPS</option>
+</select>
 </span>
+
+Post-processing: cGAN (2018&ndash;2021 training)
+</p>
+
+<p id="modelDescription">
+The <a href="https://www.ecmwf.int/" target="_blank">ECMWF IFS</a> forecast is post-processed using a
+<a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022MS003120" target="_blank">cGAN</a>
+trained on <a href="https://gpm.nasa.gov/data/imerg" target="_blank">IMERG</a> observations (2018&ndash;2021)
+to generate improved 6-hour accumulated rainfall forecasts.
 </p>
 
 <p>
@@ -44,6 +68,13 @@ Region:
     <option value="Tanzania">Tanzania</option>
     <option value="Uganda">Uganda</option>
 </select>
+
+<span id="admin1Group" style="display:none;">
+Admin&nbsp;1:
+<select id="admin1Select" onchange="admin1Select()">
+	<option value="">— whole country —</option>
+</select>
+</span>
 
 Initialisation:
 <select id="initYearSelect" onchange="initTimeSelect()" title="Forecast initialisation year"></select>
@@ -112,9 +143,26 @@ Units:
 Some text to explain the current plots.
 <br><br></div>
 
+<div id="plotsContainer">
+	<div id="plotPair0" class="plot-pair">
+		<canvas id="mapCanvas0" width="513" height="504">Your browser does not support the HTML canvas tag.</canvas>
+	</div>
+	<div id="plotPair1" class="plot-pair"><canvas id="mapCanvas1" width="513" height="504"></canvas></div>
+	<div id="plotPair2" class="plot-pair"><canvas id="mapCanvas2" width="513" height="504"></canvas></div>
+	<div id="plotPair3" class="plot-pair"><canvas id="mapCanvas3" width="513" height="504"></canvas></div>
+	<div id="plotPair4" class="plot-pair hidden-canvas"><canvas id="mapCanvas4" width="513" height="504"></canvas></div>
+	<div id="plotPair5" class="plot-pair hidden-canvas"><canvas id="mapCanvas5" width="513" height="504"></canvas></div>
+	<div id="plotPair6" class="plot-pair hidden-canvas"><canvas id="mapCanvas6" width="513" height="504"></canvas></div>
+</div>
 
+<script>
+	// Served by `python -m http.server` from the repo root: data comes straight from the
+	// data store, one tree per dataset at /store/interface/<imerg|rfe|chirps>/counts_*.
+	window.Dataset_Source_URL = "/store/interface/";
+	window.Static_Source_Url = "/interface/view_forecasts/";
+</script>
 <script src="../js/plotForecastsMin.js"></script>
 <script src="../js/testScript.js"></script>
 
 </body>
-</html> 
+</html>
