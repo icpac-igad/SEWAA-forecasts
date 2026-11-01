@@ -3,7 +3,8 @@
 .ssh
 .ipynb_checkpoints
 *.nc
-!datasets/**/cGAN_data/*.nc
+!datasets/shared/*.nc
+!datasets/*/climatology/*.nc
 *.pyc
 **/__pycache__/
 interface/data

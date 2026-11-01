@@ -257,17 +257,17 @@ if __name__ == "__main__":
             subcounty_loop = False
             skip_subcounty = True
         ## Get the country mask
-        sf_region = shapefile.Reader(
+        with shapefile.Reader(
             shpreader.natural_earth(
                 resolution="110m", category="cultural", name="admin_0_countries"
             )
-        )
-        features = sf_region.shapeRecords()
-        geometry_all = [
-            Polygon(sf_region.shape(i).points)
-            for i in range(len(features))
-            if features[i].record[3] in [country]
-        ]
+        ) as sf_region:
+            features = sf_region.shapeRecords()
+            geometry_all = [
+                Polygon(sf_region.shape(i).points)
+                for i in range(len(features))
+                if features[i].record[3] in [country]
+            ]
 
         region_vectorised = regionmask.Regions(geometry_all, overlap=True)
 

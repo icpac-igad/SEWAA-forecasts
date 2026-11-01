@@ -12,6 +12,10 @@ Usage:
 
 import os
 
+# Constants every dataset uses (elev.nc, lsm.nc), relative to project root. Files specific to
+# one dataset live under its data_root, e.g. <data_root>/climatology/.
+SHARED_DATA_ROOT = "datasets/shared"
+
 # ── IFS field lists (shared building blocks) ─────────────────────────────────
 _F13 = ['cp', 'mcc', 'sp', 'ssr', 't2m', 'tciw', 'tclw', 'tcrw', 'tcw', 'tcwv', 'tp', 'u700', 'v700']
 _F14_CAPE = ['cape'] + _F13
@@ -63,7 +67,7 @@ DATASETS = {
                 _F14_CLIM,
                 ['cp', 'ssr', 'tp'],
                 ['climatology'] + [f for f in _F13 if f not in ('u700', 'v700')],
-                0,      # climatology loaded as a regular field, not via clim channels
+                2,      # climatology loaded as a regular field, not via clim channels
             ),
         },
         "default_field_set_24h": "run07",

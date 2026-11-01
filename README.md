@@ -24,6 +24,7 @@ your web browser.
   - [Make forecasts](#make-forecasts)
   - [View the forecasts](#view-the-forecasts)
 - [Using the forecast page](#using-the-forecast-page)
+  - [The regional (ELR) page](#the-regional-elr-page)
 - [Where your data is saved](#where-your-data-is-saved)
 - [Asking the web server to make a forecast](#asking-the-web-server-to-make-a-forecast)
 - [Updating to a newer version](#updating-to-a-newer-version)
@@ -179,21 +180,42 @@ disk space, plus a terminal.
 **Catch up on recent days (recommended):**
 
 ```bash
-python auto_forecasts.py --dataset imerg --accumulation 24h
+python auto_forecasts.py
 ```
 
-This makes every forecast missing from the last 2 days, then stops. Forecasts that already
-exist are skipped, so running it again is safe. More examples:
+This makes every forecast missing from the last 2 days, for every dataset (IMERG, RFE,
+CHIRPS), both accumulations (6h and 24h) and all start times, then stops. Forecasts that
+already exist are skipped, so running it again is safe. The forecasts are made one after
+another, so the first full run can take several hours. To make fewer, pick an accumulation,
+a dataset, or both:
 
 ```bash
-python auto_forecasts.py --dataset rfe --accumulation 24h       # RFE
-python auto_forecasts.py --dataset chirps --accumulation 24h    # CHIRPS
-python auto_forecasts.py --dataset imerg --accumulation 6h      # IMERG, every 6 hours
-
-python auto_forecasts.py --dataset imerg --accumulation 24h --days_to_check 7    # last 7 days
-python auto_forecasts.py --dataset imerg --accumulation 24h \
-    --start_date 20261020 --final_date 20261025                                  # a date range
+python auto_forecasts.py --accumulation 24h                     # IMERG, RFE and CHIRPS, daily
+python auto_forecasts.py --accumulation 6h                      # IMERG 6-hourly (the only 6h dataset)
+python auto_forecasts.py --dataset imerg                        # IMERG, 6h and 24h
+python auto_forecasts.py --dataset rfe                          # RFE (daily only)
+python auto_forecasts.py --dataset chirps                       # CHIRPS (daily only)
+python auto_forecasts.py --time 1200                            # only the 12:00 start time (6h)
 ```
+
+To choose the days, add `--days_to_check` or a date range to any of the commands above:
+
+```bash
+python auto_forecasts.py --days_to_check 7                                      # last 7 days
+python auto_forecasts.py --accumulation 24h --start_date 20261020 --final_date 20261025
+```
+
+| Option | What it does | If left out |
+|--------|--------------|-------------|
+| `--dataset imerg`, `rfe` or `chirps` | Which dataset to make forecasts for | All three |
+| `--accumulation 6h` or `24h` | 6-hourly or daily rain | Every accumulation the dataset supports |
+| `--time 0000`, `0600`, `1200` or `1800` | Start time (24h forecasts only start at `0000`) | All start times |
+| `--days_to_check N` | Look back *N* days from today | 2 |
+| `--start_date` / `--final_date YYYYMMDD` | A date range instead | The last `--days_to_check` days |
+
+Daily (24h) forecasts also include the regional ELR forecasts for Kenya, Ethiopia and Rwanda
+(see [The regional (ELR) page](#the-regional-elr-page)). These add about 35 minutes per day
+and dataset.
 
 **One single forecast:**
 
@@ -324,6 +346,19 @@ around, and **Remove histograms** to hide the charts.
 | **Probability Threshold** | The percentage used by *Values below probability* |
 | **Display Format** | Show chances as percentages or as words ("Very low", "Low", "Medium", "High") |
 
+### The regional (ELR) page
+
+The **Ensemble logistic regression** page shows the chance of daily rain above 20, 30, 40 or
+50 mm in **Kenya, Ethiopia and Rwanda**, worked out separately for each county or district.
+Open it at http://localhost/ensemble_logistic_regression.html (Docker),
+http://localhost:8000/ensemble_logistic_regression.html (`fastapi dev`), or from the
+**Ensemble logistic regression** link on the `python -m http.server` start page.
+
+Pick the **Reference Dataset** (IMERG, RFE or CHIRPS), the country, the date and the
+threshold; the map title names the model and dataset, e.g. *IFS+cGAN-RFE+ELR forecast*.
+If it says no forecasts are available, none have been made yet for that dataset: ELR
+forecasts are only made with daily (24h) forecasts.
+
 ### For technical users
 
 - Each forecast is an ensemble of **1000 members**. The page doesn't load them directly.
@@ -409,6 +444,10 @@ uv sync                                          # if you run the project direct
 docker compose up -d --build --remove-orphans    # if you use Docker
 ```
 
+Always run `uv sync` (or rebuild Docker) after updating: some packages are fixed at exact
+versions (see [Troubleshooting](#troubleshooting)), and the project won't work correctly
+with others.
+
 Your forecasts are in the store, so they're kept. If you downloaded a ZIP instead, download
 the new one and copy your old `store` folder into it (or set `STORE` to the same place).
 
@@ -447,9 +486,20 @@ a machine with more RAM.
 Another server is already running on that port. Stop it with `Ctrl + C` in its terminal, or
 use another port: `fastapi dev --port 8001` or `python -m http.server 8001`.
 
-**Another run is in progress; exiting**
-`auto_forecasts.py` won't run twice at the same time for the same dataset and accumulation.
-Wait for the first run to finish.
+**"another ... run is in progress ... skipping"**
+`auto_forecasts.py` won't make the same dataset and accumulation twice at the same time. It
+skips that one and carries on with the others; the run already in progress covers it.
+
+**ELR fails with `'SplineTransformer' object has no attribute 'handle_missing'` or a
+`BSpline` error**
+The regional (ELR) models only load with the package versions they were saved with
+(scikit-learn 1.5.2 and SciPy 1.14.1, fixed in `pyproject.toml`). Run `uv sync`, or rebuild
+Docker, then run `auto_forecasts.py` again to make the missing ELR forecasts.
+
+**ELR fails with "Too many open files"**
+Fixed in the current version: update the code (see
+[Updating to a newer version](#updating-to-a-newer-version)). On an older copy, raise the
+limit first with `ulimit -n 4096` in the same terminal.
 
 Still stuck? Open an issue at https://github.com/icpac-igad/SEWAA-forecasts/issues and
 include the error message.
@@ -469,7 +519,10 @@ SEWAA-forecasts/
 ├── job_lock.py              # Stops two identical runs at once
 ├── 6h_accumulations/        # 6-hour model and scripts
 ├── 24h_accumulations/       # 24-hour model and scripts
-├── datasets/                # Per-dataset model settings and files
+├── datasets/
+│   ├── shared/              # Files every dataset uses (elevation, land-sea mask)
+│   └── imerg/, rfe/, chirps/   # Each dataset's models and settings; rfe and chirps also
+│                            #   have climatology/ (long-term rainfall averages, not in git)
 ├── ELR/                     # Regional forecasts for Kenya, Ethiopia and Rwanda
 ├── interface/               # Website pages, scripts and map boundaries
 ├── shapes/                  # Country and county boundaries

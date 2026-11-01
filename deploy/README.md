@@ -173,9 +173,10 @@ Fill in / confirm:
   cgan-cms' and the data portal's need `roles/storage.objectViewer`
 - A service account for Cloud Scheduler with `roles/run.invoker` on each Cloud Run Job
   (`SCHEDULER_SA` in `setup-cloud-scheduler.sh`)
-- `../datasets/imerg/cGAN_data/{elev.nc,lsm.nc}` are present in the repo (shared by all three
-  datasets via `datasets/{chirps,rfe}/cGAN_data` symlinks) — no action needed.
-- `RFE_climatology_meansd_doy.nc` is still missing from the repo (needed by `cgan-jobs-rfe-24h`'s
-  `run11` field set, via `data.py`'s `climatology_channel()` reading `CONSTANTS_PATH`). Deploy
-  that file into the shared `cGAN_data` constants before `cgan-jobs-rfe-24h`'s first real run —
-  it will fail with a `FileNotFoundError` until then.
+- `../datasets/shared/{elev.nc,lsm.nc}` are present in the repo (shared by all three
+  datasets) — no action needed.
+- The climatology files are too big for git, so copy them in before building the image:
+  `RFE_climatology_meansd_doy.nc` into `../datasets/rfe/climatology/` and
+  `CHIRPS_climatology_meansd_doy.nc` into `../datasets/chirps/climatology/`. Without them,
+  `cgan-jobs-rfe-24h` and `cgan-jobs-chirps-24h` log a warning and fill those channels with
+  zeros.

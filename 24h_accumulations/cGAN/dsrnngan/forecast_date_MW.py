@@ -24,7 +24,7 @@ import netCDF4 as nc
 import numpy as np
 from tensorflow.keras.utils import Progbar
 
-from data import HOURS, all_fcst_fields, fcst_norm, denormalise, load_hires_constants, load_fcst, load_fcst_operational, load_truth_and_mask, load_fcst_norm, climatology_channel, sanitise_fcst_input
+from data import HOURS, all_fcst_fields, fcst_norm, denormalise, load_hires_constants, load_fcst, load_fcst_operational, load_truth_and_mask, load_fcst_norm, climatology_channel, climatology_field, sanitise_fcst_input
 import read_config
 import models
 from noise import NoiseGenerator
@@ -128,8 +128,8 @@ assert local_fcst_norm is not None
 # MODEL.field_set picks the input set explicitly; without it the old include_cape
 # boolean still decides, so existing yamls behave exactly as before.
 #   14field  run06     (13 IFS + cape = 28 ch)
-#   run07    run07     (13 IFS + climatology as 1st field = 28 ch; climatology loaded
-#                       from IFS file in operational mode, from training files otherwise)
+#   run07    run07     (13 IFS + climatology as 1st field = 28 ch; climatology loaded from
+#                       datasets/chirps/climatology/ in operational mode, from training files otherwise)
 #   13field  run08/run09/run10  (cape dropped 2026-07-16, data.py:33)
 #   run11    run11/run13  (13 IFS + RFE climatology appended = 28 ch)
 #   4field   run05
@@ -146,8 +146,7 @@ if field_set == "14field":
     nonnegative_fields = ['cape', 'cp', 'mcc', 'sp', 'ssr', 't2m', 'tciw', 'tclw', 'tcrw', 'tcw', 'tcwv', 'tp'] #MW: things that can't be below 0
 elif field_set == "run07":
     # CHIRPS run07: 14 fields with climatology as the 1st field (not cape). 28 channels.
-    # In operational mode, climatology_ensemble_mean/sd are read from the IFS file
-    # (Oxford publishes them alongside the standard IFS fields for this model).
+    # In operational mode, climatology comes from datasets/chirps/climatology/.
     all_fcst_fields = ['climatology', 'cp', 'mcc', 'sp', 'ssr', 't2m', 'tciw', 'tclw', 'tcrw', 'tcw', 'tcwv', 'tp', 'u700', 'v700']
     accumulated_fields = ['cp', 'ssr', 'tp']
     nonnegative_fields = ['climatology', 'cp', 'mcc', 'sp', 'ssr', 't2m', 'tciw', 'tclw', 'tcrw', 'tcw', 'tcwv', 'tp']
@@ -361,11 +360,20 @@ for d in iter_dates(start_date, end_date):
             _ifs = nc.Dataset(ifs_path, mode="r")
             _ifs_vars = set(_ifs.variables.keys())
             for field in all_fcst_fields:
-                if f"{field}_ensemble_mean" not in _ifs_vars:
-                    # Field not in operational IFS file (e.g. 'climatology' for run07).
+                if field == "climatology":
+                    # run07: stays in the field's own (1st) position, as the model was trained.
+                    # Same zero-fill fallback as run11 below if the file isn't deployed.
+                    try:
+                        field_arrays.append(climatology_field(
+                            d.strftime('%Y%m%d'), lead_days=valid_time_num, fcst_norm_dict=local_fcst_norm))
+                    except (FileNotFoundError, OSError) as e:
+                        print(f"WARNING: climatology unavailable ({e}); using zero-fill placeholder")
+                        field_arrays.append(np.zeros((_ifs["latitude"].size, _ifs["longitude"].size, 2),
+                                                     dtype=np.float32))
+                elif f"{field}_ensemble_mean" not in _ifs_vars:
+                    # Field not in operational IFS file.
                     # Fill with zeros (normalised-space mean) so the model runs on the
-                    # remaining real IFS fields. A proper climatology file should be
-                    # deployed for production quality.
+                    # remaining real IFS fields.
                     # Shape from the grid itself: list(_ifs_vars)[0] was a random pick (set
                     # order changes per process) and failed whenever it hit a 1-D coordinate.
                     _shape = (_ifs["latitude"].size, _ifs["longitude"].size)
@@ -395,7 +403,7 @@ for d in iter_dates(start_date, end_date):
             # data.load_fcst_stack builds the training input (same log10(1+x) norm,
             # indexed by the day being predicted). Gives 2*13 + 2 = 28 channels.
             # climatology_channel() raises if RFE_climatology_meansd_doy.nc hasn't been
-            # deployed into the constants dir yet; fall back to zero-fill (same treatment
+            # deployed into datasets/rfe/climatology/ yet; fall back to zero-fill (same treatment
             # as a field missing from the operational IFS file, above) so the pipeline still
             # produces a forecast + histogram rather than hard-failing on every RFE run.
             try:

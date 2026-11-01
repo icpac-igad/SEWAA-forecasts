@@ -11,7 +11,7 @@ INPUT:
     format:               operational
     fcst_folder:          ../../IFS_forecast_data
     truth_folder:         ""
-    constants_folder:     ../../../datasets/rfe/cGAN_data
+    constants_folder:     ../../../datasets/shared
     normalisation_folder: ../../../datasets/rfe/24h
 
 PERIOD:

@@ -11,7 +11,8 @@
 *.json
 data
 *.nc
-RFE_climatology_meansd_doy.nc
+# Too big for git: copy into place by hand on each machine
+datasets/*/climatology/
 
 # Data store (docker-compose STORE default); usually a symlink to external storage
 /store

@@ -1,21 +1,25 @@
 #!/usr/bin/env python
 """Batch forecast generator: the Cloud Run Jobs entrypoint.
 
-Backfills run_forecast.py over a date range for ONE dataset+accumulation "channel"
-(imerg-6h, imerg-24h, chirps-24h, rfe-24h), then exits. It does not loop or sleep
+Backfills run_forecast.py over a date range for dataset+accumulation "channels"
+(imerg-6h, imerg-24h, chirps-24h, rfe-24h), then exits. With no --dataset it runs every
+dataset, and with no --accumulation every accumulation the dataset supports, so a bare
+`python auto_forecasts.py` makes all four channels; Cloud Run passes both, one channel per job. It does not loop or sleep
 itself -- Cloud Scheduler re-triggers each channel's job on a cron (see
 deploy/setup-cloud-scheduler.sh), one Cloud Run Job per channel, so a slow CHIRPS
 run never queues behind IMERG the way start_forecasting.py's single-process,
 sequential polling loop would.
 
-Runs of the same channel never overlap: the whole run holds a per-channel lock
-(job_lock.py) and a run that finds it held exits 0 without doing anything. Cloud Run
+Runs of the same channel never overlap: each channel's run holds a per-channel lock
+(job_lock.py) and a channel whose lock is held is skipped without being treated as a failure. Cloud Run
 starts a new execution on every schedule tick even if the previous one is still busy,
 e.g. while IMERG 6h catches up several init times in one execution.
 
 For a docker-compose / always-on deployment, use start_forecasting.py instead --
 it polls continuously inside one long-running container per dataset.
 
+    python auto_forecasts.py                        # every dataset and accumulation
+    python auto_forecasts.py --accumulation 24h     # IMERG, RFE and CHIRPS 24h
     python auto_forecasts.py --dataset imerg --accumulation 6h
     python auto_forecasts.py --dataset chirps --accumulation 24h --days_to_check 2
 """
@@ -27,7 +31,7 @@ from datetime import datetime, timedelta
 
 from pandas import date_range
 
-from dataset_config import DATASETS, get_active_dataset_name
+from dataset_config import DATASETS
 from job_lock import LockHeld, channel_lock
 
 # Valid initialisation times per accumulation window (mirrors run_forecast.py's
@@ -183,17 +187,18 @@ def auto_gen_forecasts(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="""
-        Function: Autogenerate cGAN forecasts for one dataset+accumulation channel,
+        Function: Autogenerate cGAN forecasts for each dataset+accumulation channel,
         from a specified start date to a final date, then exit. All parameters are
-        optional and can be omitted.
+        optional and can be omitted: with none, every dataset is generated at every
+        accumulation and initialisation time it supports.
 
         Arguments:
             --dataset        - which forecast product to generate: imerg, chirps, or rfe.
-                                Defaults to $CGAN_DATASET, else imerg.
+                                Defaults to every dataset (that supports --accumulation, if given).
             --start_date     - generate forecasts starting from this date. By default, the program uses days_to_check days from the date today.
             --final_date     - generate forecasts from start_date to this date. By default, the program uses the date today.
             --days_to_check  - number of forecasts days to be checked since today. Can be used to dynamically generate start_date and final_date.
-            --accumulation   - forecast accumulation period. Must be one the chosen dataset supports. Defaults to that dataset's default accumulation.
+            --accumulation   - forecast accumulation period (6h or 24h). Must be one the chosen dataset supports. Defaults to every accumulation each dataset supports.
             --time           - forecast initialization time (0000, 0600, 1200 or 1800). Defaults to every time the chosen accumulation supports.
 
         Returns:
@@ -203,9 +208,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--dataset",
-        help="Forecast product/channel to generate: imerg, chirps, or rfe",
+        help="Forecast product/channel to generate: imerg, chirps, or rfe. "
+             "Defaults to every dataset.",
         choices=sorted(DATASETS),
-        default=get_active_dataset_name(),
+        default=None,
     )
     parser.add_argument(
         "--start_date",
@@ -227,8 +233,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--accumulation",
-        help="How long rainfall is accumulated for. Must be supported by --dataset. "
-             "Defaults to that dataset's default accumulation.",
+        help="How long rainfall is accumulated for (6h or 24h). Must be supported by "
+             "--dataset. Defaults to every accumulation each dataset supports.",
+        choices=sorted(VALID_TIMES),
         default=None,
         type=str,
     )
@@ -246,21 +253,36 @@ if __name__ == "__main__":
         type=str,
     )
     args = parser.parse_args()
-    accumulation = args.accumulation or DATASETS[args.dataset]["default_accumulation"]
-    channel = f"{args.dataset}-{accumulation}"
-    try:
-        with channel_lock(channel):
-            succeeded = auto_gen_forecasts(
-                dataset=args.dataset,
-                start_date=args.start_date,
-                final_date=args.final_date,
-                time=args.time,
-                accumulation=accumulation,
-                days_to_check=args.days_to_check,
-                delete_forecasts=args.delete_forecasts,
-            )
-    except LockHeld as held:
-        # Not a failure: the run already in progress covers this channel.
-        print(f"[{args.dataset.upper()}] another {accumulation} run is in progress ({held}); exiting.")
-        sys.exit(0)
-    sys.exit(0 if succeeded else 1)
+    datasets = [args.dataset] if args.dataset else list(DATASETS)
+    if args.dataset and args.accumulation and args.accumulation not in DATASETS[args.dataset]["accumulations"]:
+        sys.exit(f"[{args.dataset.upper()}] ERROR: {args.dataset} does not support {args.accumulation!r} "
+                 f"accumulations (supports {DATASETS[args.dataset]['accumulations']})")
+    # Every (dataset, accumulation) channel to run: the given ones, else all supported ones.
+    channels = [
+        (dataset, accumulation)
+        for dataset in datasets
+        for accumulation in DATASETS[dataset]["accumulations"]
+        if args.accumulation in (None, accumulation)
+        and (args.time is None or args.time in VALID_TIMES[accumulation])
+    ]
+    print(f"channels to run: {', '.join(f'{d}-{a}' for d, a in channels)}")
+
+    all_succeeded = True
+    for dataset, accumulation in channels:
+        try:
+            with channel_lock(f"{dataset}-{accumulation}"):
+                succeeded = auto_gen_forecasts(
+                    dataset=dataset,
+                    start_date=args.start_date,
+                    final_date=args.final_date,
+                    time=args.time,
+                    accumulation=accumulation,
+                    days_to_check=args.days_to_check,
+                    delete_forecasts=args.delete_forecasts,
+                )
+        except LockHeld as held:
+            # Not a failure: the run already in progress covers this channel.
+            print(f"[{dataset.upper()}] another {accumulation} run is in progress ({held}); skipping.")
+            continue
+        all_succeeded = all_succeeded and succeeded
+    sys.exit(0 if all_succeeded else 1)

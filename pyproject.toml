@@ -85,5 +85,5 @@ packages = [
     "ELR",
     "configs",
     "shapes",
-    "cGAN_data",
+    "datasets/shared",
 ]

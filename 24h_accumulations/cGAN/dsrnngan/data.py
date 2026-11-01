@@ -32,12 +32,13 @@ LEAD_IDX = data_paths["GENERAL"]["LEAD_IDX"]
 _DATASET_NAME = dataset_config.get_active_dataset_name()
 _DATASET_CFG = dataset_config.get_active_dataset()
 
-# Override CONSTANTS_PATH and NORMALISATION_PATH with dataset-specific directories
-# when they exist. data_paths.yaml always points to the shared IMERG constants/norm;
-# CHIRPS and RFE have their own under datasets/<name>/.
-_ds_constants = os.path.join(_PROJECT_ROOT, _DATASET_CFG["data_root"], "cGAN_data")
-if os.path.isdir(_ds_constants):
-    CONSTANTS_PATH = _ds_constants
+# elev.nc and lsm.nc are shared by all datasets; climatology is per dataset.
+CONSTANTS_PATH = os.path.join(_PROJECT_ROOT, dataset_config.SHARED_DATA_ROOT)
+CLIMATOLOGY_PATH = os.path.join(_PROJECT_ROOT, _DATASET_CFG["data_root"], "climatology")
+
+# Override NORMALISATION_PATH with the dataset-specific directory when it exists.
+# data_paths.yaml always points to IMERG's norm; CHIRPS and RFE have their own under
+# datasets/<name>/.
 _ds_norm = os.path.join(_PROJECT_ROOT, _DATASET_CFG["data_root"], "24h")
 if os.path.isdir(_ds_norm):
     NORMALISATION_PATH = _ds_norm
@@ -78,41 +79,58 @@ HOURS = 24
 _TRUTH_NAN_TO_ZERO = _DATASET_CFG.get("truth_nan_to_zero", False)
 _TRUTH_UNIT_CONV = _DATASET_CFG.get("truth_unit_conversion", 1.0)
 
-# ── Climatology (RFE run11+) ─────────────────────────────────────────────────
+# ── Climatology (RFE run11+, CHIRPS run07) ───────────────────────────────────
 USE_CLIMATOLOGY = CLIM_CHANNELS > 0
 _CLIM = None
 
 
-def _load_climatology(constants_path=None):
+def _load_climatology(climatology_path=None):
     global _CLIM
     if _CLIM is None:
-        _cpath = CONSTANTS_PATH if constants_path is None else constants_path
-        path = os.path.join(_cpath, "RFE_climatology_meansd_doy.nc")
+        _cpath = CLIMATOLOGY_PATH if climatology_path is None else climatology_path
+        _name = _DATASET_CFG["name"]
+        path = os.path.join(_cpath, f"{_name}_climatology_meansd_doy.nc")
         try:
             with nc.Dataset(path) as d:
-                _CLIM = (np.array(d["RFE_mean"][:]),
-                         np.array(d["RFE_sd"][:]))
+                _CLIM = (np.array(d[f"{_name}_mean"][:]),
+                         np.array(d[f"{_name}_sd"][:]))
         except (FileNotFoundError, OSError) as e:
-            print(f"WARNING: RFE climatology unavailable ({e}); "
-                  f"using zero-fill placeholder for the {CLIM_CHANNELS} climatology channel(s).")
+            print(f"WARNING: {_name} climatology unavailable ({e}); "
+                  f"using zero-fill placeholder for the climatology channels.")
             _CLIM = "missing"
     return _CLIM
 
 
-def climatology_channel(date_str, lead_days=0, constants_path=None):
-    """Log-normalised climatological mean+sd for the predicted day, shape (H, W, 2)."""
-    clim = _load_climatology(constants_path=constants_path)
+def _climatology_for_day(date_str, lead_days=0, climatology_path=None):
+    """Climatological mean+sd (mm/hr) for the predicted day D+1+lead_days, shape (H, W, 2)."""
+    clim = _load_climatology(climatology_path=climatology_path)
     if clim == "missing":
-        raise FileNotFoundError("RFE_climatology_meansd_doy.nc not available")
+        raise FileNotFoundError(f"{_DATASET_CFG['name']}_climatology_meansd_doy.nc not available")
     clim_mean, clim_sd = clim
     fcst_date = datetime.datetime.strptime(date_str, "%Y%m%d")
-    target = fcst_date + datetime.timedelta(hours=(int(LEAD_IDX) + int(lead_days)) * HOURS)
+    target = fcst_date + datetime.timedelta(days=1 + int(lead_days))
     m, dd = target.month, target.day
     if m == 2 and dd == 29:
         dd = 28
     doy = (datetime.date(2001, m, dd) - datetime.date(2001, 1, 1)).days
-    out = np.stack([clim_mean[doy], clim_sd[doy]], axis=-1)
+    return np.stack([clim_mean[doy], clim_sd[doy]], axis=-1)
+
+
+def climatology_channel(date_str, lead_days=0, climatology_path=None):
+    """Log-normalised climatological mean+sd for the predicted day, shape (H, W, 2)."""
+    out = _climatology_for_day(date_str, lead_days, climatology_path=climatology_path)
     return np.log10(1.0 + out).astype(np.float32)
+
+
+def climatology_field(date_str, lead_days=0, fcst_norm_dict=None, climatology_path=None):
+    """Climatology as a regular input field (run07), for the predicted day.
+
+    Scaled like any other non-negative field, by the "climatology" entry of the model's
+    normalisation file. Shape (H, W, 2).
+    """
+    _fcst_norm = fcst_norm if fcst_norm_dict is None else fcst_norm_dict
+    out = _climatology_for_day(date_str, lead_days, climatology_path=climatology_path)
+    return (out / _fcst_norm["climatology"]["max"]).astype(np.float32)
 
 
 # ── Utility functions ─────────────────────────────────────────────────────────

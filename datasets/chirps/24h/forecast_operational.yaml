@@ -1,5 +1,5 @@
 # CHIRPS run07 operational config. Paths are relative to dsrnngan/.
-# MODEL/constants/normalisation point into datasets/chirps/ rather than the shared
+# MODEL/normalisation point into datasets/chirps/ rather than the shared
 # 24h_accumulations/cGAN/ tree, which only carries IMERG's model + normalisation assets.
 MODEL:
     folder: ../../../datasets/chirps/24h/logs_CHIRPS_run07
@@ -11,7 +11,7 @@ INPUT:
     format:               operational
     fcst_folder:          ../../IFS_forecast_data
     truth_folder:         ""
-    constants_folder:     ../../../datasets/chirps/cGAN_data
+    constants_folder:     ../../../datasets/shared
     normalisation_folder: ../../../datasets/chirps/24h
 
 PERIOD:

@@ -36,12 +36,14 @@ def get_geometry(Location, region_type='county',country='Kenya', return_all=Fals
 
         return shape_feature
 
-    sf_region = shapefile.Reader(geometry_path)
-    features = sf_region.shapeRecords()
+    # Close the reader: get_geometry() runs once per region (hundreds for Ethiopia), and
+    # unclosed readers exhaust macOS's default 256 open-file limit.
+    with shapefile.Reader(geometry_path) as sf_region:
+        features = sf_region.shapeRecords()
 
-    idx = get_geometry_idx(region_type, country)
-    geometry_all = [Polygon(sf_region.shape(i).points) for i in range(len(features)) if\
-                                          Location in features[i].record[idx].replace('/','-')]
+        idx = get_geometry_idx(region_type, country)
+        geometry_all = [Polygon(sf_region.shape(i).points) for i in range(len(features)) if\
+                                              Location in features[i].record[idx].replace('/','-')]
 
     assert len(geometry_all)!=0
 
