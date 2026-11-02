@@ -113,6 +113,12 @@ docker compose up -d rfe chirps              # add RFE and CHIRPS
 docker compose up -d --build                 # or: start everything at once
 ```
 
+RFE and CHIRPS also need a climatology file (long-term daily rainfall averages, about
+200–250 MB each), which is too big to keep in the code. Each service downloads its file
+from the [ICPAC data portal](https://icpac-data-portal-8979869085.europe-west1.run.app/cgan-data/climatology-datasets/)
+before its first forecast. To skip that download, put the files in
+`datasets/rfe/climatology/` and `datasets/chirps/climatology/` before building.
+
 ### Optional settings
 
 To change settings, such as where data is saved, copy the settings file and edit it:
@@ -286,9 +292,16 @@ It checks every 15 minutes and makes any missing forecasts, until you stop it wi
 1. Downloads the input weather forecast (IFS), if it isn't saved yet, trying three mirror
    websites in turn. New forecasts are published about 8–10 hours after their start time,
    so very recent dates are skipped until then.
-2. Runs the model to produce 1000 possible versions of the forecast (an "ensemble"). This
+2. For RFE and CHIRPS only: downloads the dataset's climatology file
+   (`RFE_climatology_meansd_doy.nc` or `CHIRPS_climatology_meansd_doy.nc`, 200–250 MB) into
+   `datasets/<dataset>/climatology/` from the
+   [ICPAC data portal](https://icpac-data-portal-8979869085.europe-west1.run.app/cgan-data/climatology-datasets/),
+   if it isn't there yet. This happens once. An interrupted download carries on where it
+   stopped the next time. If it can't be downloaded, the forecast is still made, but
+   without climatology and less accurately (the log says `WARNING: could not download`).
+3. Runs the model to produce 1000 possible versions of the forecast (an "ensemble"). This
    is the slow part, and it needs a lot of memory.
-3. Turns the result into map data for the website, and updates the list of available dates.
+4. Turns the result into map data for the website, and updates the list of available dates.
 
 A forecast that was interrupted (for example, the computer ran out of memory) is detected
 and made again on the next run.
@@ -567,7 +580,8 @@ SEWAA-forecasts/
 ├── datasets/
 │   ├── shared/              # Files every dataset uses (elevation, land-sea mask)
 │   └── imerg/, rfe/, chirps/   # Each dataset's models and settings; rfe and chirps also
-│                            #   have climatology/ (long-term rainfall averages, not in git)
+│                            #   have climatology/ (long-term rainfall averages, not in git;
+│                            #   downloaded on the first forecast)
 ├── ELR/                     # Regional forecasts for Kenya, Ethiopia and Rwanda
 ├── interface/               # Website pages, scripts and map boundaries
 ├── shapes/                  # Country and county boundaries

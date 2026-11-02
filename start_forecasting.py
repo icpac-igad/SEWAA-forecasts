@@ -7,6 +7,7 @@ over the past few days. Dataset selection via CGAN_DATASET env var.
 
 import argparse
 import subprocess
+import sys
 from datetime import datetime, timedelta
 import time
 import schedule
@@ -54,7 +55,7 @@ def run_6h_accumulation_forecasts():
         )
         subprocess.call(
             [
-                "python",
+                sys.executable,
                 "run_forecast.py",
                 "--accumulation",
                 "6h",
@@ -94,7 +95,7 @@ def run_24h_accumulation_forecasts():
         )
         subprocess.call(
             [
-                "python",
+                sys.executable,
                 "run_forecast.py",
                 "--accumulation",
                 "24h",

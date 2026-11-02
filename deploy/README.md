@@ -175,8 +175,11 @@ Fill in / confirm:
   (`SCHEDULER_SA` in `setup-cloud-scheduler.sh`)
 - `../datasets/shared/{elev.nc,lsm.nc}` are present in the repo (shared by all three
   datasets) — no action needed.
-- The climatology files are too big for git, so copy them in before building the image:
+- The climatology files are too big for git. Copy them in before building the image:
   `RFE_climatology_meansd_doy.nc` into `../datasets/rfe/climatology/` and
-  `CHIRPS_climatology_meansd_doy.nc` into `../datasets/chirps/climatology/`. Without them,
-  `cgan-jobs-rfe-24h` and `cgan-jobs-chirps-24h` log a warning and fill those channels with
-  zeros.
+  `CHIRPS_climatology_meansd_doy.nc` into `../datasets/chirps/climatology/`, both from
+  https://icpac-data-portal-8979869085.europe-west1.run.app/cgan-data/climatology-datasets/.
+  If the image lacks them, `cgan-jobs-rfe-24h` and `cgan-jobs-chirps-24h` download them from
+  there at the start of every execution (a job's disk doesn't outlive it), which adds
+  ~200–250 MB of transfer per run. If that download fails, the job logs a warning and fills
+  the climatology channels with zeros.

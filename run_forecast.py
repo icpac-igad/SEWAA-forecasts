@@ -192,10 +192,7 @@ def download_ifs_data(date_str, hour, accumulation_time, ifs_dir):
         print(f"{TAG} {dst} already exists and is valid.")
         return dst
 
-    try:
-        from job_lock import wait_for_lock
-    except ImportError:  # fcntl is POSIX-only; download unlocked elsewhere
-        return _fetch_ifs_data(date_str, accumulation_time, ifs_dir, fname, dst)
+    from job_lock import wait_for_lock
 
     with wait_for_lock(f"ifs-{accumulation_time}h-{date_str}-{hour:02d}z",
                        timeout=IFS_LOCK_WAIT_SECONDS, poll_seconds=IFS_LOCK_POLL_SECONDS,
@@ -261,6 +258,110 @@ def _fetch_ifs_data(date_str, accumulation_time, ifs_dir, fname, dst):
 
     sources = ", ".join(name for name, _ in IFS_SOURCES)
     sys.exit(f"{TAG} ERROR: {fname} is not available from any known source ({sources}).")
+
+
+# ── Climatology download ─────────────────────────────────────────────────────
+# CHIRPS (run07) and RFE (run11) take the day-of-year climatology as model input. The files
+# are too big for git, so a setup without them fetches them here before its first forecast,
+# into the folder data.py reads them from (datasets/<name>/climatology/).
+CLIMATOLOGY_DATASETS = ("chirps", "rfe")
+CLIMATOLOGY_URL = ("https://icpac-data-portal-8979869085.europe-west1.run.app/cgan-data/"
+                   "climatology-datasets/{fname}")
+# The portal (Cloud Run) answers HTTP 500 to any response over 32 MiB, and the files are
+# ~200-250 MB, so they are fetched as a series of byte ranges no bigger than this.
+CLIMATOLOGY_CHUNK_BYTES = 16 * 1024 * 1024
+# Consecutive failed chunks before giving up for this run; the .part file is kept, so the
+# next run resumes from where this one stopped.
+CLIMATOLOGY_MAX_FAILURES = 5
+CLIMATOLOGY_LOCK_WAIT_SECONDS = 3600
+
+
+def ensure_climatology():
+    """Download the active dataset's climatology file if it is missing or corrupt.
+
+    Returns True if a valid file is in place. On failure the forecast still runs, with the
+    climatology channels zero-filled (see data.py), so this warns instead of exiting.
+    """
+    fname = f"{DATASET_CFG['name']}_climatology_meansd_doy.nc"
+    clim_dir = os.path.join(ROOT, DATASET_CFG["data_root"], "climatology")
+    dst = os.path.join(clim_dir, fname)
+
+    if os.path.isfile(dst):
+        if is_valid_netcdf(dst):
+            return True
+        print(f"{TAG} {dst} exists but is corrupt/incomplete; re-downloading.")
+        os.remove(dst)
+    pathlib.Path(clim_dir).mkdir(exist_ok=True, parents=True)
+
+    from job_lock import wait_for_lock
+
+    with wait_for_lock(f"climatology-{DATASET_NAME}", timeout=CLIMATOLOGY_LOCK_WAIT_SECONDS,
+                       poll_seconds=IFS_LOCK_POLL_SECONDS, stale_seconds=IFS_LOCK_STALE_SECONDS,
+                       local_dir=os.path.join(clim_dir, ".locks"),
+                       until=lambda: os.path.isfile(dst) and is_valid_netcdf(dst)):
+        if os.path.isfile(dst) and is_valid_netcdf(dst):
+            print(f"{TAG} {dst} downloaded by another job; using it.")
+            return True
+        return _fetch_climatology(fname, clim_dir, dst)
+
+
+def _fetch_climatology(fname, clim_dir, dst):
+    """Download fname into dst in byte-range chunks, resuming any earlier partial download."""
+    url = CLIMATOLOGY_URL.format(fname=fname)
+    warning = (f"{TAG} WARNING: could not download {url}; the forecast will run with zero-filled "
+               f"climatology channels. Rerun to resume the download, or copy {fname} into "
+               f"{clim_dir}/ by hand.")
+
+    r = subprocess.run(["curl", "-sfIL", "--connect-timeout", "30", "--max-time", "60", url],
+                       capture_output=True, text=True)
+    lengths = [line.split(":", 1)[1].strip() for line in r.stdout.splitlines()
+               if line.lower().startswith("content-length:")]
+    if r.returncode != 0 or not lengths or not lengths[-1].isdigit():
+        print(f"{TAG} {fname} not available from the ICPAC data portal (curl exit {r.returncode}).")
+        print(warning)
+        return False
+    size = int(lengths[-1])
+
+    # A fixed name (not per-PID like the IFS temp files) so a run that is killed partway --
+    # the download can take a long time on a slow link -- is resumed by the next run.
+    tmp = f"{dst}.part"
+    if os.path.isfile(tmp) and os.path.getsize(tmp) > size:
+        os.remove(tmp)
+    done = os.path.getsize(tmp) if os.path.isfile(tmp) else 0
+    print(f"{TAG} Climatology {fname} missing; downloading {size / 2**20:.0f} MiB from the "
+          f"ICPAC data portal -> {clim_dir}/" + (f" (resuming at {done / 2**20:.0f} MiB)" if done else ""))
+
+    failures = 0
+    with open(tmp, "ab") as f:
+        while done < size and failures < CLIMATOLOGY_MAX_FAILURES:
+            end = min(done + CLIMATOLOGY_CHUNK_BYTES, size) - 1
+            c = subprocess.run(["curl", "-sSfL", "--retry", "5", "--retry-delay", "5",
+                                "--retry-all-errors", *CURL_TIMEOUT_ARGS, "-r", f"{done}-{end}", url],
+                               stdout=f)
+            # curl wrote straight to the file descriptor; a failed or short chunk is cut off
+            # so the file only ever holds whole, in-order chunks.
+            if c.returncode == 0 and os.path.getsize(tmp) == end + 1:
+                done = end + 1
+                failures = 0
+                print(f"{TAG} {fname}: {done / 2**20:.0f}/{size / 2**20:.0f} MiB")
+            else:
+                f.truncate(done)
+                failures += 1
+                print(f"{TAG} Chunk {done}-{end} of {fname} failed (curl exit {c.returncode}, "
+                      f"attempt {failures}/{CLIMATOLOGY_MAX_FAILURES}).")
+
+    if done < size:
+        print(warning)
+        return False
+    if not is_valid_netcdf(tmp):
+        # Every byte arrived but the file doesn't open: the remote file changed between runs.
+        os.remove(tmp)
+        print(f"{TAG} Downloaded {fname} does not open as netCDF; discarded.")
+        print(warning)
+        return False
+    os.replace(tmp, dst)
+    print(f"{TAG} Climatology saved to {dst}")
+    return True
 
 
 # ── Counts checking ──────────────────────────────────────────────────────────
@@ -342,8 +443,10 @@ if __name__ == "__main__":
             # step below is skipped because the counts are already there.
             print(f"{TAG} Histogram counts exist but ELR outputs for {date_str} are missing; "
                   f"rerunning ELR (regenerating the lead {ELR_LEAD_IDX} raw forecast if needed).")
-        # ── Download IFS data ────────────────────────────────────────────
+        # ── Download IFS data (and climatology for CHIRPS/RFE) ───────────
         download_ifs_data(date_str, hour, accumulation_time, ifs_dir)
+        if DATASET_NAME in CLIMATOLOGY_DATASETS:
+            ensure_climatology()
 
         # ── Run forecast ─────────────────────────────────────────────────
         dsr = os.path.join(ROOT, f"{accumulation_time}h_accumulations", "cGAN", "dsrnngan")
@@ -382,7 +485,7 @@ if __name__ == "__main__":
                     os.remove(fpath)   # partial file from a killed run
                 print(f"{TAG} Running {DATASET_NAME} 24h forecast + counts for {date_str} lead {lead_idx}")
                 r = subprocess.run(
-                    ["python", "forecast_date_MW.py", config, date_str, "--lead", str(lead_idx)],
+                    [sys.executable, "forecast_date_MW.py", config, date_str, "--lead", str(lead_idx)],
                     cwd=dsr, env=env
                 )
                 if r.returncode != 0 or not has_forecast_output(fpath) or not os.path.isfile(cpath):
@@ -402,7 +505,7 @@ if __name__ == "__main__":
                         os.remove(fpath)
                     print(f"{TAG} Running 6h cGAN: forecast_date.py {date_str} {hour}")
                     r = subprocess.run(
-                        ["python", "forecast_date.py", date_str, str(hour)],
+                        [sys.executable, "forecast_date.py", date_str, str(hour)],
                         cwd=dsr, env=env
                     )
                     forecast_ok = (r.returncode == 0
@@ -420,7 +523,7 @@ if __name__ == "__main__":
                             os.remove(fpath)
                         print(f"{TAG} Running 24h cGAN: forecast_date.py {lead_idx} {date_str}")
                         r = subprocess.run(
-                            ["python", "forecast_date.py", str(lead_idx), date_str],
+                            [sys.executable, "forecast_date.py", str(lead_idx), date_str],
                             cwd=dsr, env=env
                         )
                         if r.returncode != 0 or not has_forecast_output(fpath):
@@ -440,7 +543,7 @@ if __name__ == "__main__":
                                else "forecast2histogram_7d_lowRAM.py")
                 run_dir = os.path.join(ROOT, f"{accumulation_time}h_accumulations")
                 print(f"{TAG} Computing {accumulation_time}h histograms for {date_str}.")
-                subprocess.run(["python", hist_script, date_str, str(hour)], cwd=run_dir, env=data_env)
+                subprocess.run([sys.executable, hist_script, date_str, str(hour)], cwd=run_dir, env=data_env)
 
     # ── ELR (24h, all datasets) ──────────────────────────────────────────
     if elr_needed and not elr_done:
@@ -453,7 +556,7 @@ if __name__ == "__main__":
         elif os.path.isfile(os.path.join(elr_dir, "run_ELR.py")):
             print(f"{TAG} Running ELR 24h forecasts.")
             r = subprocess.run(
-                ["python", "run_ELR.py", "--date", date_str, "--model", "GAN",
+                [sys.executable, "run_ELR.py", "--date", date_str, "--model", "GAN",
                  "--accumulation", "24h_accumulations"],
                 cwd=elr_dir, env=data_env
             )
@@ -467,13 +570,13 @@ if __name__ == "__main__":
     fad = os.path.join(run_dir, "find_available_dates.py")
     if os.path.isfile(fad):
         print(f"{TAG} Listing {accumulation_time}h counts for the interface.")
-        subprocess.run(["python", "find_available_dates.py"], cwd=run_dir, env=data_env)
+        subprocess.run([sys.executable, "find_available_dates.py"], cwd=run_dir, env=data_env)
 
     if elr_needed:
         elr_dates = os.path.join(ROOT, "ELR", "ELR_available_dates.py")
         if os.path.isfile(elr_dates):
             print(f"{TAG} Listing ELR available dates.")
-            subprocess.run(["python", "ELR_available_dates.py"], cwd=os.path.join(ROOT, "ELR"),
+            subprocess.run([sys.executable, "ELR_available_dates.py"], cwd=os.path.join(ROOT, "ELR"),
                            env=data_env)
 
     # ── Delete raw forecasts if requested ────────────────────────────────

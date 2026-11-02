@@ -62,7 +62,7 @@ def gen_forecast_request(
     env = os.environ.copy()
     env["CGAN_DATASET"] = dataset
     params = [
-        "python",
+        sys.executable,
         "run_forecast.py",
         "--delete_forecasts",
         delete_forecasts,
