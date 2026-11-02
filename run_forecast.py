@@ -154,6 +154,36 @@ STALE_PART_SECONDS = 3600
 # it in the same job. Abort a transfer slower than CURL_SPEED_LIMIT bytes/s for
 # CURL_SPEED_TIME seconds; --retry then resumes it (-C -) on a fresh connection.
 CURL_TIMEOUT_ARGS = ["--connect-timeout", "30", "--speed-limit", "1024", "--speed-time", "300"]
+
+
+def curl_retry_args(retries):
+    """curl options to retry a failed transfer `retries` times, 5s apart.
+
+    --retry-all-errors (curl >= 7.71) also retries dropped connections and HTTP errors that
+    plain --retry treats as final. Older curl (Ubuntu 20.04, RHEL 8, early Windows 10 builds)
+    rejects the unknown option and downloads nothing, so it is only added when supported;
+    there the callers' own attempt loops cover what --retry alone doesn't.
+    """
+    args = ["--retry", str(retries), "--retry-delay", "5"]
+    if _curl_version() >= (7, 71):
+        args.append("--retry-all-errors")
+    return args
+
+
+def _curl_version():
+    """Installed curl's version as a tuple, e.g. (8, 7, 1); (0,) if it can't be read."""
+    global _CURL_VERSION
+    if _CURL_VERSION is None:
+        try:
+            out = subprocess.run(["curl", "--version"], capture_output=True, text=True).stdout
+            # First line: "curl 7.68.0 (x86_64-pc-linux-gnu) libcurl/7.68.0 ..."
+            _CURL_VERSION = tuple(int(p) for p in out.split()[1].split("-")[0].split(".")[:3])
+        except (OSError, IndexError, ValueError):
+            _CURL_VERSION = (0,)
+    return _CURL_VERSION
+
+
+_CURL_VERSION = None
 # Mirrors to try in order, highest precedence first. All datasets 
 # read from the same IFS archive, so a single HTTP fallback chain covers
 # all of them without any per-dataset download configuration.
@@ -241,8 +271,8 @@ def _fetch_ifs_data(date_str, accumulation_time, ifs_dir, fname, dst):
             # Host + PID: jobs in different containers share this folder and can share a PID.
             tmp = f"{dst}.{socket.gethostname()}-{os.getpid()}.part"
             for attempt in range(1, 4):
-                c = subprocess.run(["curl", "-fL", "--retry", "20", "--retry-delay", "5",
-                                    "--retry-all-errors", *CURL_TIMEOUT_ARGS, "-C", "-", url, "-o", tmp])
+                c = subprocess.run(["curl", "-fL", *curl_retry_args(20), *CURL_TIMEOUT_ARGS,
+                                    "-C", "-", url, "-o", tmp])
                 if c.returncode == 0 and is_valid_netcdf(tmp):
                     os.replace(tmp, dst)
                     return dst
@@ -335,8 +365,8 @@ def _fetch_climatology(fname, clim_dir, dst):
     with open(tmp, "ab") as f:
         while done < size and failures < CLIMATOLOGY_MAX_FAILURES:
             end = min(done + CLIMATOLOGY_CHUNK_BYTES, size) - 1
-            c = subprocess.run(["curl", "-sSfL", "--retry", "5", "--retry-delay", "5",
-                                "--retry-all-errors", *CURL_TIMEOUT_ARGS, "-r", f"{done}-{end}", url],
+            c = subprocess.run(["curl", "-sSfL", *curl_retry_args(5), *CURL_TIMEOUT_ARGS,
+                                "-r", f"{done}-{end}", url],
                                stdout=f)
             # curl wrote straight to the file descriptor; a failed or short chunk is cut off
             # so the file only ever holds whole, in-order chunks.
