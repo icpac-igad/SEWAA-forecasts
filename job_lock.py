@@ -19,15 +19,17 @@ is an object `locks/<channel>.lock` in that bucket:
     acquisition is retried once.
   - release: delete the object, on normal exit and on SIGTERM.
 
-Uses only the standard library and the metadata server for credentials, so it adds no
-dependency. Without CGAN_LOCK_BUCKET (docker-compose, local runs) it falls back to an
-flock on a local file, which stops overlapping runs on the same machine.
+The GCS backend uses only the standard library and the metadata server for credentials.
+Without CGAN_LOCK_BUCKET (docker-compose, local runs) it falls back to a lock on a local
+file, which stops overlapping runs on the same machine (e.g. two auto_forecasts.py runs,
+or one started by hand while start_forecasting.py is running). That uses the filelock
+package, which works on Linux, macOS and Windows; the standard library's fcntl doesn't
+exist on Windows.
 """
 
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import json
 import os
 import signal
@@ -40,6 +42,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+
+import filelock
 
 HEARTBEAT_SECONDS = int(os.environ.get("CGAN_LOCK_HEARTBEAT_SECONDS", "60"))
 STALE_SECONDS = int(os.environ.get("CGAN_LOCK_STALE_SECONDS", "600"))
@@ -174,22 +178,17 @@ class _FileLock:
         directory = directory or tempfile.gettempdir()
         os.makedirs(directory, exist_ok=True)
         self.path = os.path.join(directory, name.replace("/", "_"))
-        self._fh = None
+        self._lock = filelock.FileLock(self.path)
 
     def acquire(self) -> None:
-        self._fh = open(self.path, "w")
         try:
-            fcntl.flock(self._fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            self._fh.close()
-            self._fh = None
+            self._lock.acquire(timeout=0)
+        except filelock.Timeout:
             raise LockHeld(f"{self.path} is locked by another local run") from None
 
     def release(self) -> None:
-        if self._fh:
-            fcntl.flock(self._fh, fcntl.LOCK_UN)
-            self._fh.close()
-            self._fh = None
+        if self._lock.is_locked:
+            self._lock.release()
 
 
 # ── public API ───────────────────────────────────────────────────────────────
@@ -238,7 +237,7 @@ def wait_for_lock(name: str, timeout: float, poll_seconds: float = 15,
     Yields True while holding it, or False if it wasn't acquired: the wait timed out, the
     `until()` callback reported the work done meanwhile (e.g. another job finished the
     download), or the lock backend failed. Callers must stay correct without the lock --
-    it only avoids duplicated work. Without CGAN_LOCK_BUCKET the lock is an flock in
+    it only avoids duplicated work. Without CGAN_LOCK_BUCKET the lock is a file lock in
     `local_dir`, which should be a directory every container sharing the work mounts.
     """
     bucket = os.environ.get("CGAN_LOCK_BUCKET")
