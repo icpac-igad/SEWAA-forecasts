@@ -5,7 +5,7 @@ description = "Scripts for operational rainfall forecasts in the ICPAC region"
 authors = [{ name = "Jason Kinyua", email = "jaysnmury@gmail.com" }]
 license = { text = "CC BY 4.0" }
 readme = "README.md"
-requires-python = ">=3.11.0,<3.13"
+requires-python = ">=3.11.0,<3.12"
 dependencies = [
     "cartopy>=0.25.0",
     "cfgrib>=0.9.15.0",
@@ -33,7 +33,15 @@ dependencies = [
     "scikit-learn==1.5.2",
     "scipy==1.14.1",
     "seaborn>=0.13.2",
+    # On Windows, Linux aarch64 and macOS arm64 the tensorflow wheel is an empty shim that pulls in
+    # a platform build, but uv locks tensorflow's dependencies from one wheel's metadata and drops
+    # them, so they are listed explicitly. tensorflow-io-gcs-filesystem stopped shipping Windows
+    # wheels after 0.31.0. TensorFlow 2.15 has no Python 3.12 wheels (hence requires-python < 3.12).
     "tensorflow==2.15.0",
+    "tensorflow-intel==2.15.0; sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tensorflow-io-gcs-filesystem==0.31.0; sys_platform == 'win32'",
+    "tensorflow-io-gcs-filesystem>=0.32.0; sys_platform != 'win32'",
+    "tensorflow-cpu-aws==2.15.0; sys_platform == 'linux' and (platform_machine == 'aarch64' or platform_machine == 'arm64')",
     "tensorflow-macos==2.15.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "tqdm>=4.67.1",
     "xarray>=2025.9.0",
@@ -86,4 +94,15 @@ packages = [
     "configs",
     "shapes",
     "datasets/shared",
+]
+
+
+[tool.uv]
+# Fail at lock time (not on a user's machine) if any package lacks a wheel for these platforms.
+required-environments = [
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]

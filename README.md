@@ -149,25 +149,62 @@ disk space, plus a terminal.
    Every command below is run **from inside this project folder**.
 
 2. **Install uv**, a tool that installs the right Python version and all the packages the
-   project needs (see https://docs.astral.sh/uv/getting-started/installation/ for Windows):
+   project needs (more options at https://docs.astral.sh/uv/getting-started/installation/):
+
+   macOS / Linux:
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
-   Close and reopen the terminal afterwards.
+   Windows (PowerShell):
+   ```powershell
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+   Close and reopen the terminal afterwards, then check with `uv --version`.
 
-3. **Install the project** (15–30 minutes the first time):
+3. **Install Python 3.11.** The project needs exactly Python 3.11 (TensorFlow 2.15 has no
+   packages for newer versions). uv downloads its own copy, separate from any Python already
+   on the computer:
+   ```bash
+   uv python install 3.11
+   ```
+
+4. **Create the virtual environment** (a `.venv` folder inside the project) with Python 3.11:
+   ```bash
+   uv venv --python 3.11
+   ```
+   If a `.venv` folder already exists from an earlier install, recreate it with
+   `uv venv --python 3.11 --clear`.
+
+5. **Activate the environment.** Do this every time you open a new terminal:
+
+   | System and terminal          | Command                         |
+   |------------------------------|---------------------------------|
+   | macOS / Linux (bash, zsh)    | `source .venv/bin/activate`     |
+   | macOS / Linux (fish)         | `source .venv/bin/activate.fish`|
+   | Windows (PowerShell)         | `.venv\Scripts\Activate.ps1`    |
+   | Windows (Command Prompt)     | `.venv\Scripts\activate.bat`    |
+   | Windows (Git Bash)           | `source .venv/Scripts/activate` |
+
+   Your prompt now starts with `(.venv)`, and `python --version` shows `Python 3.11.x`.
+   To leave the environment, run `deactivate`.
+
+   If PowerShell refuses with "running scripts is disabled on this system", allow scripts for
+   your user once, then activate again:
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+   ```
+
+6. **Install the project** into the environment (15–30 minutes the first time):
    ```bash
    uv sync
    ```
+   On Windows, TensorFlow has very long file paths. If this fails with "filename too long" or
+   "No such file or directory", move the project to a short folder such as `C:\cgan`, or turn
+   on long paths (in PowerShell run as administrator:
+   `New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force`,
+   then restart), and run `uv sync` again.
 
-4. **Activate the environment.** Do this every time you open a new terminal:
-   ```bash
-   source .venv/bin/activate        # macOS / Linux
-   .venv\Scripts\activate           # Windows
-   ```
-   Your prompt now starts with `(.venv)`.
-
-5. **Check it works:**
+7. **Check it works:**
    ```bash
    python -c "import tensorflow as tf; print('OK', tf.__version__)"
    ```
@@ -461,10 +498,18 @@ run only one forecast service (`docker compose up -d web imerg nginx`).
 
 **"command not found" for `uv`, `python` or `fastapi`**
 Close and reopen the terminal, go to the project folder, and activate the environment
-again (`source .venv/bin/activate`).
+again (see step 5 of [Install](#install)).
 
 **`No module named 'tensorflow'` (or any other module)**
-The environment isn't active. Run `source .venv/bin/activate`, and `uv sync` if it still fails.
+The environment isn't active. Activate it (`source .venv/bin/activate` on macOS / Linux,
+`.venv\Scripts\Activate.ps1` in Windows PowerShell; see [Install](#install)), and run `uv sync`
+if it still fails.
+
+**`uv sync` says a package "doesn't have a wheel for the current platform"**
+TensorFlow 2.15 only runs on Python 3.11 on Windows (64-bit Intel/AMD), Linux (x86_64 or
+ARM64) and macOS (Intel or Apple Silicon). Windows on ARM is not supported. Check with
+`python --version` that the environment uses Python 3.11; if not, recreate it with
+`uv venv --python 3.11 --clear`, activate it, and run `uv sync` again.
 
 **"is not available from any known source"**
 The input weather forecast for that date isn't published yet (it takes about 8–10 hours),
