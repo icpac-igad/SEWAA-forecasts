@@ -56,15 +56,14 @@ longitude = np.arange(19.15, 54.3, 0.1)
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 data_paths = read_config.get_data_paths()  # need the constants directory
 downscaling_steps = read_config.read_downscaling_factor()["steps"]
-assert fcst_norm is not None
+assert fcst_norm is not None, "forecast normalisations (FCSTNorm2018.pkl) failed to load; see the error printed above"
 
 
 # In[3]:
 
 
 # Open and parse forecast.yaml
-#fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
-fcstyaml_path = "forecast.yaml"
+fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
 with open(fcstyaml_path, "r") as f:
     try:
         fcst_params = yaml.safe_load(f)
@@ -74,17 +73,21 @@ with open(fcstyaml_path, "r") as f:
 
 # In[4]:
 
+# Resolve the model folders from this file's location rather than via the cGAN/logs_* symlinks:
+# git checks symlinks out as plain text files on Windows unless core.symlinks is enabled.
+imerg_24h_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                                             "datasets", "imerg", "24h"))
 if (valid_time_num == 0):
-    model_folder = "../logs_1"
+    model_folder = os.path.join(imerg_24h_dir, "logs_1")
     checkpoint = 203776
 elif (valid_time_num == 1):
-    model_folder = "../logs_5"
+    model_folder = os.path.join(imerg_24h_dir, "logs_5")
     checkpoint = 163840
 elif (valid_time_num > 6):
     print("ERROR: valid_time_num (1st argument) can be 0,1,2,3,4,5,6")
     sys.exit(1)
 else:
-    model_folder = "../logs_17"
+    model_folder = os.path.join(imerg_24h_dir, "logs_17")
     checkpoint = 115200
 print(f"Using model in {model_folder} checkpoint {checkpoint}.")
 

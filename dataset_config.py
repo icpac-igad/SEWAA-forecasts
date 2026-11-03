@@ -35,7 +35,7 @@ DATASETS = {
                 [f for f in _F14_CAPE if f not in ('u700', 'v700')],
                 0,
             ),
-            "24h_default": (
+            "imerg_24h": (
                 _F13,
                 ['cp', 'ssr', 'tp'],
                 [f for f in _F13 if f not in ('u700', 'v700')],
@@ -43,7 +43,7 @@ DATASETS = {
             ),
         },
         "default_field_set_6h": "6h_default",
-        "default_field_set_24h": "24h_default",
+        "default_field_set_24h": "imerg_24h",
 
         # truth loading behaviour
         "truth_nan_to_zero": False,

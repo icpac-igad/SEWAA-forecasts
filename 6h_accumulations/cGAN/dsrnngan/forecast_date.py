@@ -42,12 +42,11 @@ longitude = np.arange(19.15, 54.3, 0.1)
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 data_paths = read_config.get_data_paths()  # need the constants directory
 downscaling_steps = read_config.read_downscaling_factor()["steps"]
-assert fcst_norm is not None
+assert fcst_norm is not None, "forecast normalisations (FCSTNorm2018.pkl) failed to load; see the error printed above"
 
 # %%
 # Open and parse forecast.yaml
-#fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
-fcstyaml_path = "forecast.yaml"
+fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
 with open(fcstyaml_path, "r") as f:
     try:
         fcst_params = yaml.safe_load(f)
@@ -56,7 +55,8 @@ with open(fcstyaml_path, "r") as f:
 
 # %%
 set_seed = fcst_params["MODEL"]["set_seed"]
-model_folder = fcst_params["MODEL"]["folder"]
+# MODEL.folder is relative to this file's directory, not the working directory
+model_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), fcst_params["MODEL"]["folder"])
 checkpoint = fcst_params["MODEL"]["checkpoint"]
 # run_forecast.py passes the data store folders via env; the yaml paths are the in-repo defaults.
 input_folder = os.environ.get("CGAN_IFS_DIR", fcst_params["INPUT"]["folder"])

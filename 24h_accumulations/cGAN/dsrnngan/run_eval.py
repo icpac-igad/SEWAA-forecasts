@@ -10,7 +10,7 @@ import read_config
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 
 # input parameters
-log_folder = os.path.join(os.path.dirname(__file__), '..', 'logs_17')
+log_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'datasets', 'imerg', '24h', 'logs_17')
 model_numbers = [90624,95744,107008,108544,172544]
 val_years = 2021
 

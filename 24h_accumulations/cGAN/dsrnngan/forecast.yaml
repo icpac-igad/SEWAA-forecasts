@@ -1,5 +1,5 @@
 MODEL:
-    folder: "../logs_17"
+    folder: "../../../datasets/imerg/24h/logs_17"
     
     set_seed: False # set the seed used in NoiseGenerator when making forecasts. If True, this will set the seed as"
     # "dayofforecastissue+ensemble_member"

@@ -1,0 +1,5 @@
+# Model weights, normalisation pickles and NetCDF data are binary: never apply line-ending
+# conversion (a CRLF checkout on Windows corrupts FCSTNorm*.pkl and the forecast fails to start).
+*.pkl binary
+*.h5 binary
+*.nc binary

@@ -3,7 +3,7 @@ AOPP:
         TRUTH_PATH: ''
         FORECAST_PATH: '../../cGAN_forecasts'
         CONSTANTS_PATH: '../../../datasets/shared'
-        NORMALISATION_PATH: '../'
+        NORMALISATION_PATH: '../../../datasets/imerg/6h'
         
     TFRecords:
         tfrecords_path: ''
