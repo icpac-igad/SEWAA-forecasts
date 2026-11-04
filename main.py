@@ -22,6 +22,16 @@ class GenForecastPayload(BaseModel):
     status: Literal["started", "complete", "pending", "failed"]
 
 
+class RevalidatedStaticFiles(StaticFiles):
+    """Static files that browsers re-check on every load (unchanged files return 304), so
+    updated scripts and map boundaries show up after a `git pull` without a hard reload."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 app = FastAPI()
 
 # ensure static data paths exist before mounting to path
@@ -45,7 +55,7 @@ if not data_dir.is_dir():
 elr_climate_dir = Path("ELR/climatological_exceedances")
 
 
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.mount("/static", RevalidatedStaticFiles(directory=static_dir), name="static")
 # Mirror the nginx data portal (configs/nginx.conf): IMERG at /data/, the others under it.
 # Registered before /data so they take precedence.
 for dataset in ("rfe", "chirps"):

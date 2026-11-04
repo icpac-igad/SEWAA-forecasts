@@ -361,8 +361,9 @@ Open the forecast page:
    to start with) and **Reference Dataset** to *IMERG*, *RFE* or *CHIRPS*.
 2. **Pick the date.** Under **Initialization Date & Time**, choose the day the forecast
    starts. **Valid Time** picks which day (or 6-hour period) of that forecast to show.
-3. **Pick the area.** Choose your country under **Region**, or keep *East Africa*. For some
-   countries an **Admin 1** menu appears so you can zoom to a province or county.
+3. **Pick the area.** Choose your country under **Region**, or keep *East Africa*. An
+   **Admin 1** menu then appears so you can zoom to a province, region, county or district,
+   and its outline is drawn on the map.
 4. **Read the map.** By default, the colours show the **chance of rain above an amount**
    (the *Value Threshold*). Tick **Show plot explanation** below the maps for a
    plain-language description of what you're looking at.
@@ -419,6 +420,33 @@ forecasts are only made with daily (24h) forecasts.
   simple file viewer reads `/store/interface/<dataset>/` directly.
 - The page's code is in `interface/static/js/` (website) and `interface/view_forecasts/`
   (file viewer); the two copies of `testScript.js` are kept identical.
+- Map outlines are in `interface/static/boundaries/` (copied to
+  `interface/view_forecasts/boundaries/`). Each country has a `<Country>_border.json` and one
+  `<Region>_boundary.json` per Admin 1 unit. `regional_names.json` lists which files to load
+  and `region_bboxes.json` fills the **Admin 1** menu; the names in both must match.
+
+  | Country | Admin 1 units | Source |
+  |---------|---------------|--------|
+  | Burundi | 18 provinces | `shapes/Burundi_shapes` |
+  | Djibouti | 6 regions | `shapes/Djibouti_shapes` |
+  | Eritrea | 6 regions | `shapes/Eritrea_shapes` (names from ISO codes) |
+  | Ethiopia | 13 regions | OCHA COD-AB 2021 (`shapes/Ethiopia_shapes`) |
+  | Kenya | 47 counties | `shapes/Kenya_shapes` |
+  | Rwanda | 5 provinces | `shapes/Rwanda_shapes` |
+  | Somalia | 18 regions | geoBoundaries / OpenStreetMap, ODbL 1.0 (`shapes/Somalia_shapes`) |
+  | South Sudan | 10 states | `shapes/South Sudan_shapes` |
+  | Sudan | 18 states | `shapes/Sudan_shapes` |
+  | Tanzania | 30 regions | `shapes/Tanzania_shapes` |
+  | Uganda | 111 districts | `shapes/Uganda_shapes` |
+
+- To rebuild the Somalia, Uganda, Eritrea and Ethiopia outlines from `shapes/`, then shrink
+  all outline files for fast loading, run:
+
+  ```bash
+  python shapes/build_admin1_boundaries.py
+  python shapes/simplify_boundaries.py
+  rsync -a --delete interface/static/boundaries/ interface/view_forecasts/boundaries/
+  ```
 
 If the page says **"No ... forecasts available"**, no forecast has been made yet for that
 dataset, accumulation and date. See [Troubleshooting](#troubleshooting).
@@ -539,6 +567,14 @@ a machine with more RAM.
   [View the forecasts](#view-the-forecasts)).
 - Try a different date, accumulation or dataset on the forecast page.
 - Reload the page with `Ctrl + Shift + R` to bypass old cached files.
+
+**The Admin 1 menu lists regions but no outlines are drawn**
+- Check you're running the server from an up-to-date copy of the project
+  (`git pull`; run `pwd` in the server's terminal to see which folder it is).
+- Maps (and so outlines) only appear when forecasts exist; see
+  [The website shows no forecasts](#troubleshooting) above.
+- With `python -m http.server`, reload with `Ctrl + Shift + R` (`Cmd + Shift + R` on a
+  Mac) after updating, as that server lets the browser keep old files.
 
 **"Address already in use" / port 8000 is busy**
 Another server is already running on that port. Stop it with `Ctrl + C` in its terminal, or
