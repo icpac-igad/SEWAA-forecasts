@@ -22,6 +22,10 @@ dependencies = [
     "matplotlib>=3.10.6",
     "netcdf4>=1.7.2",
     "numba>=0.62.1",
+    # llvmlite (numba's compiler) stopped publishing Intel macOS wheels after 0.45.x, and
+    # building it from source needs a full LLVM install, so cap it there (numba then resolves
+    # to 0.62.x). Remove once Intel Macs are no longer supported.
+    "llvmlite<0.46; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "pre-commit>=4.3.0",
     "properscoring>=0.1",
     "regionmask>=0.13.0",
