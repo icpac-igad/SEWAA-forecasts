@@ -1,5 +1,10 @@
 MODEL:
-    folder: "../ICPAC-big-ensmeansd"
+    folder: "../../../datasets/imerg/6h/ICPAC-big-ensmeansd"
+    
+    set_seed: False # set the seed used in NoiseGenerator when making forecasts. If True, this will set the seed as"
+    # "dayofforecastissue+ensemble_member"
+    # NOTE: Using this is not good for a proper forecast that represents unbiased uncertainty and is strongly discouraged.
+    
     checkpoint: 316800
 
 INPUT:
@@ -10,4 +15,9 @@ INPUT:
 
 OUTPUT:
     folder: "../../cGAN_forecasts"
+    # gen.predict() called sequentially in forecast_date.py's plain Python loop (no
+    # tf.function/batching) leaks memory per call, and this many calls (x4 lead times in
+    # one process) OOM'd in production; mitigated via container memory sizing instead of
+    # cutting ensemble size (docker-compose.yml's mem_limit / cloudbuild.yaml's
+    # cgan-jobs-imerg-6h memory).
     ensemble_members: 1000

@@ -1,11 +1,11 @@
 [project]
 name = "sewaa-forecasts-v2"
-version = "0.1.0"
+version = "1.2.0"
 description = "Scripts for operational rainfall forecasts in the ICPAC region"
 authors = [{ name = "Jason Kinyua", email = "jaysnmury@gmail.com" }]
 license = { text = "CC BY 4.0" }
 readme = "README.md"
-requires-python = ">=3.11.0,<3.13"
+requires-python = ">=3.11.0,<3.12"
 dependencies = [
     "cartopy>=0.25.0",
     "cfgrib>=0.9.15.0",
@@ -13,9 +13,11 @@ dependencies = [
     "dask>=2025.9.1",
     "ecmwf-api-client>=1.6.5",
     "fastapi[standard]>=0.118.0",
+    "filelock>=3.13.0",
     "flake8>=7.3.0",
     "iris>=1.0.7",
     "jinja2>=3.1.6",
+    "markdown2>=2.5.4",
     "jupyter>=1.1.1",
     "matplotlib>=3.10.6",
     "netcdf4>=1.7.2",
@@ -24,10 +26,84 @@ dependencies = [
     "properscoring>=0.1",
     "regionmask>=0.13.0",
     "ruff>=0.13.2",
-    "scikit-learn>=1.7.2",
+    "schedule>=1.2.2",
+    # scikit-learn and scipy are pinned to the versions ELR/models/**/*.pkl were saved with:
+    # the pickles (sklearn pipelines holding scipy BSplines) only load reliably there; newer
+    # versions fail (e.g. SplineTransformer.handle_missing, BSpline._asarray).
+    # Change them only together with re-saving the ELR models.
+    "scikit-learn==1.5.2",
+    "scipy==1.14.1",
     "seaborn>=0.13.2",
+    # On Windows, Linux aarch64 and macOS arm64 the tensorflow wheel is an empty shim that pulls in
+    # a platform build, but uv locks tensorflow's dependencies from one wheel's metadata and drops
+    # them, so they are listed explicitly. tensorflow-io-gcs-filesystem stopped shipping Windows
+    # wheels after 0.31.0. TensorFlow 2.15 has no Python 3.12 wheels (hence requires-python < 3.12).
     "tensorflow==2.15.0",
+    "tensorflow-intel==2.15.0; sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tensorflow-io-gcs-filesystem==0.31.0; sys_platform == 'win32'",
+    "tensorflow-io-gcs-filesystem>=0.32.0; sys_platform != 'win32'",
+    "tensorflow-cpu-aws==2.15.0; sys_platform == 'linux' and (platform_machine == 'aarch64' or platform_machine == 'arm64')",
+    "tensorflow-macos==2.15.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "tqdm>=4.67.1",
     "xarray>=2025.9.0",
     "xesmf>=0.8.10",
+]
+
+
+[tool.black]
+line-length = 150
+skip-string-normalization = true
+target-version = ['py310', 'py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+
+[tool.ruff]
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+select = ["E", "F", "I"]
+ignore = []
+fix = true
+# Same as Black.
+line-length = 150
+# Assume Python 3.11.
+target-version = "py311"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "6h_accumulations",
+    "24h_accumulations",
+    "interface",
+    "ELR",
+    "configs",
+    "shapes",
+    "datasets/shared",
+]
+
+
+[tool.uv]
+# Fail at lock time (not on a user's machine) if any package lacks a wheel for these platforms.
+required-environments = [
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]

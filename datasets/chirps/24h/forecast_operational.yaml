@@ -1,0 +1,28 @@
+# CHIRPS run07 operational config. Paths are relative to dsrnngan/.
+# MODEL/normalisation point into datasets/chirps/ rather than the shared
+# 24h_accumulations/cGAN/ tree, which only carries IMERG's model + normalisation assets.
+MODEL:
+    folder: ../../../datasets/chirps/24h/logs_CHIRPS_run07
+    checkpoint: 204800
+    include_cape: False
+    field_set: run07             # 14 fields (climatology + 13 IFS) = 28 channels
+
+INPUT:
+    format:               operational
+    fcst_folder:          ../../IFS_forecast_data
+    truth_folder:         ""
+    constants_folder:     ../../../datasets/shared
+    normalisation_folder: ../../../datasets/chirps/24h
+
+PERIOD:
+    start: 20260903
+    end:   20260903
+
+OUTPUT:
+    # Per-lead GAN_<date>_00Z_v<lead>.nc into the mounted cGAN_forecasts folder (the bucket on
+    # Cloud Run): ELR reads lead 1 from here, and run_forecast.py deletes them once the
+    # histogram counts and ELR outputs exist.
+    folder: ../../cGAN_forecasts
+    ensemble_members: 1000
+    save_crps_only: False
+    histogram_folder: ../../../interface/data/counts_24h

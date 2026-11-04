@@ -2,9 +2,9 @@ AOPP:
     GENERAL:
         TRUTH_PATH: ''
         FORECAST_PATH: '../../cGAN_forecasts'
-        CONSTANTS_PATH: '../../../cGAN_data'
-        NORMALISATION_PATH: '../'
-        LEAD_IDX: 21
+        CONSTANTS_PATH: '../../../datasets/shared'
+        NORMALISATION_PATH: '../../../datasets/imerg/24h'
+        LEAD_IDX: 1
         
     TFRecords:
         tfrecords_path: ''

@@ -42,12 +42,11 @@ longitude = np.arange(19.15, 54.3, 0.1)
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 data_paths = read_config.get_data_paths()  # need the constants directory
 downscaling_steps = read_config.read_downscaling_factor()["steps"]
-assert fcst_norm is not None
+assert fcst_norm is not None, "forecast normalisations (FCSTNorm2018.pkl) failed to load; see the error printed above"
 
 # %%
 # Open and parse forecast.yaml
-#fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
-fcstyaml_path = "forecast.yaml"
+fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
 with open(fcstyaml_path, "r") as f:
     try:
         fcst_params = yaml.safe_load(f)
@@ -55,9 +54,12 @@ with open(fcstyaml_path, "r") as f:
         print(exc)
 
 # %%
-model_folder = fcst_params["MODEL"]["folder"]
+set_seed = fcst_params["MODEL"]["set_seed"]
+# MODEL.folder is relative to this file's directory, not the working directory
+model_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), fcst_params["MODEL"]["folder"])
 checkpoint = fcst_params["MODEL"]["checkpoint"]
-input_folder = fcst_params["INPUT"]["folder"]
+# run_forecast.py passes the data store folders via env; the yaml paths are the in-repo defaults.
+input_folder = os.environ.get("CGAN_IFS_DIR", fcst_params["INPUT"]["folder"])
 
 #input_file = fcst_params["INPUT"]["file"]
 # Instead of reading input_file from forecast.yaml, get it from the command line
@@ -65,7 +67,7 @@ input_file = f"IFS_{time_str}_{hour:02d}Z.nc"
 
 start_hour = fcst_params["INPUT"]["start_hour"]
 end_hour = fcst_params["INPUT"]["end_hour"]
-output_folder = fcst_params["OUTPUT"]["folder"]
+output_folder = os.environ.get("CGAN_FORECASTS_DIR", fcst_params["OUTPUT"]["folder"])
 ensemble_members = fcst_params["OUTPUT"]["ensemble_members"]
 
 assert start_hour % HOURS == 0, f"start_hour must be divisible by {HOURS}"
@@ -176,6 +178,9 @@ valid_times = nc_in["valid_time"][:]
 d = datetime(1900,1,1) + timedelta(hours=int(start_times[0]))
 print(f"{d.year}-{d.month:02}-{d.day:02}")
 
+tdelta = d-datetime(1980,1,1)
+tdelta = tdelta.seconds/(3600*6)
+
 # %%
 # Create output netCDF file
 pathlib.Path(output_folder).mkdir(parents=True, exist_ok=True)
@@ -271,9 +276,13 @@ for out_time_idx, in_time_idx in enumerate(range(start_hour//HOURS, end_hour//HO
     network_fcst_input = np.expand_dims(network_fcst_input, axis=0)  # 1 x lat x lon x 4*len(...)
 
     noise_shape = network_fcst_input.shape[1:-1] + (noise_channels,)
-    noise_gen = NoiseGenerator(noise_shape, batch_size=1)
     progbar = Progbar(ensemble_members)
+    if not set_seed:
+        noise_gen = NoiseGenerator(noise_shape, batch_size=1)
     for ii in range(ensemble_members):
+        if set_seed:
+            noise_gen = NoiseGenerator(noise_shape, batch_size=1, 
+                                       random_seed=int(tdelta+(out_time_idx*1e5)+(ii*1e6)))
         gan_inputs = [network_fcst_input, network_const_input, noise_gen()]
         gan_prediction = gen.predict(gan_inputs, verbose=False)  # 1 x lat x lon x 1
         netcdf_dict["precipitation"][0, ii, out_time_idx, :, :] = denormalise(gan_prediction[0, :, :, 0])

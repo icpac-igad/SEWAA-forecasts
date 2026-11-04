@@ -24,12 +24,17 @@ import netCDF4 as nc
 import numpy as np
 from tensorflow.keras.utils import Progbar
 
-from data import HOURS, all_fcst_fields, accumulated_fields, nonnegative_fields, fcst_norm, logprec, denormalise, load_hires_constants
+from data import all_fcst_fields, accumulated_fields, nonnegative_fields, fcst_norm, logprec, denormalise, load_hires_constants
 import read_config
 from noise import NoiseGenerator
 from setupmodel import setup_model
 
 from datetime import datetime, timedelta
+
+# The IFS input file has 6-hourly time steps, and the IMERG models (logs_1/5/17) were
+# trained on inputs normalised with 6h steps. data.HOURS is 24 since the unified codebase
+# (it's the accumulation period for CHIRPS/RFE), so don't use it here.
+HOURS = 6
 
 # Get the valid time number from the command line
 valid_time_num = int(sys.argv[1])
@@ -51,15 +56,14 @@ longitude = np.arange(19.15, 54.3, 0.1)
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 data_paths = read_config.get_data_paths()  # need the constants directory
 downscaling_steps = read_config.read_downscaling_factor()["steps"]
-assert fcst_norm is not None
+assert fcst_norm is not None, "forecast normalisations (FCSTNorm2018.pkl) failed to load; see the error printed above"
 
 
 # In[3]:
 
 
 # Open and parse forecast.yaml
-#fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
-fcstyaml_path = "forecast.yaml"
+fcstyaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forecast.yaml")
 with open(fcstyaml_path, "r") as f:
     try:
         fcst_params = yaml.safe_load(f)
@@ -69,24 +73,29 @@ with open(fcstyaml_path, "r") as f:
 
 # In[4]:
 
+# Resolve the model folders from this file's location rather than via the cGAN/logs_* symlinks:
+# git checks symlinks out as plain text files on Windows unless core.symlinks is enabled.
+imerg_24h_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                                             "datasets", "imerg", "24h"))
 if (valid_time_num == 0):
-    model_folder = "../logs_1"
+    model_folder = os.path.join(imerg_24h_dir, "logs_1")
     checkpoint = 203776
 elif (valid_time_num == 1):
-    model_folder = "../logs_5"
+    model_folder = os.path.join(imerg_24h_dir, "logs_5")
     checkpoint = 163840
 elif (valid_time_num > 6):
     print("ERROR: valid_time_num (1st argument) can be 0,1,2,3,4,5,6")
     sys.exit(1)
 else:
-    model_folder = "../logs_17"
+    model_folder = os.path.join(imerg_24h_dir, "logs_17")
     checkpoint = 115200
 print(f"Using model in {model_folder} checkpoint {checkpoint}.")
 
 #model_folder = fcst_params["MODEL"]["folder"]
 #checkpoint = fcst_params["MODEL"]["checkpoint"]
-
-input_folder = fcst_params["INPUT"]["folder"]
+set_seed = fcst_params["MODEL"]["set_seed"]
+# run_forecast.py passes the data store folders via env; the yaml paths are the in-repo defaults.
+input_folder = os.environ.get("CGAN_IFS_DIR", fcst_params["INPUT"]["folder"])
 
 #input_file = fcst_params["INPUT"]["file"]
 # Instead of reading input_file from forecast.yaml, get it from the command line
@@ -94,7 +103,7 @@ input_file = f"IFS_{time_str}_00Z.nc"
 
 start_hour = fcst_params["INPUT"]["start_hour"]
 end_hour = fcst_params["INPUT"]["end_hour"]
-output_folder = fcst_params["OUTPUT"]["folder"]
+output_folder = os.environ.get("CGAN_FORECASTS_DIR", fcst_params["OUTPUT"]["folder"])
 ensemble_members = fcst_params["OUTPUT"]["ensemble_members"]
 
 assert start_hour % HOURS == 0, f"start_hour must be divisible by {HOURS}"
@@ -198,6 +207,8 @@ valid_times = nc_in["valid_time"][:]
 
 # The datetime corresponding to this start time
 d = datetime(1900,1,1) + timedelta(hours=int(start_times[0]))
+tdelta = d-datetime(1980,1,1)
+tdelta = tdelta.seconds/(3600*6)
 
 # Create output netCDF file
 pathlib.Path(output_folder).mkdir(parents=True, exist_ok=True)
@@ -297,9 +308,13 @@ if (True):
     network_fcst_input = np.expand_dims(network_fcst_input, axis=0)  # 1 x lat x lon x 2*len(...)
     
     noise_shape = network_fcst_input.shape[1:-1] + (noise_channels,)
-    noise_gen = NoiseGenerator(noise_shape, batch_size=1)
+    if not set_seed:
+        noise_gen = NoiseGenerator(noise_shape, batch_size=1)
     progbar = Progbar(ensemble_members)
     for ii in range(ensemble_members):
+        if set_seed:
+            noise_gen = NoiseGenerator(noise_shape, batch_size=1, 
+                                       random_seed=int(tdelta+((in_time_idx[0][valid_time_num])*1e5)+(ii*1e6)))
         gan_inputs = [network_fcst_input, network_const_input, noise_gen()]
         gan_prediction = gen.predict(gan_inputs, verbose=False)  # 1 x lat x lon x 1
         netcdf_dict["precipitation"][0, ii, 0, :, :] = denormalise(gan_prediction[0, :, :, 0])

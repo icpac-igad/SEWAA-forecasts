@@ -1,0 +1,28 @@
+# run13 operational config. Paths are relative to dsrnngan/.
+# MODEL/constants/normalisation point into datasets/rfe/ rather than the shared
+# 24h_accumulations/cGAN/ tree, which only carries IMERG's model + normalisation assets.
+MODEL:
+    folder: ../../../datasets/rfe/24h/logs_RFE2_run13
+    checkpoint: 160768
+    include_cape: False
+    field_set: run11            # 13 IFS fields + RFE climatology mean & sd = 28 channels
+
+INPUT:
+    format:               operational
+    fcst_folder:          ../../IFS_forecast_data
+    truth_folder:         ""
+    constants_folder:     ../../../datasets/shared
+    normalisation_folder: ../../../datasets/rfe/24h
+
+PERIOD:
+    start: 20260604
+    end:   20260604
+
+OUTPUT:
+    # Per-lead GAN_<date>_00Z_v<lead>.nc into the mounted cGAN_forecasts folder (the bucket on
+    # Cloud Run): ELR reads lead 1 from here, and run_forecast.py deletes them once the
+    # histogram counts and ELR outputs exist.
+    folder: ../../cGAN_forecasts
+    ensemble_members: 1000
+    save_crps_only: False
+    histogram_folder: ../../../interface/data/counts_24h

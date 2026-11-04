@@ -1,5 +1,10 @@
 MODEL:
-    folder: "../logs_17"
+    folder: "../../../datasets/imerg/24h/logs_17"
+    
+    set_seed: False # set the seed used in NoiseGenerator when making forecasts. If True, this will set the seed as"
+    # "dayofforecastissue+ensemble_member"
+    # NOTE: Using this is not good for a proper forecast that represents unbiased uncertainty and is strongly discouraged.
+    
     checkpoint: 172544
 
 INPUT:
@@ -10,4 +15,8 @@ INPUT:
 
 OUTPUT:
     folder: "../../cGAN_forecasts"
+    # gen.predict() called sequentially in forecast_date.py's plain Python loop (no
+    # tf.function/batching) leaks memory per call; the 6h config OOM'd in production at this
+    # ensemble size (it runs 4 lead times per process, compounding the leak). Mitigated via
+    # container memory sizing instead of cutting ensemble size.
     ensemble_members: 1000

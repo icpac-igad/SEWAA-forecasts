@@ -14,7 +14,9 @@ data_paths = read_config.get_data_paths()
 TRUTH_PATH = data_paths["GENERAL"]["TRUTH_PATH"]
 FCST_PATH = data_paths["GENERAL"]["FORECAST_PATH"]
 CONSTANTS_PATH = data_paths["GENERAL"]["CONSTANTS_PATH"]
-NORMALISATION_PATH = data_paths["GENERAL"]["NORMALISATION_PATH"]
+# relative to this file's directory, not the working directory
+NORMALISATION_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  data_paths["GENERAL"]["NORMALISATION_PATH"])
 
 all_fcst_fields = ['cape', 'cp', 'mcc', 'sp', 'ssr', 't2m', 'tciw', 'tclw', 'tcrw', 'tcw', 'tcwv', 'tp', 'u700', 'v700']
 accumulated_fields = ['cp', 'ssr', 'tp']
@@ -376,8 +378,9 @@ def load_fcst_norm(year=2018):
 try:
     print("Loading forecast normalisations")
     fcst_norm = load_fcst_norm(2018)
-except:  # noqa
+except Exception as exc:
     fcst_norm = None
     print("******************************************")
     print("*** FORECAST NORMALISATIONS NOT LOADED ***")
+    print(f"*** {type(exc).__name__}: {exc}")
     print("******************************************")

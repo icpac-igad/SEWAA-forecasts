@@ -1,28 +1,19 @@
 ARG PYTHON_VERSION=3.11
-
-FROM alpine/git AS builder
-ARG GAN_REPO=https://github.com/icpac-igad/SEWAA-forecasts.git
-
-RUN git clone --depth 1 ${GAN_REPO} /tmp/cgan
-
-
-FROM python:${PYTHON_VERSION}-slim AS runner
+FROM python:${PYTHON_VERSION}-slim
 
 # image build step variables
 ARG USER_NAME=cgan
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 ARG WORK_HOME=/opt/cgan
-ARG API_WORKERS=32
-
-
+ARG API_WORKERS=4
 
 # install system libraries
 RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends git rsync ssh ca-certificates pkg-config \
-    libgdal-dev libgeos-dev libproj-dev gdal-bin libcgal-dev libxml2-dev libsqlite3-dev  \
-    gcc g++ dvipng libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev \
-    libeccodes-dev libeccodes-tools curl && mkdir -p ${WORK_HOME}/.ssh ${WORK_HOME}/.local
+    apt-get install -y --no-install-recommends rsync ssh git curl gcc g++ pkg-config \
+    ca-certificates libgdal-dev libgeos-dev libproj-dev gdal-bin libcgal-dev libxml2-dev   \
+    libsqlite3-dev dvipng libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev \
+    libeccodes-dev libeccodes-tools && mkdir -p ${WORK_HOME}/.ssh ${WORK_HOME}/.local
 
 
 RUN groupadd --gid ${GROUP_ID} ${USER_NAME} && \
@@ -32,13 +23,21 @@ RUN groupadd --gid ${GROUP_ID} ${USER_NAME} && \
 USER ${USER_NAME}
 WORKDIR ${WORK_HOME}
 
-COPY --from=builder --chown=${USER_ID}:root /tmp/cgan ${WORK_HOME}
-
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     python -m venv ${WORK_HOME}/.venv
 
-ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS}
+COPY --chown=${USER_ID}:root . ${WORK_HOME}/
+# The general COPY above already places each accumulation's own forecast.yaml at
+# {6h,24h}_accumulations/cGAN/dsrnngan/forecast.yaml. Do NOT re-COPY a shared
+# configs/forecast.yaml over both here -- 6h and 24h use different trained models
+# (different MODEL.folder/checkpoint), and overwriting both with one file silently
+# made the 24h job run the 6h model.
 
-RUN uv sync
+ARG CGAN_DATASET=imerg
+# Data folders are volume-mounted over the in-repo paths (docker-compose.yml, cloudbuild.yaml),
+# so run_forecast.py uses those paths rather than ${STORE}.
+ENV PATH=${WORK_HOME}/.local/bin:${WORK_HOME}/.venv/bin:${PATH} VIRTUAL_ENV=${WORK_HOME}/.venv WORK_HOME=${WORK_HOME} API_WORKERS=${API_WORKERS} CGAN_DATASET=${CGAN_DATASET} CGAN_DATA_MOUNTED=1
+
+RUN uv sync --all-extras
 
 CMD ["sh", "-c", "fastapi run --proxy-headers --workers ${API_WORKERS}"]

@@ -12,7 +12,7 @@ import numpy as np
 import json
 
 # The directory with the counts data in
-counts_dir = "../interface/data/counts_6h"
+counts_dir = os.path.join(os.environ.get("CGAN_INTERFACE_DATA_DIR", "../interface/data"), "counts_6h")
 
 # Find the years to include
 counts_years = []
@@ -67,6 +67,13 @@ def sortFunc(e):
 
 # Sort the list of times
 times_list.sort(reverse=False, key=sortFunc)
+
+# No counts files yet (fresh deployment, or none have finished) -- write an empty result
+# instead of crashing on times_list[0] below.
+if not times_list:
+    with open(f"{output_dir}/available_dates.json", "w") as text_file:
+        text_file.write(json.dumps({}))
+    raise SystemExit(0)
 
 # Make dictionaries
 year = str(times_list[0][0])
